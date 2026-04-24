@@ -52,6 +52,8 @@ export default function SellerDetailPage({
   const [address, setAddress] = useState("");
   const [cep, setCep] = useState("");
   const [phone, setPhone] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [logoFile, setLogoFile] = useState<File | undefined>();
   const [clearLogo, setClearLogo] = useState(false);
   const [logoInputKey, setLogoInputKey] = useState(0);
@@ -64,6 +66,8 @@ export default function SellerDetailPage({
       setAddress(seller.address);
       setCep(seller.cep);
       setPhone(seller.phone);
+      setLatitude(seller.latitude ?? "");
+      setLongitude(seller.longitude ?? "");
     }
   }, [seller?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -75,6 +79,8 @@ export default function SellerDetailPage({
         address,
         cep,
         phone,
+        latitude: latitude || undefined,
+        longitude: longitude || undefined,
         logo: logoFile,
         clearLogo: clearLogo || undefined,
       }),
@@ -191,6 +197,26 @@ export default function SellerDetailPage({
               <p className="text-xs text-muted-foreground">
                 {formatCep(seller.cep)}
               </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="latitude">{t("seller.latitude")}</Label>
+              <Input
+                id="latitude"
+                disabled={!canEdit}
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                placeholder="-23.550520"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="longitude">{t("seller.longitude")}</Label>
+              <Input
+                id="longitude"
+                disabled={!canEdit}
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                placeholder="-46.633308"
+              />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="logo">{t("seller.logo")}</Label>

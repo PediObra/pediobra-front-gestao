@@ -103,3 +103,40 @@ export function allowedOrderStatusTransitions(
 
   return [] as const;
 }
+
+export function allowedDeliveryRequestStatusTransitions(
+  user: AuthUser | null,
+  deliveryRequest: {
+    requesterUserId: number;
+    requesterSellerId?: number | null;
+    assignedDriverProfileId?: number | null;
+    status: string;
+  },
+) {
+  if (isAdmin(user)) {
+    return [
+      "ASSIGNED",
+      "PICKED_UP",
+      "OUT_FOR_DELIVERY",
+      "DELIVERED",
+      "DELIVERY_FAILED",
+      "CANCELLED",
+    ] as const;
+  }
+
+  if (
+    deliveryRequest.requesterSellerId &&
+    canAccessSeller(user, deliveryRequest.requesterSellerId)
+  ) {
+    return ["CANCELLED"] as const;
+  }
+
+  if (
+    user?.id === deliveryRequest.requesterUserId &&
+    ["PENDING", "ASSIGNED"].includes(deliveryRequest.status)
+  ) {
+    return ["CANCELLED"] as const;
+  }
+
+  return [] as const;
+}

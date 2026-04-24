@@ -321,27 +321,33 @@ export default function OrderDetailPage({
                         new Date(b.createdAt).getTime() -
                         new Date(a.createdAt).getTime(),
                     )
-                    .map((h) => (
-                      <li key={h.id} className="ml-4">
-                        <div className="absolute -left-1.5 size-3 rounded-full bg-primary border-2 border-background" />
-                        <div className="flex items-center gap-2">
-                          <OrderStatusBadge status={h.status} />
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateTime(h.createdAt)}
-                          </span>
-                        </div>
-                        {h.note && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {h.note}
-                          </p>
-                        )}
-                        {h.changedByUser && (
-                          <p className="text-xs text-muted-foreground">
-                            {t("order.changedBy", { name: h.changedByUser.name })}
-                          </p>
-                        )}
-                      </li>
-                    ))}
+                    .map((h) => {
+                      const status = h.toStatus ?? h.status ?? "PENDING";
+
+                      return (
+                        <li key={h.id} className="ml-4">
+                          <div className="absolute -left-1.5 size-3 rounded-full bg-primary border-2 border-background" />
+                          <div className="flex items-center gap-2">
+                            <OrderStatusBadge status={status} />
+                            <span className="text-xs text-muted-foreground">
+                              {formatDateTime(h.createdAt)}
+                            </span>
+                          </div>
+                          {h.note && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {h.note}
+                            </p>
+                          )}
+                          {h.changedByUser && (
+                            <p className="text-xs text-muted-foreground">
+                              {t("order.changedBy", {
+                                name: h.changedByUser.name,
+                              })}
+                            </p>
+                          )}
+                        </li>
+                      );
+                    })}
                 </ol>
               ) : (
                 <p className="text-sm text-muted-foreground">

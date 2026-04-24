@@ -14,6 +14,17 @@ export interface ListOrdersParams {
   sellerId?: number;
   clientUserId?: number;
   assignedDriverProfileId?: number;
+  createdFrom?: string;
+  createdTo?: string;
+}
+
+export interface OrderStats {
+  total: number;
+  active: number;
+  delivered: number;
+  cancelled: number;
+  revenueCents: number;
+  statusCounts: Partial<Record<OrderStatus, number>>;
 }
 
 export interface CreateOrderPayload {
@@ -56,6 +67,9 @@ function buildOrderEvidenceFormData(payload: CreateOrderEvidencePayload) {
 export const ordersService = {
   list: (params: ListOrdersParams = {}) =>
     api.get<Paginated<Order>>("/orders", { query: params }),
+
+  stats: (params: ListOrdersParams = {}) =>
+    api.get<OrderStats>("/orders/stats", { query: params }),
 
   getById: (id: number) => api.get<Order>(`/orders/${id}`),
 

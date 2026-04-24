@@ -14,6 +14,7 @@ import {
   Receipt,
   ClipboardList,
   Menu,
+  Route,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/lib/i18n/language-store";
@@ -31,6 +32,7 @@ type NavItem = {
   labelKey:
     | "nav.dashboard"
     | "nav.orders"
+    | "nav.deliveryRequests"
     | "nav.products"
     | "nav.sellerProducts"
     | "nav.sellers"
@@ -53,6 +55,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.orders",
     href: "/orders",
     icon: ClipboardList,
+    show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
+  },
+  {
+    labelKey: "nav.deliveryRequests",
+    href: "/delivery-requests",
+    icon: Route,
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {

@@ -5,6 +5,7 @@ export * from "./products";
 export * from "./seller-products";
 export * from "./drivers";
 export * from "./orders";
+export * from "./delivery-requests";
 export * from "./payments";
 export * from "./addresses";
 export * from "./client";

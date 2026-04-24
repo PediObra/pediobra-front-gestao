@@ -1,5 +1,6 @@
 import {
   driverStatusLabel,
+  deliveryRequestStatusLabel,
   membershipRoleLabel,
   orderStatusLabel,
   paymentStatusLabel,
@@ -8,6 +9,7 @@ import {
 import { useLanguageStore } from "@/lib/i18n/language-store";
 import type {
   DriverStatus,
+  DeliveryRequestStatus,
   MembershipRole,
   OrderStatus,
   PaymentStatus,
@@ -35,6 +37,33 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
   return (
     <Badge variant={ORDER_STATUS_VARIANT[status]}>
       {orderStatusLabel(status)}
+    </Badge>
+  );
+}
+
+const DELIVERY_REQUEST_STATUS_VARIANT: Record<
+  DeliveryRequestStatus,
+  BadgeVariant
+> = {
+  PENDING: "muted",
+  ASSIGNED: "default",
+  PICKED_UP: "default",
+  OUT_FOR_DELIVERY: "warning",
+  DELIVERED: "success",
+  DELIVERY_FAILED: "destructive",
+  CANCELLED: "destructive",
+};
+
+export function DeliveryRequestStatusBadge({
+  status,
+}: {
+  status: DeliveryRequestStatus;
+}) {
+  useLanguageStore((state) => state.language);
+
+  return (
+    <Badge variant={DELIVERY_REQUEST_STATUS_VARIANT[status]}>
+      {deliveryRequestStatusLabel(status)}
     </Badge>
   );
 }

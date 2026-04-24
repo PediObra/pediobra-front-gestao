@@ -1,5 +1,6 @@
 import type {
   DriverStatus,
+  DeliveryRequestStatus,
   EvidenceType,
   MembershipRole,
   OrderStatus,
@@ -95,6 +96,12 @@ export function orderStatusLabel(status: OrderStatus) {
   return translate(`status.order.${status}` as Parameters<typeof translate>[0]);
 }
 
+export function deliveryRequestStatusLabel(status: DeliveryRequestStatus) {
+  return translate(
+    `status.deliveryRequest.${status}` as Parameters<typeof translate>[0],
+  );
+}
+
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   PENDING: "Pendente",
   AUTHORIZED: "Autorizado",
@@ -153,6 +160,10 @@ export const EVIDENCE_TYPE_LABEL: Record<EvidenceType, string> = {
 
 export function evidenceTypeLabel(type: EvidenceType) {
   return translate(`evidence.${type}` as Parameters<typeof translate>[0]);
+}
+
+export function formatDeliveryRequestCode(deliveryRequest: { id: number }) {
+  return `#D${String(deliveryRequest.id).padStart(4, "0")}`;
 }
 
 export function formatOrderCode(order: {

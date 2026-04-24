@@ -5,6 +5,7 @@ export interface ListPaymentsParams {
   page?: number;
   limit?: number;
   orderId?: number;
+  deliveryRequestId?: number;
   status?: PaymentStatus;
 }
 
@@ -24,8 +25,20 @@ export const paymentsService = {
   listByOrder: (orderId: number) =>
     api.get<Payment[]>(`/payments/orders/${orderId}`),
 
+  listByDeliveryRequest: (deliveryRequestId: number) =>
+    api.get<Payment[]>(`/payments/delivery-requests/${deliveryRequestId}`),
+
   createMock: (orderId: number, payload: CreateMockPaymentPayload) =>
     api.post<Payment>(`/payments/orders/${orderId}/mock`, payload),
+
+  createMockForDeliveryRequest: (
+    deliveryRequestId: number,
+    payload: CreateMockPaymentPayload,
+  ) =>
+    api.post<Payment>(
+      `/payments/delivery-requests/${deliveryRequestId}/mock`,
+      payload,
+    ),
 
   updateStatus: (id: number, status: PaymentStatus) =>
     api.patch<Payment>(`/payments/${id}/status`, { status }),

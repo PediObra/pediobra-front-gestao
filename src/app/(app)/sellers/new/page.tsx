@@ -36,6 +36,8 @@ function createSchema(t: typeof translate) {
     phone: z.string().min(8, t("seller.phoneRequired")),
     primaryColor: z.string().optional().or(z.literal("")),
     secondaryColor: z.string().optional().or(z.literal("")),
+    latitude: z.string().optional().or(z.literal("")),
+    longitude: z.string().optional().or(z.literal("")),
   });
 }
 
@@ -58,6 +60,8 @@ export default function NewSellerPage() {
       phone: "",
       primaryColor: "",
       secondaryColor: "",
+      latitude: "",
+      longitude: "",
     },
   });
 
@@ -72,6 +76,8 @@ export default function NewSellerPage() {
         logo: logoFile,
         primaryColor: values.primaryColor || undefined,
         secondaryColor: values.secondaryColor || undefined,
+        latitude: values.latitude || undefined,
+        longitude: values.longitude || undefined,
       };
       return sellersService.create(payload);
     },
@@ -188,6 +194,24 @@ export default function NewSellerPage() {
                   {form.formState.errors.cep.message}
                 </p>
               )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="latitude">{t("seller.latitude")}</Label>
+              <Input
+                id="latitude"
+                placeholder="-23.550520"
+                {...form.register("latitude")}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="longitude">{t("seller.longitude")}</Label>
+              <Input
+                id="longitude"
+                placeholder="-46.633308"
+                {...form.register("longitude")}
+              />
             </div>
 
             <div className="space-y-2 sm:col-span-2">

@@ -103,15 +103,10 @@ export default function PaymentsListPage() {
         size: 60,
       },
       {
-        id: "order",
-        header: t("payments.order"),
+        id: "target",
+        header: t("payments.target"),
         cell: ({ row }) => (
-          <Link
-            href={`/orders/${row.original.orderId}`}
-            className="font-mono text-xs font-medium hover:underline"
-          >
-            #{row.original.orderId}
-          </Link>
+          <PaymentTarget payment={row.original} />
         ),
       },
       {
@@ -166,9 +161,15 @@ export default function PaymentsListPage() {
               {t("common.status")}
             </Button>
             <Button asChild variant="ghost" size="sm">
-              <Link href={`/orders/${row.original.orderId}`}>
+              <Link
+                href={
+                  row.original.deliveryRequestId
+                    ? `/delivery-requests/${row.original.deliveryRequestId}`
+                    : `/orders/${row.original.orderId}`
+                }
+              >
                 <Eye className="size-4" />
-                {t("payments.order")}
+                {t("actions.open")}
               </Link>
             </Button>
           </div>
@@ -230,7 +231,11 @@ export default function PaymentsListPage() {
             <DialogDescription>
               {t("payments.updateDescription", {
                 paymentId: editing?.id ?? "—",
-                orderId: editing?.orderId ?? "—",
+                orderId:
+                  editing?.orderId ??
+                  (editing?.deliveryRequestId
+                    ? `D${editing.deliveryRequestId}`
+                    : "—"),
               })}
             </DialogDescription>
           </DialogHeader>
@@ -271,5 +276,29 @@ export default function PaymentsListPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function PaymentTarget({ payment }: { payment: Payment }) {
+  const t = useTranslation();
+
+  if (payment.deliveryRequestId) {
+    return (
+      <Link
+        href={`/delivery-requests/${payment.deliveryRequestId}`}
+        className="font-mono text-xs font-medium hover:underline"
+      >
+        {t("payments.delivery")} #{payment.deliveryRequestId}
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      href={`/orders/${payment.orderId}`}
+      className="font-mono text-xs font-medium hover:underline"
+    >
+      {t("payments.order")} #{payment.orderId}
+    </Link>
   );
 }

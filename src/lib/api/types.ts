@@ -25,6 +25,19 @@ export type OrderStatus =
   | "DELIVERY_FAILED"
   | "CANCELLED";
 
+export type DeliveryRequestStatus =
+  | "PENDING"
+  | "ASSIGNED"
+  | "PICKED_UP"
+  | "OUT_FOR_DELIVERY"
+  | "DELIVERED"
+  | "DELIVERY_FAILED"
+  | "CANCELLED";
+
+export type DeliveryJobStatus = "OPEN" | "ACCEPTED" | "CANCELLED" | "COMPLETED";
+
+export type PricingSource = "MANUAL" | "ESTIMATED";
+
 export type PaymentStatus =
   | "PENDING"
   | "AUTHORIZED"
@@ -135,6 +148,8 @@ export interface Seller {
   logo?: string | null;
   primaryColor?: string | null;
   secondaryColor?: string | null;
+  latitude?: string | null;
+  longitude?: string | null;
   active?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -273,7 +288,9 @@ export interface OrderItem {
 export interface OrderStatusHistoryEntry {
   id: number;
   orderId: number;
-  status: OrderStatus;
+  status?: OrderStatus;
+  fromStatus?: OrderStatus | null;
+  toStatus?: OrderStatus;
   note?: string | null;
   createdAt: string;
   changedByUserId?: number | null;
@@ -288,6 +305,88 @@ export interface OrderEvidence {
   note?: string | null;
   createdAt: string;
   uploadedByUserId?: number | null;
+}
+
+export interface DeliveryRequestEvidence {
+  id: number;
+  deliveryRequestId: number;
+  evidenceType: EvidenceType;
+  imageUrl: string;
+  note?: string | null;
+  createdAt: string;
+  uploadedByUserId?: number | null;
+  uploadedByUser?: User | null;
+}
+
+export interface DeliveryRequestStatusHistoryEntry {
+  id: number;
+  deliveryRequestId: number;
+  fromStatus?: DeliveryRequestStatus | null;
+  toStatus: DeliveryRequestStatus;
+  status?: DeliveryRequestStatus;
+  note?: string | null;
+  createdAt: string;
+  changedByUserId?: number | null;
+  changedByUser?: User | null;
+}
+
+export interface DeliveryJob {
+  id: number;
+  orderId?: number | null;
+  deliveryRequestId?: number | null;
+  pickupLatitude?: string | null;
+  pickupLongitude?: string | null;
+  radiusMeters: number;
+  offeredFeeCents: number;
+  status: DeliveryJobStatus;
+  acceptedByDriverProfileId?: number | null;
+  acceptedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  order?: Order | null;
+  deliveryRequest?: DeliveryRequest | null;
+  acceptedByDriverProfile?: DriverProfile | null;
+}
+
+export interface DeliveryRequest {
+  id: number;
+  requesterUserId: number;
+  requesterSellerId?: number | null;
+  assignedDriverProfileId?: number | null;
+  status: DeliveryRequestStatus;
+  paymentStatus?: PaymentStatus | null;
+  pickupAddress: string;
+  pickupCep?: string | null;
+  pickupContactName?: string | null;
+  pickupContactPhone?: string | null;
+  pickupLatitude?: string | null;
+  pickupLongitude?: string | null;
+  dropoffAddress: string;
+  dropoffCep?: string | null;
+  dropoffContactName?: string | null;
+  dropoffContactPhone?: string | null;
+  dropoffLatitude?: string | null;
+  dropoffLongitude?: string | null;
+  packageDescription: string;
+  packageSize?: string | null;
+  packageWeightGrams?: number | null;
+  notes?: string | null;
+  cancellationReason?: string | null;
+  cancellationDetails?: string | null;
+  cancelledByUserId?: number | null;
+  deliveryFeeCents: number;
+  deliveryDistanceMeters?: number | null;
+  pricingSource: PricingSource;
+  active?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  requesterUser?: User;
+  requesterSeller?: Seller | null;
+  assignedDriverProfile?: DriverProfile | null;
+  evidences?: DeliveryRequestEvidence[];
+  statusHistory?: DeliveryRequestStatusHistoryEntry[];
+  payments?: Payment[];
+  deliveryJobs?: DeliveryJob[];
 }
 
 export interface Order {
@@ -326,7 +425,8 @@ export interface Order {
 
 export interface Payment {
   id: number;
-  orderId: number;
+  orderId?: number | null;
+  deliveryRequestId?: number | null;
   provider?: string | null;
   method?: string | null;
   transactionId?: string | null;
@@ -334,7 +434,8 @@ export interface Payment {
   status: PaymentStatus;
   createdAt: string;
   updatedAt?: string;
-  order?: Order;
+  order?: Order | null;
+  deliveryRequest?: DeliveryRequest | null;
 }
 
 // ---- Cart ----

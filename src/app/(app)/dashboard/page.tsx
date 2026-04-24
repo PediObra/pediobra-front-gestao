@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import Link from "next/link";
 import {
@@ -10,14 +10,24 @@ import {
   Truck,
   ArrowRight,
   DollarSign,
+  Route,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { ordersService } from "@/lib/api/orders";
+import { ordersService, type OrderStats } from "@/lib/api/orders";
 import { sellersService } from "@/lib/api/sellers";
 import { productsService } from "@/lib/api/products";
 import { driversService } from "@/lib/api/drivers";
+import {
+  deliveryRequestsService,
+  type DeliveryRequestStats,
+} from "@/lib/api/delivery-requests";
 import { queryKeys } from "@/lib/query-keys";
-import { centsToBRL, formatDateTime, formatOrderCode } from "@/lib/formatters";
+import {
+  centsToBRL,
+  formatDateTime,
+  formatDeliveryRequestCode,
+  formatOrderCode,
+} from "@/lib/formatters";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -27,39 +37,50 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { OrderStatusBadge } from "@/components/badges";
+import { DeliveryRequestStatusBadge, OrderStatusBadge } from "@/components/badges";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type {
+  DeliveryRequestStatus,
   OrderStatus,
   Paginated,
   Order,
+  DeliveryRequest,
   DriverProfile,
   Product,
   Seller,
 } from "@/lib/api/types";
 
+type DashboardPeriod = "today" | "yesterday" | "last7Days";
+
 export default function DashboardPage() {
   const t = useTranslation();
   const { user, isAdmin, isSeller, sellerIds } = useAuth();
+  const [period, setPeriod] = useState<DashboardPeriod>("today");
 
   const sellerId = !isAdmin && isSeller ? sellerIds[0] : undefined;
+  const periodRange = useMemo(() => getDashboardPeriodRange(period), [period]);
+  const periodParams = {
+    createdFrom: periodRange.from.toISOString(),
+    createdTo: periodRange.to.toISOString(),
+  };
 
-  const sharedOrderParams = sellerId ? { sellerId } : {};
+  const sharedOrderParams = { ...(sellerId ? { sellerId } : {}), ...periodParams };
+  const sharedDeliveryParams = {
+    ...(sellerId ? { requesterSellerId: sellerId } : {}),
+    ...periodParams,
+  };
+  const periodOptions: Array<{ value: DashboardPeriod; label: string }> = [
+    { value: "today", label: t("dashboard.period.today") },
+    { value: "yesterday", label: t("dashboard.period.yesterday") },
+    { value: "last7Days", label: t("dashboard.period.last7Days") },
+  ];
 
   const results = useQueries({
     queries: [
       {
-        queryKey: queryKeys.orders.list({
-          page: 1,
-          limit: 100,
-          ...sharedOrderParams,
-        }),
-        queryFn: () =>
-          ordersService.list({
-            page: 1,
-            limit: 100,
-            ...sharedOrderParams,
-          }),
+        queryKey: queryKeys.orders.stats(sharedOrderParams),
+        queryFn: () => ordersService.stats(sharedOrderParams),
       },
       {
         queryKey: queryKeys.orders.list({
@@ -88,34 +109,46 @@ export default function DashboardPage() {
         queryFn: () => driversService.list({ page: 1, limit: 1 }),
         enabled: isAdmin,
       },
+      {
+        queryKey: queryKeys.deliveryRequests.stats(sharedDeliveryParams),
+        queryFn: () => deliveryRequestsService.stats(sharedDeliveryParams),
+      },
+      {
+        queryKey: queryKeys.deliveryRequests.list({
+          page: 1,
+          limit: 5,
+          ...sharedDeliveryParams,
+        }),
+        queryFn: () =>
+          deliveryRequestsService.list({
+            page: 1,
+            limit: 5,
+            ...sharedDeliveryParams,
+          }),
+      },
     ],
   });
 
   const [
-    ordersAllQ,
+    ordersStatsQ,
     ordersRecentQ,
     sellersQ,
     productsQ,
     driversQ,
+    deliveriesStatsQ,
+    deliveriesRecentQ,
   ] = results as [
-    { data?: Paginated<Order>; isLoading: boolean },
+    { data?: OrderStats; isLoading: boolean },
     { data?: Paginated<Order>; isLoading: boolean },
     { data?: Paginated<Seller>; isLoading: boolean },
     { data?: Paginated<Product>; isLoading: boolean },
     { data?: Paginated<DriverProfile>; isLoading: boolean },
+    { data?: DeliveryRequestStats; isLoading: boolean },
+    { data?: Paginated<DeliveryRequest>; isLoading: boolean },
   ];
 
-  const ordersAll = ordersAllQ.data?.data ?? [];
-  const statusCounts = countByStatus(ordersAll);
-
-  const [sevenDaysAgo] = useState(() => Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const revenueCents7d = ordersAll
-    .filter(
-      (o) =>
-        o.status === "DELIVERED" &&
-        new Date(o.createdAt).getTime() >= sevenDaysAgo,
-    )
-    .reduce((sum, o) => sum + (o.totalAmountCents ?? 0), 0);
+  const statusCounts = ordersStatsQ.data?.statusCounts ?? {};
+  const deliveryStatusCounts = deliveriesStatsQ.data?.statusCounts ?? {};
 
   const cards: Array<{
     label: string;
@@ -128,27 +161,29 @@ export default function DashboardPage() {
     {
       label: t("dashboard.activeOrders"),
       icon: ClipboardList,
-      value:
-        (statusCounts.PENDING ?? 0) +
-        (statusCounts.CONFIRMED ?? 0) +
-        (statusCounts.PREPARING ?? 0) +
-        (statusCounts.READY_FOR_PICKUP ?? 0) +
-        (statusCounts.PICKED_UP ?? 0) +
-        (statusCounts.OUT_FOR_DELIVERY ?? 0),
+      value: ordersStatsQ.data?.active ?? 0,
       hint: t("dashboard.deliveredCancelled", {
-        delivered: statusCounts.DELIVERED ?? 0,
-        cancelled: statusCounts.CANCELLED ?? 0,
+        delivered: ordersStatsQ.data?.delivered ?? 0,
+        cancelled: ordersStatsQ.data?.cancelled ?? 0,
       }),
-      loading: ordersAllQ.isLoading,
+      loading: ordersStatsQ.isLoading,
       href: "/orders",
     },
     {
-      label: t("dashboard.revenue7d"),
+      label: t("dashboard.periodRevenue"),
       icon: DollarSign,
-      value: centsToBRL(revenueCents7d),
-      hint: t("dashboard.revenue7dHint"),
-      loading: ordersAllQ.isLoading,
+      value: centsToBRL(ordersStatsQ.data?.revenueCents ?? 0),
+      hint: t("dashboard.periodRevenueHint"),
+      loading: ordersStatsQ.isLoading,
       href: "/orders",
+    },
+    {
+      label: t("dashboard.activeDeliveries"),
+      icon: Route,
+      value: deliveriesStatsQ.data?.active ?? 0,
+      hint: t("dashboard.deliveryRequestsHint"),
+      loading: deliveriesStatsQ.isLoading,
+      href: "/delivery-requests",
     },
     {
       label: t("dashboard.registeredProducts"),
@@ -181,6 +216,7 @@ export default function DashboardPage() {
   ];
 
   const recentOrders = ordersRecentQ.data?.data ?? [];
+  const recentDeliveries = deliveriesRecentQ.data?.data ?? [];
 
   return (
     <div className="space-y-6">
@@ -194,6 +230,38 @@ export default function DashboardPage() {
             : t("dashboard.sellerDescription")
         }
       />
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold">{t("dashboard.period")}</p>
+          <p className="text-xs text-muted-foreground">
+            {t("dashboard.periodHint")}
+          </p>
+        </div>
+        <div
+          className="inline-flex rounded-md border border-border bg-muted/40 p-1"
+          role="tablist"
+          aria-label={t("dashboard.period")}
+        >
+          {periodOptions.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={period === option.value}
+              className={cn(
+                "h-8 rounded-sm px-3 text-sm font-medium text-muted-foreground transition-colors",
+                "hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                period === option.value &&
+                  "bg-background text-foreground shadow-sm",
+              )}
+              onClick={() => setPeriod(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => {
@@ -227,12 +295,14 @@ export default function DashboardPage() {
         })}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+        <Card>
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
               <CardTitle>{t("dashboard.recentOrders")}</CardTitle>
-              <CardDescription>{t("dashboard.lastFiveOrders")}</CardDescription>
+              <CardDescription>
+                {t("dashboard.lastFiveOrders")}
+              </CardDescription>
             </div>
             <Link
               href="/orders"
@@ -289,12 +359,12 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t("dashboard.statusDistribution")}</CardTitle>
-            <CardDescription>{t("dashboard.last100Orders")}</CardDescription>
+            <CardTitle>{t("dashboard.ordersStatusDistribution")}</CardTitle>
+            <CardDescription>{t("dashboard.ordersInPeriod")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2.5">
-            {ordersAllQ.isLoading ? (
-              Array.from({ length: 6 }).map((_, i) => (
+            {ordersStatsQ.isLoading ? (
+              Array.from({ length: 8 }).map((_, i) => (
                 <Skeleton key={i} className="h-7 w-full" />
               ))
             ) : (
@@ -303,8 +373,11 @@ export default function DashboardPage() {
                   "PENDING",
                   "CONFIRMED",
                   "PREPARING",
+                  "READY_FOR_PICKUP",
+                  "PICKED_UP",
                   "OUT_FOR_DELIVERY",
                   "DELIVERED",
+                  "DELIVERY_FAILED",
                   "CANCELLED",
                 ] as OrderStatus[]
               ).map((status) => (
@@ -322,14 +395,140 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+        <Card>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle>{t("dashboard.recentDeliveries")}</CardTitle>
+              <CardDescription>
+                {t("dashboard.lastFiveDeliveries")}
+              </CardDescription>
+            </div>
+            <Link
+              href="/delivery-requests"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+            >
+              {t("dashboard.viewAll")}
+              <ArrowRight className="size-3.5" />
+            </Link>
+          </CardHeader>
+          <CardContent className="px-0 pb-0">
+            {deliveriesRecentQ.isLoading ? (
+              <div className="space-y-2 px-6 pb-6">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : recentDeliveries.length === 0 ? (
+              <div className="px-6 pb-6 text-sm text-muted-foreground">
+                {t("dashboard.noDeliveries")}
+              </div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {recentDeliveries.map((delivery) => (
+                  <li key={delivery.id}>
+                    <Link
+                      href={`/delivery-requests/${delivery.id}`}
+                      className="flex items-center gap-4 px-6 py-3 hover:bg-muted/50"
+                    >
+                      <div className="w-24 shrink-0 font-mono text-sm font-medium">
+                        {formatDeliveryRequestCode(delivery)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium">
+                          {delivery.dropoffAddress}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {formatDateTime(delivery.createdAt)}
+                        </div>
+                      </div>
+                      <div className="hidden sm:block">
+                        <DeliveryRequestStatusBadge status={delivery.status} />
+                      </div>
+                      <div className="w-24 text-right font-mono text-sm font-semibold">
+                        {centsToBRL(delivery.deliveryFeeCents)}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("dashboard.deliveriesStatusDistribution")}</CardTitle>
+            <CardDescription>
+              {t("dashboard.deliveriesInPeriod")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2.5">
+            {deliveriesStatsQ.isLoading ? (
+              Array.from({ length: 7 }).map((_, i) => (
+                <Skeleton key={i} className="h-7 w-full" />
+              ))
+            ) : (
+              (
+                [
+                  "PENDING",
+                  "ASSIGNED",
+                  "PICKED_UP",
+                  "OUT_FOR_DELIVERY",
+                  "DELIVERED",
+                  "DELIVERY_FAILED",
+                  "CANCELLED",
+                ] as DeliveryRequestStatus[]
+              ).map((status) => (
+                <div
+                  key={status}
+                  className="flex items-center justify-between gap-2"
+                >
+                  <DeliveryRequestStatusBadge status={status} />
+                  <span className="font-mono text-sm font-medium">
+                    {deliveryStatusCounts[status] ?? 0}
+                  </span>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
 
-function countByStatus(orders: Order[]): Partial<Record<OrderStatus, number>> {
-  const out: Partial<Record<OrderStatus, number>> = {};
-  for (const o of orders) {
-    out[o.status] = (out[o.status] ?? 0) + 1;
+function getDashboardPeriodRange(period: DashboardPeriod) {
+  const now = new Date();
+  const todayStart = startOfLocalDay(now);
+
+  if (period === "today") {
+    return {
+      from: todayStart,
+      to: addDays(todayStart, 1),
+    };
   }
-  return out;
+
+  if (period === "yesterday") {
+    return {
+      from: addDays(todayStart, -1),
+      to: todayStart,
+    };
+  }
+
+  return {
+    from: addDays(todayStart, -6),
+    to: addDays(todayStart, 1),
+  };
+}
+
+function startOfLocalDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 }

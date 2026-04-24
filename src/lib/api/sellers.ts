@@ -18,6 +18,8 @@ export interface CreateSellerPayload {
   logo?: File;
   primaryColor?: string;
   secondaryColor?: string;
+  latitude?: string;
+  longitude?: string;
 }
 
 export interface UpdateSellerPayload extends Partial<CreateSellerPayload> {
@@ -48,6 +50,8 @@ function buildSellerFormData(
   appendOptional(formData, "logo", payload.logo);
   appendOptional(formData, "primaryColor", payload.primaryColor);
   appendOptional(formData, "secondaryColor", payload.secondaryColor);
+  appendOptional(formData, "latitude", payload.latitude);
+  appendOptional(formData, "longitude", payload.longitude);
 
   if ("clearLogo" in payload) {
     appendOptional(formData, "clearLogo", payload.clearLogo);

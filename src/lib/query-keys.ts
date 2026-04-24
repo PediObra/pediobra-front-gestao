@@ -1,5 +1,6 @@
 import type {
   ListDriversParams,
+  ListDeliveryRequestsParams,
   ListOrdersParams,
   ListPaymentsParams,
   ListProductsParams,
@@ -37,7 +38,16 @@ export const queryKeys = {
   orders: {
     all: () => ["orders"] as const,
     list: (params: ListOrdersParams) => ["orders", "list", params] as const,
+    stats: (params: ListOrdersParams) => ["orders", "stats", params] as const,
     byId: (id: number) => ["orders", "byId", id] as const,
+  },
+  deliveryRequests: {
+    all: () => ["deliveryRequests"] as const,
+    list: (params: ListDeliveryRequestsParams) =>
+      ["deliveryRequests", "list", params] as const,
+    stats: (params: ListDeliveryRequestsParams) =>
+      ["deliveryRequests", "stats", params] as const,
+    byId: (id: number) => ["deliveryRequests", "byId", id] as const,
   },
   drivers: {
     all: () => ["drivers"] as const,
@@ -49,6 +59,8 @@ export const queryKeys = {
     list: (params: ListPaymentsParams) => ["payments", "list", params] as const,
     byId: (id: number) => ["payments", "byId", id] as const,
     byOrder: (orderId: number) => ["payments", "byOrder", orderId] as const,
+    byDeliveryRequest: (deliveryRequestId: number) =>
+      ["payments", "byDeliveryRequest", deliveryRequestId] as const,
   },
   addresses: {
     all: () => ["addresses"] as const,
