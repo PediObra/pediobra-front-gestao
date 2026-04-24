@@ -165,9 +165,11 @@ function setStoredSidebarCollapsed(value: boolean) {
 
 export function SidebarBrand({
   className,
+  labelClassName,
   collapsed = false,
 }: {
   className?: string;
+  labelClassName?: string;
   collapsed?: boolean;
 }) {
   return (
@@ -177,6 +179,7 @@ export function SidebarBrand({
         className={cn(
           "truncate font-semibold tracking-tight",
           collapsed && "sr-only",
+          labelClassName,
         )}
       >
         PediObra

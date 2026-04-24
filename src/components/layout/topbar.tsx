@@ -39,7 +39,10 @@ export function Topbar() {
     <header className="h-16 shrink-0 border-b border-border bg-background/95 backdrop-blur flex items-center gap-4 px-4 lg:px-6">
       <div className="flex items-center gap-2 md:hidden">
         <MobileSidebar />
-        <SidebarBrand />
+        <SidebarBrand
+          className="min-w-0"
+          labelClassName="hidden min-[420px]:block"
+        />
       </div>
 
       <div className="flex-1" />
