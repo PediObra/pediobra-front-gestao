@@ -24,6 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
+import { useTranslation } from "@/lib/i18n/language-store";
 
 export default function SellerDetailPage({
   params,
@@ -31,6 +32,7 @@ export default function SellerDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslation();
   const sellerId = Number(id);
   const qc = useQueryClient();
   const { canEditSeller, canManageSellerStaff } = useAuth();
@@ -79,7 +81,7 @@ export default function SellerDetailPage({
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.sellers.byId(sellerId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
-      toast.success("Loja atualizada");
+      toast.success(t("seller.updated"));
       setLogoFile(undefined);
       setClearLogo(false);
       setLogoInputKey((key) => key + 1);
@@ -88,7 +90,7 @@ export default function SellerDetailPage({
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível salvar";
+          : t("product.saveFailed");
       toast.error(msg);
     },
   });
@@ -99,20 +101,20 @@ export default function SellerDetailPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/sellers">
             <ArrowLeft className="size-4" />
-            Voltar
+            {t("common.back")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title={seller?.name ?? "Carregando…"}
+        title={seller?.name ?? t("app.loading")}
         description={seller?.email}
         actions={
           seller && canEditTeam && (
             <Button asChild variant="outline">
               <Link href={`/sellers/${sellerId}/team`}>
                 <Users className="size-4" />
-                Gerenciar equipe
+                {t("seller.manageTeam")}
               </Link>
             </Button>
           )
@@ -124,22 +126,22 @@ export default function SellerDetailPage({
       ) : !seller ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Loja não encontrada.
+            {t("seller.notFound")}
           </CardContent>
         </Card>
       ) : (
         <Card className="max-w-2xl">
           <CardHeader>
-            <CardTitle>Dados operacionais</CardTitle>
+            <CardTitle>{t("seller.operationalData")}</CardTitle>
             <CardDescription>
               {canEdit
-                ? "Atualize informações cadastrais."
-                : "Você não tem permissão para editar esta loja."}
+                ? t("seller.updateInfo")
+                : t("seller.noEditPermission")}
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name">{t("common.name")}</Label>
               <Input
                 id="name"
                 disabled={!canEdit}
@@ -148,7 +150,7 @@ export default function SellerDetailPage({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("common.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -158,7 +160,7 @@ export default function SellerDetailPage({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="phone">{t("common.phone")}</Label>
               <Input
                 id="phone"
                 disabled={!canEdit}
@@ -170,7 +172,7 @@ export default function SellerDetailPage({
               </p>
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="address">Endereço</Label>
+              <Label htmlFor="address">{t("common.address")}</Label>
               <Input
                 id="address"
                 disabled={!canEdit}
@@ -191,15 +193,15 @@ export default function SellerDetailPage({
               </p>
             </div>
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="logo">Logo</Label>
+              <Label htmlFor="logo">{t("seller.logo")}</Label>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <ImageFilePreview
                   file={logoFile}
                   src={clearLogo ? null : seller.logo}
                   alt={
                     logoFile
-                      ? `Nova logo da loja ${seller.name}`
-                      : `Logo da loja ${seller.name}`
+                      ? t("seller.newLogoAlt", { seller: seller.name })
+                      : t("seller.logoAlt", { seller: seller.name })
                   }
                   className="size-16 shrink-0"
                 />
@@ -234,7 +236,7 @@ export default function SellerDetailPage({
                       }
                     }}
                   />
-                  Remover logo atual
+                  {t("seller.removeCurrentLogo")}
                 </label>
               )}
             </div>
@@ -250,7 +252,7 @@ export default function SellerDetailPage({
                   ) : (
                     <Save className="size-4" />
                   )}
-                  Salvar alterações
+                  {t("common.saveChanges")}
                 </Button>
               </div>
             )}

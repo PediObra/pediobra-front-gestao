@@ -14,9 +14,11 @@ import { queryKeys } from "@/lib/query-keys";
 import { formatCep, formatPhone } from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useTranslation } from "@/lib/i18n/language-store";
 import type { Seller } from "@/lib/api/types";
 
 export default function SellersListPage() {
+  const t = useTranslation();
   const { isAdmin } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -50,7 +52,7 @@ export default function SellersListPage() {
       },
       {
         accessorKey: "name",
-        header: "Loja",
+        header: t("sellers.store"),
         cell: ({ row }) => (
           <div>
             <div className="font-medium">{row.original.name}</div>
@@ -62,7 +64,7 @@ export default function SellersListPage() {
       },
       {
         accessorKey: "address",
-        header: "Endereço",
+        header: t("sellers.address"),
         cell: ({ row }) => (
           <div className="text-sm max-w-md truncate">
             {row.original.address}
@@ -81,7 +83,7 @@ export default function SellersListPage() {
       },
       {
         accessorKey: "phone",
-        header: "Telefone",
+        header: t("sellers.phone"),
         cell: ({ row }) => (
           <span className="text-sm">{formatPhone(row.original.phone)}</span>
         ),
@@ -94,27 +96,27 @@ export default function SellersListPage() {
             <Button asChild variant="ghost" size="sm">
               <Link href={`/sellers/${row.original.id}`}>
                 <Eye className="size-4" />
-                Detalhes
+                {t("actions.details")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Lojas"
-        description="Todas as lojas parceiras PediObra."
+        title={t("sellers.title")}
+        description={t("sellers.description")}
         actions={
           isAdmin && (
             <Button asChild>
               <Link href="/sellers/new">
                 <Plus className="size-4" />
-                Nova loja
+                {t("sellers.new")}
               </Link>
             </Button>
           )
@@ -125,7 +127,7 @@ export default function SellersListPage() {
         <div className="relative sm:w-80">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome ou email…"
+            placeholder={t("sellers.search")}
             className="pl-8"
             value={search}
             onChange={(e) => {

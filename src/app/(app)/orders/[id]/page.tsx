@@ -22,13 +22,14 @@ import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import {
   centsToBRL,
-  EVIDENCE_TYPE_LABEL,
+  evidenceTypeLabel,
   formatDateTime,
   formatOrderCode,
   formatPhone,
-  ORDER_STATUS_LABEL,
+  orderStatusLabel,
 } from "@/lib/formatters";
 import { allowedOrderStatusTransitions } from "@/lib/auth/permissions";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -67,6 +68,7 @@ export default function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslation();
   const orderId = Number(id);
   const { user, isAdmin } = useAuth();
   const qc = useQueryClient();
@@ -101,7 +103,7 @@ export default function OrderDetailPage({
 
   const statusMutation = useMutation({
     mutationFn: () => {
-      if (!nextStatus) throw new Error("Selecione um status");
+      if (!nextStatus) throw new Error(t("order.selectStatus"));
       return ordersService.updateStatus(orderId, {
         status: nextStatus,
         cancellationReason:
@@ -113,7 +115,7 @@ export default function OrderDetailPage({
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.orders.byId(orderId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
-      toast.success("Status atualizado");
+      toast.success(t("order.statusUpdated"));
       setNextStatus("");
       setCancelReason("");
       setCancelDetails("");
@@ -124,21 +126,21 @@ export default function OrderDetailPage({
           ? err.displayMessage
           : err instanceof Error
             ? err.message
-            : "Não foi possível atualizar o status";
+            : t("order.statusUpdateFailed");
       toast.error(msg);
     },
   });
 
   const assignMutation = useMutation({
     mutationFn: () => {
-      if (!driverSel) throw new Error("Selecione um motorista");
+      if (!driverSel) throw new Error(t("order.selectDriver"));
       return ordersService.assignDriver(orderId, {
         driverProfileId: Number(driverSel),
       });
     },
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.orders.byId(orderId), updated);
-      toast.success("Motorista atribuído");
+      toast.success(t("order.driverAssigned"));
       setDriverSel("");
     },
     onError: (err: unknown) => {
@@ -147,14 +149,14 @@ export default function OrderDetailPage({
           ? err.displayMessage
           : err instanceof Error
             ? err.message
-            : "Não foi possível atribuir";
+            : t("order.assignFailed");
       toast.error(msg);
     },
   });
 
   const evidenceMutation = useMutation({
     mutationFn: () => {
-      if (!evFile) throw new Error("Selecione uma imagem");
+      if (!evFile) throw new Error(t("order.selectImage"));
 
       return ordersService.addEvidence(orderId, {
         evidenceType: evType,
@@ -165,7 +167,7 @@ export default function OrderDetailPage({
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.orders.byId(orderId) });
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
-      toast.success("Evidência adicionada");
+      toast.success(t("order.evidenceAdded"));
       setEvFile(null);
       setEvNote("");
       setEvFileInputKey((key) => key + 1);
@@ -176,7 +178,7 @@ export default function OrderDetailPage({
           ? err.displayMessage
           : err instanceof Error
             ? err.message
-            : "Não foi possível adicionar";
+            : t("order.addFailed");
       toast.error(msg);
     },
   });
@@ -196,12 +198,12 @@ export default function OrderDetailPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/orders">
             <ArrowLeft className="size-4" />
-            Voltar
+            {t("common.back")}
           </Link>
         </Button>
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Pedido não encontrado.
+            {t("order.notFound")}
           </CardContent>
         </Card>
       </div>
@@ -216,7 +218,7 @@ export default function OrderDetailPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/orders">
             <ArrowLeft className="size-4" />
-            Voltar para pedidos
+            {t("order.backToOrders")}
           </Link>
         </Button>
       </div>
@@ -225,7 +227,9 @@ export default function OrderDetailPage({
         title={
           <span className="font-mono">{formatOrderCode(order)}</span>
         }
-        description={`Criado em ${formatDateTime(order.createdAt)}`}
+        description={t("order.createdAt", {
+          date: formatDateTime(order.createdAt),
+        })}
         actions={
           <div className="flex items-center gap-2">
             <OrderStatusBadge status={order.status} />
@@ -242,7 +246,7 @@ export default function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="size-4" />
-                Itens ({order.items?.length ?? 0})
+                {t("order.items", { count: order.items?.length ?? 0 })}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -270,7 +274,10 @@ export default function OrderDetailPage({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm">
-                        {product?.name ?? `Produto #${item.sellerProductId}`}
+                        {product?.name ??
+                          t("app.productFallback", {
+                            id: item.sellerProductId,
+                          })}
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {item.quantity} × {centsToBRL(item.unitPriceCents)}
@@ -284,13 +291,15 @@ export default function OrderDetailPage({
               })}
 
               <div className="flex justify-between border-t border-border pt-3 text-sm">
-                <span className="text-muted-foreground">Taxa de entrega</span>
+                <span className="text-muted-foreground">
+                  {t("order.deliveryFee")}
+                </span>
                 <span className="font-mono">
                   {centsToBRL(order.deliveryFeeCents ?? 0)}
                 </span>
               </div>
               <div className="flex justify-between text-base font-semibold">
-                <span>Total</span>
+                <span>{t("order.total")}</span>
                 <span className="font-mono">
                   {centsToBRL(order.totalAmountCents)}
                 </span>
@@ -300,8 +309,8 @@ export default function OrderDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Timeline</CardTitle>
-              <CardDescription>Histórico de mudanças de status.</CardDescription>
+              <CardTitle>{t("order.timeline")}</CardTitle>
+              <CardDescription>{t("order.timelineDescription")}</CardDescription>
             </CardHeader>
             <CardContent>
               {order.statusHistory?.length ? (
@@ -328,7 +337,7 @@ export default function OrderDetailPage({
                         )}
                         {h.changedByUser && (
                           <p className="text-xs text-muted-foreground">
-                            por {h.changedByUser.name}
+                            {t("order.changedBy", { name: h.changedByUser.name })}
                           </p>
                         )}
                       </li>
@@ -336,7 +345,7 @@ export default function OrderDetailPage({
                 </ol>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Sem histórico disponível.
+                  {t("order.noHistory")}
                 </p>
               )}
             </CardContent>
@@ -346,10 +355,12 @@ export default function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Camera className="size-4" />
-                Evidências ({order.evidences?.length ?? 0})
+                {t("order.evidences", {
+                  count: order.evidences?.length ?? 0,
+                })}
               </CardTitle>
               <CardDescription>
-                Fotos de coleta, entrega e confirmações.
+                {t("order.evidencesDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -367,13 +378,13 @@ export default function OrderDetailPage({
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={e.imageUrl}
-                          alt={EVIDENCE_TYPE_LABEL[e.evidenceType]}
+                          alt={evidenceTypeLabel(e.evidenceType)}
                           className="size-full object-cover group-hover:scale-105 transition-transform"
                         />
                       </div>
                       <div className="p-2 bg-card">
                         <p className="text-xs font-medium">
-                          {EVIDENCE_TYPE_LABEL[e.evidenceType]}
+                          {evidenceTypeLabel(e.evidenceType)}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
                           {formatDateTime(e.createdAt)}
@@ -389,15 +400,15 @@ export default function OrderDetailPage({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma evidência enviada ainda.
+                  {t("order.noEvidence")}
                 </p>
               )}
 
               <div className="border-t border-border pt-4 space-y-3">
-                <p className="text-sm font-medium">Adicionar evidência</p>
+                <p className="text-sm font-medium">{t("order.addEvidence")}</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label>Tipo</Label>
+                    <Label>{t("order.type")}</Label>
                     <Select
                       value={evType}
                       onValueChange={(v) => setEvType(v as EvidenceType)}
@@ -408,21 +419,23 @@ export default function OrderDetailPage({
                       <SelectContent>
                         {EVIDENCE_TYPES.map((t) => (
                           <SelectItem key={t} value={t}>
-                            {EVIDENCE_TYPE_LABEL[t]}
+                            {evidenceTypeLabel(t)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="ev-image">Imagem</Label>
+                    <Label htmlFor="ev-image">{t("order.image")}</Label>
                     <div className="flex flex-col gap-3 sm:flex-row">
                       <ImageFilePreview
                         file={evFile}
                         alt={
                           evFile
-                            ? `Prévia da evidência ${evFile.name}`
-                            : "Prévia da evidência"
+                            ? t("order.evidencePreviewFile", {
+                                file: evFile.name,
+                              })
+                            : t("order.evidencePreview")
                         }
                         className="size-20 shrink-0"
                       />
@@ -445,7 +458,7 @@ export default function OrderDetailPage({
                     </div>
                   </div>
                   <div className="space-y-1.5 sm:col-span-2">
-                    <Label htmlFor="ev-note">Observação (opcional)</Label>
+                    <Label htmlFor="ev-note">{t("order.noteOptional")}</Label>
                     <Textarea
                       id="ev-note"
                       rows={2}
@@ -464,7 +477,7 @@ export default function OrderDetailPage({
                       ) : (
                         <Camera className="size-4" />
                       )}
-                      Enviar
+                      {t("common.send")}
                     </Button>
                   </div>
                 </div>
@@ -475,7 +488,9 @@ export default function OrderDetailPage({
           {order.payments?.length ? (
             <Card>
               <CardHeader>
-                <CardTitle>Pagamentos ({order.payments.length})</CardTitle>
+                <CardTitle>
+                  {t("order.payments", { count: order.payments.length })}
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {order.payments.map((p) => (
@@ -509,7 +524,7 @@ export default function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <UserRound className="size-4" />
-                Cliente
+                {t("order.client")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
@@ -533,7 +548,7 @@ export default function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="size-4" />
-                Entrega
+                {t("order.delivery")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
@@ -553,7 +568,7 @@ export default function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Truck className="size-4" />
-                Motorista
+                {t("order.driver")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -561,7 +576,9 @@ export default function OrderDetailPage({
                 <div className="text-sm space-y-1">
                   <div className="font-medium">
                     {order.assignedDriverProfile.user?.name ??
-                      `Motorista #${order.assignedDriverProfile.id}`}
+                      t("order.driverFallback", {
+                        id: order.assignedDriverProfile.id,
+                      })}
                   </div>
                   <div className="text-xs text-muted-foreground">
                     {formatPhone(order.assignedDriverProfile.phone)}
@@ -575,16 +592,16 @@ export default function OrderDetailPage({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Sem motorista atribuído.
+                  {t("order.noDriver")}
                 </p>
               )}
 
               {isAdmin && (
                 <div className="border-t border-border pt-3 space-y-2">
-                  <Label>Atribuir motorista</Label>
+                  <Label>{t("order.assignDriver")}</Label>
                   <Select value={driverSel} onValueChange={setDriverSel}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecionar" />
+                      <SelectValue placeholder={t("order.select")} />
                     </SelectTrigger>
                     <SelectContent>
                       {(driversQ.data?.data ?? []).map((d) => (
@@ -605,7 +622,7 @@ export default function OrderDetailPage({
                     ) : (
                       <CheckCircle2 className="size-4" />
                     )}
-                    Atribuir
+                    {t("common.assign")}
                   </Button>
                 </div>
               )}
@@ -615,9 +632,9 @@ export default function OrderDetailPage({
           {canChangeStatus && (
             <Card>
               <CardHeader>
-                <CardTitle>Mudar status</CardTitle>
+                <CardTitle>{t("order.changeStatus")}</CardTitle>
                 <CardDescription>
-                  Estados permitidos pelo seu perfil.
+                  {t("order.allowedStatuses")}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -626,12 +643,12 @@ export default function OrderDetailPage({
                   onValueChange={(v) => setNextStatus(v as OrderStatus)}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Novo status" />
+                    <SelectValue placeholder={t("order.newStatus")} />
                   </SelectTrigger>
                   <SelectContent>
                     {transitions.map((s) => (
                       <SelectItem key={s} value={s}>
-                        {ORDER_STATUS_LABEL[s as OrderStatus]}
+                        {orderStatusLabel(s as OrderStatus)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -640,12 +657,12 @@ export default function OrderDetailPage({
                 {nextStatus === "CANCELLED" && (
                   <div className="space-y-2">
                     <Input
-                      placeholder="Motivo"
+                      placeholder={t("order.reason")}
                       value={cancelReason}
                       onChange={(e) => setCancelReason(e.target.value)}
                     />
                     <Textarea
-                      placeholder="Detalhes (opcional)"
+                      placeholder={t("order.detailsOptional")}
                       rows={2}
                       value={cancelDetails}
                       onChange={(e) => setCancelDetails(e.target.value)}
@@ -662,7 +679,7 @@ export default function OrderDetailPage({
                   {statusMutation.isPending && (
                     <Loader2 className="size-4 animate-spin" />
                   )}
-                  Aplicar
+                  {t("common.apply")}
                 </Button>
               </CardContent>
             </Card>

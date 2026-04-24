@@ -1,10 +1,11 @@
 import {
-  DRIVER_STATUS_LABEL,
-  MEMBERSHIP_ROLE_LABEL,
-  ORDER_STATUS_LABEL,
-  PAYMENT_STATUS_LABEL,
-  ROLE_LABEL,
+  driverStatusLabel,
+  membershipRoleLabel,
+  orderStatusLabel,
+  paymentStatusLabel,
+  roleLabel,
 } from "@/lib/formatters";
+import { useLanguageStore } from "@/lib/i18n/language-store";
 import type {
   DriverStatus,
   MembershipRole,
@@ -29,9 +30,11 @@ const ORDER_STATUS_VARIANT: Record<OrderStatus, BadgeVariant> = {
 };
 
 export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+  useLanguageStore((state) => state.language);
+
   return (
     <Badge variant={ORDER_STATUS_VARIANT[status]}>
-      {ORDER_STATUS_LABEL[status] ?? status}
+      {orderStatusLabel(status)}
     </Badge>
   );
 }
@@ -46,9 +49,11 @@ const PAYMENT_STATUS_VARIANT: Record<PaymentStatus, BadgeVariant> = {
 };
 
 export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
+  useLanguageStore((state) => state.language);
+
   return (
     <Badge variant={PAYMENT_STATUS_VARIANT[status]}>
-      {PAYMENT_STATUS_LABEL[status] ?? status}
+      {paymentStatusLabel(status)}
     </Badge>
   );
 }
@@ -61,9 +66,11 @@ const DRIVER_STATUS_VARIANT: Record<DriverStatus, BadgeVariant> = {
 };
 
 export function DriverStatusBadge({ status }: { status: DriverStatus }) {
+  useLanguageStore((state) => state.language);
+
   return (
     <Badge variant={DRIVER_STATUS_VARIANT[status]}>
-      {DRIVER_STATUS_LABEL[status] ?? status}
+      {driverStatusLabel(status)}
     </Badge>
   );
 }
@@ -76,17 +83,21 @@ const ROLE_VARIANT: Record<RoleName, BadgeVariant> = {
 };
 
 export function RoleBadge({ role }: { role: RoleName }) {
+  useLanguageStore((state) => state.language);
+
   return (
     <Badge variant={ROLE_VARIANT[role] ?? "muted"}>
-      {ROLE_LABEL[role] ?? role}
+      {roleLabel(role)}
     </Badge>
   );
 }
 
 export function MembershipRoleBadge({ role }: { role: MembershipRole }) {
+  useLanguageStore((state) => state.language);
+
   return (
     <Badge variant={role === "OWNER" ? "default" : "muted"}>
-      {MEMBERSHIP_ROLE_LABEL[role] ?? role}
+      {membershipRoleLabel(role)}
     </Badge>
   );
 }

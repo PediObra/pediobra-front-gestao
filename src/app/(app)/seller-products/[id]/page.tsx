@@ -17,6 +17,7 @@ import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { centsToBRL } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -46,6 +47,7 @@ export default function SellerProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslation();
   const sellerProductId = Number(id);
   const { canManageSellerProducts } = useAuth();
   const qc = useQueryClient();
@@ -83,13 +85,13 @@ export default function SellerProductDetailPage({
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.sellerProducts.byId(sellerProductId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.sellerProducts.all() });
-      toast.success("Oferta atualizada");
+      toast.success(t("sellerProduct.updated"));
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível salvar";
+          : t("product.saveFailed");
       toast.error(msg);
     },
   });
@@ -98,14 +100,14 @@ export default function SellerProductDetailPage({
     mutationFn: () => sellerProductsService.remove(sellerProductId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.sellerProducts.all() });
-      toast.success("Oferta arquivada");
+      toast.success(t("sellerProduct.archived"));
       router.push("/seller-products");
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível arquivar";
+          : t("product.archiveFailed");
       toast.error(msg);
     },
   });
@@ -119,16 +121,19 @@ export default function SellerProductDetailPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/seller-products">
             <ArrowLeft className="size-4" />
-            Voltar
+            {t("common.back")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title={sp?.product?.name ?? "Oferta"}
+        title={sp?.product?.name ?? t("sellerProduct.offer")}
         description={
           sp
-            ? `Loja: ${sp.seller?.name ?? `#${sp.sellerId}`} · Preço atual: ${centsToBRL(sp.unitPriceCents)}`
+            ? t("sellerProduct.descriptionLine", {
+                store: sp.seller?.name ?? `#${sp.sellerId}`,
+                price: centsToBRL(sp.unitPriceCents),
+              })
             : undefined
         }
         actions={
@@ -137,18 +142,18 @@ export default function SellerProductDetailPage({
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Trash2 className="size-4" />
-                  Arquivar
+                  {t("common.archive")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Arquivar oferta?</DialogTitle>
+                  <DialogTitle>{t("sellerProduct.archiveTitle")}</DialogTitle>
                   <DialogDescription>
-                    A oferta deixará de aparecer na loja.
+                    {t("sellerProduct.archiveDescription")}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="ghost">Cancelar</Button>
+                  <Button variant="ghost">{t("common.cancel")}</Button>
                   <Button
                     variant="destructive"
                     onClick={() => deleteMutation.mutate()}
@@ -157,7 +162,7 @@ export default function SellerProductDetailPage({
                     {deleteMutation.isPending && (
                       <Loader2 className="size-4 animate-spin" />
                     )}
-                    Arquivar
+                    {t("common.archive")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -171,14 +176,14 @@ export default function SellerProductDetailPage({
       ) : !sp ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Oferta não encontrada.
+            {t("sellerProduct.notFound")}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle>Produto</CardTitle>
+              <CardTitle>{t("sellerProducts.product")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="aspect-square rounded-md border border-border bg-muted overflow-hidden flex items-center justify-center">
@@ -202,7 +207,7 @@ export default function SellerProductDetailPage({
               </div>
               <Button asChild variant="outline" size="sm" className="w-full">
                 <Link href={`/products/${sp.productId}`}>
-                  Ver detalhes do produto
+                  {t("sellerProduct.productDetails")}
                 </Link>
               </Button>
             </CardContent>
@@ -210,16 +215,16 @@ export default function SellerProductDetailPage({
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Preço e estoque</CardTitle>
+              <CardTitle>{t("sellerProduct.priceStock")}</CardTitle>
               <CardDescription>
                 {canManage
-                  ? "Edite valores da oferta."
-                  : "Você não tem permissão de gerenciar essa oferta."}
+                  ? t("sellerProduct.editValues")
+                  : t("sellerProduct.noPermission")}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="price">Preço unitário</Label>
+                <Label htmlFor="price">{t("sellerProduct.unitPrice")}</Label>
                 <MoneyInput
                   valueCents={priceCents}
                   onChangeCents={setPriceCents}
@@ -227,7 +232,7 @@ export default function SellerProductDetailPage({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="stock">Estoque</Label>
+                <Label htmlFor="stock">{t("sellerProducts.stock")}</Label>
                 <Input
                   id="stock"
                   type="number"
@@ -258,7 +263,7 @@ export default function SellerProductDetailPage({
                     ) : (
                       <Save className="size-4" />
                     )}
-                    Salvar alterações
+                    {t("common.saveChanges")}
                   </Button>
                 </div>
               )}

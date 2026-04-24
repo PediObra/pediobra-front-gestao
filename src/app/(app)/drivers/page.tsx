@@ -18,21 +18,20 @@ import { DataTable } from "@/components/data-table/data-table";
 import { DriverStatusBadge } from "@/components/badges";
 import { driversService, type ListDriversParams } from "@/lib/api/drivers";
 import { queryKeys } from "@/lib/query-keys";
-import { formatPhone } from "@/lib/formatters";
+import { driverStatusLabel, formatPhone } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/language-store";
 import type { DriverProfile, DriverStatus } from "@/lib/api/types";
 
-const STATUS_OPTIONS: Array<{
-  value: DriverStatus | "ALL";
-  label: string;
-}> = [
-  { value: "ALL", label: "Todos os status" },
-  { value: "PENDING", label: "Pendentes" },
-  { value: "APPROVED", label: "Aprovados" },
-  { value: "REJECTED", label: "Rejeitados" },
-  { value: "BLOCKED", label: "Bloqueados" },
+const STATUS_OPTIONS: Array<DriverStatus | "ALL"> = [
+  "ALL",
+  "PENDING",
+  "APPROVED",
+  "REJECTED",
+  "BLOCKED",
 ];
 
 export default function DriversListPage() {
+  const t = useTranslation();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<DriverStatus | "ALL">("ALL");
 
@@ -64,7 +63,7 @@ export default function DriversListPage() {
       },
       {
         id: "name",
-        header: "Nome",
+        header: t("drivers.name"),
         cell: ({ row }) => (
           <div>
             <div className="font-medium">{row.original.user?.name ?? "—"}</div>
@@ -83,14 +82,14 @@ export default function DriversListPage() {
       },
       {
         accessorKey: "phone",
-        header: "Telefone",
+        header: t("drivers.phone"),
         cell: ({ row }) => (
           <span className="text-sm">{formatPhone(row.original.phone)}</span>
         ),
       },
       {
         id: "vehicles",
-        header: "Veículos",
+        header: t("drivers.vehicles"),
         cell: ({ row }) => (
           <span className="text-sm">
             {row.original.vehicles?.length ?? 0}
@@ -99,7 +98,7 @@ export default function DriversListPage() {
       },
       {
         accessorKey: "status",
-        header: "Status",
+        header: t("common.status"),
         cell: ({ row }) => <DriverStatusBadge status={row.original.status} />,
       },
       {
@@ -110,21 +109,21 @@ export default function DriversListPage() {
             <Button asChild variant="ghost" size="sm">
               <Link href={`/drivers/${row.original.id}`}>
                 <Eye className="size-4" />
-                Detalhes
+                {t("actions.details")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Motoristas"
-        description="Aprove ou bloqueie motoboys cadastrados."
+        title={t("drivers.title")}
+        description={t("drivers.description")}
       />
 
       <div className="flex items-center gap-3">
@@ -140,8 +139,8 @@ export default function DriversListPage() {
           </SelectTrigger>
           <SelectContent>
             {STATUS_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+              <SelectItem key={opt} value={opt}>
+                {opt === "ALL" ? t("drivers.allStatuses") : driverStatusLabel(opt)}
               </SelectItem>
             ))}
           </SelectContent>

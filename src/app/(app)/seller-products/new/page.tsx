@@ -13,6 +13,7 @@ import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -35,6 +36,7 @@ import { MoneyInput } from "@/components/forms/money-input";
 
 export default function NewSellerProductPage() {
   const router = useRouter();
+  const t = useTranslation();
   const qc = useQueryClient();
   const { isAdmin, sellerIds, canManageSellerProducts } = useAuth();
 
@@ -82,7 +84,8 @@ export default function NewSellerProductPage() {
 
   const mutation = useMutation({
     mutationFn: () => {
-      if (!sellerId || !productId) throw new Error("Selecione loja e produto");
+      if (!sellerId || !productId)
+        throw new Error(t("sellerProduct.selectStoreProduct"));
       return sellerProductsService.create({
         sellerId: Number(sellerId),
         productId: Number(productId),
@@ -93,14 +96,14 @@ export default function NewSellerProductPage() {
     },
     onSuccess: (sp) => {
       qc.invalidateQueries({ queryKey: queryKeys.sellerProducts.all() });
-      toast.success("Oferta criada");
+      toast.success(t("sellerProduct.created"));
       router.push(`/seller-products/${sp.id}`);
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível criar a oferta";
+          : t("sellerProduct.createFailed");
       toast.error(msg);
     },
   });
@@ -111,29 +114,29 @@ export default function NewSellerProductPage() {
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/seller-products">
             <ArrowLeft className="size-4" />
-            Voltar
+            {t("common.back")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title="Nova oferta"
-        description="Publique um produto na sua loja com preço e estoque."
+        title={t("sellerProducts.new")}
+        description={t("sellerProduct.newDescription")}
       />
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle>Dados da oferta</CardTitle>
+          <CardTitle>{t("sellerProduct.data")}</CardTitle>
           <CardDescription>
-            Preço em R$ (armazenado internamente em centavos).
+            {t("sellerProduct.priceHint")}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
-            <Label>Loja</Label>
+            <Label>{t("sellerProducts.store")}</Label>
             <Select value={sellerId} onValueChange={setSellerId}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione a loja" />
+                <SelectValue placeholder={t("sellerProduct.selectStore")} />
               </SelectTrigger>
               <SelectContent>
                 {availableSellers.map((s) => (
@@ -145,21 +148,21 @@ export default function NewSellerProductPage() {
             </Select>
             {!canCreateForSelected && sellerId && (
               <p className="text-xs text-destructive">
-                Você não tem permissão de gerenciar ofertas nessa loja.
+                {t("sellerProduct.managePermissionError")}
               </p>
             )}
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label>Produto</Label>
+            <Label>{t("sellerProducts.product")}</Label>
             <Input
-              placeholder="Buscar produto…"
+              placeholder={t("sellerProduct.searchProduct")}
               value={productSearch}
               onChange={(e) => setProductSearch(e.target.value)}
             />
             <Select value={productId} onValueChange={setProductId}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione um produto" />
+                <SelectValue placeholder={t("sellerProduct.selectProduct")} />
               </SelectTrigger>
               <SelectContent>
                 {(productsQ.data?.data ?? []).map((p) => (
@@ -172,7 +175,7 @@ export default function NewSellerProductPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="price">Preço unitário</Label>
+            <Label htmlFor="price">{t("sellerProduct.unitPrice")}</Label>
             <MoneyInput
               valueCents={priceCents}
               onChangeCents={setPriceCents}
@@ -180,7 +183,7 @@ export default function NewSellerProductPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="stock">Estoque</Label>
+            <Label htmlFor="stock">{t("sellerProducts.stock")}</Label>
             <Input
               id="stock"
               type="number"
@@ -191,18 +194,18 @@ export default function NewSellerProductPage() {
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="sku">SKU (opcional)</Label>
+            <Label htmlFor="sku">{t("sellerProduct.skuOptional")}</Label>
             <Input
               id="sku"
               value={sku}
               onChange={(e) => setSku(e.target.value)}
-              placeholder="Código interno"
+              placeholder={t("sellerProduct.skuPlaceholder")}
             />
           </div>
 
           <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
             <Button variant="ghost" asChild>
-              <Link href="/seller-products">Cancelar</Link>
+              <Link href="/seller-products">{t("common.cancel")}</Link>
             </Button>
             <Button
               onClick={() => mutation.mutate()}
@@ -218,7 +221,7 @@ export default function NewSellerProductPage() {
               ) : (
                 <Save className="size-4" />
               )}
-              Criar oferta
+              {t("sellerProduct.create")}
             </Button>
           </div>
         </CardContent>

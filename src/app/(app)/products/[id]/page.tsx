@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
+import { useTranslation } from "@/lib/i18n/language-store";
 
 export default function ProductDetailPage({
   params,
@@ -47,6 +48,7 @@ export default function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslation();
   const productId = Number(id);
   const { isAdmin } = useAuth();
   const qc = useQueryClient();
@@ -100,7 +102,7 @@ export default function ProductDetailPage({
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.products.byId(productId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.products.all() });
-      toast.success("Produto atualizado");
+      toast.success(t("product.updated"));
       setImageFiles([]);
       setClearImages(false);
       setImageInputKey((key) => key + 1);
@@ -109,7 +111,7 @@ export default function ProductDetailPage({
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível salvar";
+          : t("product.saveFailed");
       toast.error(msg);
     },
   });
@@ -118,14 +120,14 @@ export default function ProductDetailPage({
     mutationFn: () => productsService.remove(productId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.products.all() });
-      toast.success("Produto arquivado");
+      toast.success(t("product.archived"));
       router.push("/products");
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível arquivar";
+          : t("product.archiveFailed");
       toast.error(msg);
     },
   });
@@ -142,13 +144,13 @@ export default function ProductDetailPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/products">
             <ArrowLeft className="size-4" />
-            Voltar
+            {t("common.back")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title={product?.name ?? "Carregando…"}
+        title={product?.name ?? t("app.loading")}
         description={product?.category?.name ?? product?.brand ?? undefined}
         actions={
           product && isAdmin && (
@@ -156,19 +158,18 @@ export default function ProductDetailPage({
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">
                   <Trash2 className="size-4" />
-                  Arquivar
+                  {t("common.archive")}
                 </Button>
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Arquivar produto?</DialogTitle>
+                  <DialogTitle>{t("product.archiveTitle")}</DialogTitle>
                   <DialogDescription>
-                    Essa ação fará um soft-delete. O produto deixa de aparecer
-                    nas listagens públicas.
+                    {t("product.archiveDescription")}
                   </DialogDescription>
                 </DialogHeader>
                 <DialogFooter>
-                  <Button variant="ghost">Cancelar</Button>
+                  <Button variant="ghost">{t("common.cancel")}</Button>
                   <Button
                     variant="destructive"
                     onClick={() => deleteMutation.mutate()}
@@ -177,7 +178,7 @@ export default function ProductDetailPage({
                     {deleteMutation.isPending && (
                       <Loader2 className="size-4 animate-spin" />
                     )}
-                    Arquivar
+                    {t("common.archive")}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -194,21 +195,21 @@ export default function ProductDetailPage({
       ) : !product ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Produto não encontrado.
+            {t("product.notFound")}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle>Galeria</CardTitle>
+              <CardTitle>{t("product.gallery")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="aspect-square rounded-md border border-border bg-muted overflow-hidden flex items-center justify-center">
                 {pendingPrimaryImage ? (
                   <ImageFilePreview
                     file={pendingPrimaryImage}
-                    alt={`Nova imagem do produto ${product.name}`}
+                    alt={t("product.newImageAlt", { product: product.name })}
                     className="size-full border-0"
                   />
                 ) : showExistingImages && primaryImage ? (
@@ -228,7 +229,7 @@ export default function ProductDetailPage({
                     <ImageFilePreview
                       key={`${file.name}-${file.lastModified}`}
                       file={file}
-                      alt={`Nova imagem ${file.name}`}
+                      alt={t("product.newImageFileAlt", { file: file.name })}
                       className="aspect-square"
                     />
                   ))}
@@ -254,7 +255,7 @@ export default function ProductDetailPage({
               {product.barcodes && product.barcodes.length > 0 && (
                 <div className="pt-3 border-t border-border">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                    Códigos de barras
+                    {t("product.barcodes")}
                   </p>
                   <ul className="space-y-1">
                     {product.barcodes.map((b) => (
@@ -278,16 +279,16 @@ export default function ProductDetailPage({
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Detalhes</CardTitle>
+              <CardTitle>{t("product.details")}</CardTitle>
               <CardDescription>
                 {isAdmin
-                  ? "Edite os dados principais do produto."
-                  : "Somente administradores podem editar."}
+                  ? t("product.detailsEditable")
+                  : t("product.detailsReadonly")}
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="name">{t("common.name")}</Label>
                 <Input
                   id="name"
                   disabled={!isAdmin}
@@ -296,7 +297,7 @@ export default function ProductDetailPage({
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="description">{t("common.description")}</Label>
                 <Textarea
                   id="description"
                   rows={3}
@@ -306,7 +307,7 @@ export default function ProductDetailPage({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="brand">Marca</Label>
+                <Label htmlFor="brand">{t("product.brand")}</Label>
                 <Input
                   id="brand"
                   disabled={!isAdmin}
@@ -315,7 +316,7 @@ export default function ProductDetailPage({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="unit">Unidade</Label>
+                <Label htmlFor="unit">{t("product.unit")}</Label>
                 <Input
                   id="unit"
                   disabled={!isAdmin}
@@ -324,7 +325,7 @@ export default function ProductDetailPage({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="size">Tamanho / dimensão</Label>
+                <Label htmlFor="size">{t("product.size")}</Label>
                 <Input
                   id="size"
                   disabled={!isAdmin}
@@ -333,7 +334,7 @@ export default function ProductDetailPage({
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="product-images">Substituir imagens</Label>
+                <Label htmlFor="product-images">{t("product.replaceImages")}</Label>
                 <Input
                   key={imageInputKey}
                   id="product-images"
@@ -354,7 +355,9 @@ export default function ProductDetailPage({
                       >
                         <ImageFilePreview
                           file={file}
-                          alt={`Prévia da imagem ${file.name}`}
+                          alt={t("product.imagePreviewAlt", {
+                            file: file.name,
+                          })}
                           className="aspect-square"
                         />
                         <figcaption className="truncate text-xs text-muted-foreground">
@@ -378,7 +381,7 @@ export default function ProductDetailPage({
                       }
                     }}
                   />
-                  Remover imagens atuais
+                  {t("product.removeCurrentImages")}
                 </label>
               )}
 
@@ -393,7 +396,7 @@ export default function ProductDetailPage({
                     ) : (
                       <Save className="size-4" />
                     )}
-                    Salvar alterações
+                    {t("common.saveChanges")}
                   </Button>
                 </div>
               )}

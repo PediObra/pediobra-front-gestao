@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import type { DriverStatus } from "@/lib/api/types";
 import { formatDate, formatPhone } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -24,25 +25,25 @@ import { DriverStatusBadge } from "@/components/badges";
 
 const STATUS_ACTIONS: Array<{
   target: DriverStatus;
-  label: string;
+  labelKey: "driver.approve" | "driver.reject" | "driver.block";
   icon: typeof CheckCircle2;
   variant: "default" | "destructive" | "secondary" | "outline";
 }> = [
   {
     target: "APPROVED",
-    label: "Aprovar",
+    labelKey: "driver.approve",
     icon: CheckCircle2,
     variant: "default",
   },
   {
     target: "REJECTED",
-    label: "Rejeitar",
+    labelKey: "driver.reject",
     icon: XCircle,
     variant: "outline",
   },
   {
     target: "BLOCKED",
-    label: "Bloquear",
+    labelKey: "driver.block",
     icon: Ban,
     variant: "destructive",
   },
@@ -54,6 +55,7 @@ export default function DriverDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslation();
   const driverId = Number(id);
   const qc = useQueryClient();
 
@@ -69,13 +71,13 @@ export default function DriverDetailPage({
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.drivers.byId(driverId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.drivers.all() });
-      toast.success("Status atualizado");
+      toast.success(t("order.statusUpdated"));
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível atualizar o status";
+          : t("order.statusUpdateFailed");
       toast.error(msg);
     },
   });
@@ -88,13 +90,13 @@ export default function DriverDetailPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/drivers">
             <ArrowLeft className="size-4" />
-            Voltar para motoristas
+            {t("driver.backToDrivers")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title={driver?.user?.name ?? "Carregando…"}
+        title={driver?.user?.name ?? t("app.loading")}
         description={driver?.user?.email}
         actions={driver && <DriverStatusBadge status={driver.status} />}
       />
@@ -107,15 +109,15 @@ export default function DriverDetailPage({
       ) : !driver ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Motorista não encontrado.
+            {t("driver.notFound")}
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Dados do motorista</CardTitle>
-              <CardDescription>Informações cadastrais e veículos.</CardDescription>
+              <CardTitle>{t("driver.data")}</CardTitle>
+              <CardDescription>{t("driver.dataDescription")}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
@@ -133,26 +135,28 @@ export default function DriverDetailPage({
                 </div>
                 <div>
                   <dt className="text-muted-foreground text-xs uppercase tracking-wider">
-                    Telefone
+                    {t("common.phone")}
                   </dt>
                   <dd>{formatPhone(driver.phone)}</dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground text-xs uppercase tracking-wider">
-                    Cadastrado em
+                    {t("common.createdAt")}
                   </dt>
                   <dd>{formatDate(driver.createdAt)}</dd>
                 </div>
                 <div className="sm:col-span-2">
                   <dt className="text-muted-foreground text-xs uppercase tracking-wider">
-                    Endereço
+                    {t("common.address")}
                   </dt>
                   <dd>{driver.address}</dd>
                 </div>
               </dl>
 
               <div>
-                <h3 className="text-sm font-semibold mb-2">Veículos</h3>
+                <h3 className="text-sm font-semibold mb-2">
+                  {t("driver.vehicles")}
+                </h3>
                 {driver.vehicles && driver.vehicles.length > 0 ? (
                   <ul className="space-y-2">
                     {driver.vehicles.map((v) => (
@@ -165,7 +169,7 @@ export default function DriverDetailPage({
                             {v.brand} {v.model} {v.year ? `(${v.year})` : ""}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {v.type ?? "Veículo"} · {v.color ?? "—"}
+                            {v.type ?? t("driver.vehicle")} · {v.color ?? "—"}
                           </div>
                         </div>
                         <div className="font-mono text-sm font-semibold">
@@ -176,7 +180,7 @@ export default function DriverDetailPage({
                   </ul>
                 ) : (
                   <p className="text-sm text-muted-foreground">
-                    Nenhum veículo cadastrado.
+                    {t("driver.noVehicles")}
                   </p>
                 )}
               </div>
@@ -185,9 +189,9 @@ export default function DriverDetailPage({
 
           <Card>
             <CardHeader>
-              <CardTitle>Ações</CardTitle>
+              <CardTitle>{t("driver.actions")}</CardTitle>
               <CardDescription>
-                Altere o status operacional do motorista.
+                {t("driver.actionsDescription")}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -208,9 +212,11 @@ export default function DriverDetailPage({
                     ) : (
                       <Icon className="size-4" />
                     )}
-                    {action.label}
+                    {t(action.labelKey)}
                     {isCurrent && (
-                      <span className="ml-auto text-xs opacity-70">atual</span>
+                      <span className="ml-auto text-xs opacity-70">
+                        {t("common.current")}
+                      </span>
                     )}
                   </Button>
                 );

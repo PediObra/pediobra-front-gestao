@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { usersService } from "@/lib/api/users";
 import { ApiError } from "@/lib/api/client";
 import { useAuthStore } from "@/lib/auth/store";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -24,16 +25,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RoleBadge, MembershipRoleBadge } from "@/components/badges";
 
-const profileSchema = z.object({
-  name: z.string().min(2, "Informe ao menos 2 caracteres"),
-  email: z.string().email("Email inválido"),
-});
-
-type ProfileForm = z.infer<typeof profileSchema>;
+type ProfileForm = {
+  name: string;
+  email: string;
+};
 
 export default function ProfilePage() {
+  const t = useTranslation();
   const { user } = useAuth();
   const setUser = useAuthStore((s) => s.setUser);
+  const profileSchema = z.object({
+    name: z.string().min(2, t("profile.nameMin")),
+    email: z.string().email(t("profile.invalidEmail")),
+  });
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
@@ -48,7 +52,7 @@ export default function ProfilePage() {
 
   const mutation = useMutation({
     mutationFn: async (values: ProfileForm) => {
-      if (!user) throw new Error("Sem usuário");
+      if (!user) throw new Error(t("profile.noUser"));
       return usersService.update(user.id, values);
     },
     onSuccess: (updated) => {
@@ -59,13 +63,13 @@ export default function ProfilePage() {
           email: updated.email,
         });
       }
-      toast.success("Perfil atualizado");
+      toast.success(t("profile.updated"));
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível salvar o perfil";
+          : t("profile.saveFailed");
       toast.error(msg);
     },
   });
@@ -73,16 +77,16 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Meu perfil"
-        description="Atualize seus dados de acesso."
+        title={t("profile.title")}
+        description={t("profile.description")}
       />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Dados pessoais</CardTitle>
+            <CardTitle>{t("profile.personalData")}</CardTitle>
             <CardDescription>
-              Alterações afetam apenas sua conta.
+              {t("profile.personalDataDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -92,7 +96,7 @@ export default function ProfilePage() {
               noValidate
             >
               <div className="space-y-2">
-                <Label htmlFor="name">Nome</Label>
+                <Label htmlFor="name">{t("profile.name")}</Label>
                 <Input id="name" {...form.register("name")} />
                 {form.formState.errors.name && (
                   <p className="text-xs text-destructive">
@@ -101,7 +105,7 @@ export default function ProfilePage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("profile.email")}</Label>
                 <Input id="email" type="email" {...form.register("email")} />
                 {form.formState.errors.email && (
                   <p className="text-xs text-destructive">
@@ -115,7 +119,7 @@ export default function ProfilePage() {
                 ) : (
                   <Save className="size-4" />
                 )}
-                Salvar alterações
+                {t("profile.save")}
               </Button>
             </form>
           </CardContent>
@@ -123,15 +127,15 @@ export default function ProfilePage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Acessos</CardTitle>
+            <CardTitle>{t("profile.access")}</CardTitle>
             <CardDescription>
-              Papéis e lojas vinculadas à sua conta.
+              {t("profile.accessDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                Papéis
+                {t("profile.roles")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {user?.roles.length ? (
@@ -144,7 +148,7 @@ export default function ProfilePage() {
 
             <div>
               <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                Lojas
+                {t("profile.stores")}
               </p>
               <div className="space-y-2">
                 {user?.sellers.length ? (
@@ -168,7 +172,7 @@ export default function ProfilePage() {
                   ))
                 ) : (
                   <span className="text-sm text-muted-foreground">
-                    Nenhuma loja vinculada
+                    {t("profile.noStore")}
                   </span>
                 )}
               </div>

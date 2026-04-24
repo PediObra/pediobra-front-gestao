@@ -13,9 +13,11 @@ import { productsService, type ListProductsParams } from "@/lib/api/products";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useTranslation } from "@/lib/i18n/language-store";
 import type { Product } from "@/lib/api/types";
 
 export default function ProductsListPage() {
+  const t = useTranslation();
   const { isAdmin } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -66,7 +68,7 @@ export default function ProductsListPage() {
       },
       {
         accessorKey: "name",
-        header: "Produto",
+        header: t("products.product"),
         cell: ({ row }) => (
           <div>
             <div className="font-medium">{row.original.name}</div>
@@ -79,7 +81,7 @@ export default function ProductsListPage() {
       },
       {
         accessorKey: "unit",
-        header: "Unidade",
+        header: t("products.unit"),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground uppercase">
             {row.original.unit ?? "—"}
@@ -88,7 +90,7 @@ export default function ProductsListPage() {
       },
       {
         id: "category",
-        header: "Categoria",
+        header: t("products.category"),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {row.original.category?.name ?? "—"}
@@ -103,27 +105,27 @@ export default function ProductsListPage() {
             <Button asChild variant="ghost" size="sm">
               <Link href={`/products/${row.original.id}`}>
                 <Eye className="size-4" />
-                Ver
+                {t("actions.view")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Catálogo de produtos"
-        description="Produtos globais disponíveis para as lojas."
+        title={t("products.title")}
+        description={t("products.description")}
         actions={
           isAdmin && (
             <Button asChild>
               <Link href="/products/new">
                 <Plus className="size-4" />
-                Novo produto
+                {t("products.new")}
               </Link>
             </Button>
           )
@@ -134,7 +136,7 @@ export default function ProductsListPage() {
         <div className="relative sm:w-80">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome…"
+            placeholder={t("products.searchName")}
             className="pl-8"
             value={search}
             onChange={(e) => {
@@ -144,7 +146,7 @@ export default function ProductsListPage() {
           />
         </div>
         <Input
-          placeholder="Filtrar por marca…"
+          placeholder={t("products.filterBrand")}
           className="sm:w-60"
           value={brand}
           onChange={(e) => {

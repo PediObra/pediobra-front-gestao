@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { ROLE_LABEL, roleNamesOf } from "@/lib/formatters";
+import { roleLabel, roleNamesOf } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/language-store";
 
 const ALL_ROLES: RoleName[] = ["ADMIN", "SELLER", "DRIVER", "CUSTOMER"];
 
@@ -32,6 +32,7 @@ export function EditRolesDialog({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslation();
   const [selected, setSelected] = useState<RoleName[]>(roleNamesOf(user.roles));
   const qc = useQueryClient();
 
@@ -41,14 +42,14 @@ export function EditRolesDialog({
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.users.byId(user.id), updated);
       qc.invalidateQueries({ queryKey: queryKeys.users.all() });
-      toast.success("Papéis atualizados");
+      toast.success(t("roles.updated"));
       setOpen(false);
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível atualizar os papéis";
+          : t("roles.updateFailed");
       toast.error(msg);
     },
   });
@@ -70,9 +71,9 @@ export function EditRolesDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar papéis</DialogTitle>
+          <DialogTitle>{t("roles.editTitle")}</DialogTitle>
           <DialogDescription>
-            Selecione os papéis de sistema para {user.name}.
+            {t("roles.editDescription", { user: user.name })}
           </DialogDescription>
         </DialogHeader>
 
@@ -92,7 +93,7 @@ export function EditRolesDialog({
                 />
                 <div>
                   <div className="text-sm font-medium">
-                    {ROLE_LABEL[role]}
+                    {roleLabel(role)}
                   </div>
                   <div className="text-xs text-muted-foreground font-mono">
                     {role}
@@ -105,14 +106,14 @@ export function EditRolesDialog({
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={() => mutation.mutate(selected)}
             disabled={mutation.isPending}
           >
             {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
-            Salvar
+            {t("common.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

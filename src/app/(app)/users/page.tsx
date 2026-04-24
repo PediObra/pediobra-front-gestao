@@ -16,22 +16,23 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table/data-table";
-import { RoleBadge } from "@/components/badges";
 import { usersService, type ListUsersParams } from "@/lib/api/users";
 import { queryKeys } from "@/lib/query-keys";
-import { formatDate } from "@/lib/formatters";
+import { formatDate, roleLabel } from "@/lib/formatters";
 import type { RoleName, User } from "@/lib/api/types";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useTranslation } from "@/lib/i18n/language-store";
 
-const ROLE_OPTIONS: Array<{ value: RoleName | "ALL"; label: string }> = [
-  { value: "ALL", label: "Todos os papéis" },
-  { value: "ADMIN", label: "Admin" },
-  { value: "SELLER", label: "Vendedor" },
-  { value: "DRIVER", label: "Motorista" },
-  { value: "CUSTOMER", label: "Cliente" },
+const ROLE_OPTIONS: Array<RoleName | "ALL"> = [
+  "ALL",
+  "ADMIN",
+  "SELLER",
+  "DRIVER",
+  "CUSTOMER",
 ];
 
 export default function UsersListPage() {
+  const t = useTranslation();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<RoleName | "ALL">("ALL");
@@ -67,21 +68,21 @@ export default function UsersListPage() {
       },
       {
         accessorKey: "name",
-        header: "Nome",
+        header: t("users.name"),
         cell: ({ row }) => (
           <span className="font-medium">{row.original.name}</span>
         ),
       },
       {
         accessorKey: "email",
-        header: "Email",
+        header: t("common.email"),
         cell: ({ row }) => (
           <span className="text-muted-foreground">{row.original.email}</span>
         ),
       },
       {
         accessorKey: "createdAt",
-        header: "Criado em",
+        header: t("users.createdAt"),
         cell: ({ row }) => (
           <span className="text-muted-foreground text-sm">
             {formatDate(row.original.createdAt)}
@@ -96,28 +97,28 @@ export default function UsersListPage() {
             <Button asChild variant="ghost" size="sm">
               <Link href={`/users/${row.original.id}`}>
                 <Eye className="size-4" />
-                Ver
+                {t("actions.view")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Usuários"
-        description="Gerencie papéis e vínculos com lojas."
+        title={t("users.title")}
+        description={t("users.description")}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative sm:w-80">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome ou email…"
+            placeholder={t("users.search")}
             className="pl-8"
             value={search}
             onChange={(e) => {
@@ -138,8 +139,8 @@ export default function UsersListPage() {
           </SelectTrigger>
           <SelectContent>
             {ROLE_OPTIONS.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
+              <SelectItem key={opt} value={opt}>
+                {opt === "ALL" ? t("users.allRoles") : roleLabel(opt)}
               </SelectItem>
             ))}
           </SelectContent>

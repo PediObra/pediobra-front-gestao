@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table/data-table";
 import { MembershipRoleBadge } from "@/components/badges";
+import { useTranslation } from "@/lib/i18n/language-store";
 import type { UserWithRelations } from "@/lib/api/types";
 
 interface TeamMember {
@@ -33,6 +34,7 @@ export default function SellerTeamPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslation();
   const sellerId = Number(id);
   const { canManageSellerStaff } = useAuth();
   const canEditTeam = canManageSellerStaff(sellerId);
@@ -71,7 +73,7 @@ export default function SellerTeamPage({
     () => [
       {
         accessorKey: "name",
-        header: "Nome",
+        header: t("team.name"),
         cell: ({ row }) => (
           <div>
             <div className="font-medium">{row.original.name}</div>
@@ -83,7 +85,7 @@ export default function SellerTeamPage({
       },
       {
         accessorKey: "jobTitle",
-        header: "Cargo",
+        header: t("team.jobTitle"),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
             {row.original.jobTitle ?? "—"}
@@ -92,20 +94,20 @@ export default function SellerTeamPage({
       },
       {
         accessorKey: "membershipRole",
-        header: "Papel",
+        header: t("team.role"),
         cell: ({ row }) => (
           <MembershipRoleBadge role={row.original.membershipRole} />
         ),
       },
       {
         id: "permissions",
-        header: "Permissões",
+        header: t("team.permissions"),
         cell: ({ row }) => {
           const labels: string[] = [];
-          if (row.original.canEditSeller) labels.push("editar loja");
+          if (row.original.canEditSeller) labels.push(t("team.editStore"));
           if (row.original.canManageSellerProducts)
-            labels.push("ofertas");
-          if (row.original.canManageSellerStaff) labels.push("equipe");
+            labels.push(t("team.offers"));
+          if (row.original.canManageSellerStaff) labels.push(t("team.staff"));
           return (
             <span className="text-xs text-muted-foreground">
               {labels.length ? labels.join(", ") : "—"}
@@ -121,14 +123,14 @@ export default function SellerTeamPage({
             <Button asChild variant="ghost" size="sm">
               <Link href={`/users/${row.original.userId}`}>
                 <Eye className="size-4" />
-                Editar no usuário
+                {t("team.editInUser")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   return (
@@ -137,7 +139,7 @@ export default function SellerTeamPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href={`/sellers/${sellerId}`}>
             <ArrowLeft className="size-4" />
-            Voltar para a loja
+            {t("common.backToStore")}
           </Link>
         </Button>
       </div>
@@ -146,17 +148,16 @@ export default function SellerTeamPage({
         title={
           <span className="flex items-center gap-2">
             <Users className="size-5 text-muted-foreground" />
-            Equipe de {sellerQ.data?.name ?? "—"}
+            {t("team.title", { store: sellerQ.data?.name ?? "—" })}
           </span>
         }
-        description="Usuários vinculados a essa loja e suas permissões granulares."
+        description={t("team.description")}
       />
 
       {!canEditTeam && (
         <Card>
           <CardContent className="py-4 text-sm text-muted-foreground">
-            Você pode visualizar, mas apenas o OWNER (ou um ADMIN) pode
-            modificar a equipe. As edições acontecem na tela do usuário.
+            {t("team.readonly")}
           </CardContent>
         </Card>
       )}
@@ -167,7 +168,7 @@ export default function SellerTeamPage({
         page={1}
         onPageChange={() => {}}
         isLoading={usersQ.isLoading || sellerQ.isLoading}
-        emptyMessage="Nenhum membro vinculado a essa loja."
+        emptyMessage={t("team.empty")}
       />
     </div>
   );

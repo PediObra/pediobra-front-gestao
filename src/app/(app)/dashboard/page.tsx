@@ -18,6 +18,7 @@ import { productsService } from "@/lib/api/products";
 import { driversService } from "@/lib/api/drivers";
 import { queryKeys } from "@/lib/query-keys";
 import { centsToBRL, formatDateTime, formatOrderCode } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -38,6 +39,7 @@ import type {
 } from "@/lib/api/types";
 
 export default function DashboardPage() {
+  const t = useTranslation();
   const { user, isAdmin, isSeller, sellerIds } = useAuth();
 
   const sellerId = !isAdmin && isSeller ? sellerIds[0] : undefined;
@@ -124,7 +126,7 @@ export default function DashboardPage() {
     href: string;
   }> = [
     {
-      label: "Pedidos ativos",
+      label: t("dashboard.activeOrders"),
       icon: ClipboardList,
       value:
         (statusCounts.PENDING ?? 0) +
@@ -133,41 +135,44 @@ export default function DashboardPage() {
         (statusCounts.READY_FOR_PICKUP ?? 0) +
         (statusCounts.PICKED_UP ?? 0) +
         (statusCounts.OUT_FOR_DELIVERY ?? 0),
-      hint: `${statusCounts.DELIVERED ?? 0} entregues · ${statusCounts.CANCELLED ?? 0} cancelados`,
+      hint: t("dashboard.deliveredCancelled", {
+        delivered: statusCounts.DELIVERED ?? 0,
+        cancelled: statusCounts.CANCELLED ?? 0,
+      }),
       loading: ordersAllQ.isLoading,
       href: "/orders",
     },
     {
-      label: "Receita 7 dias",
+      label: t("dashboard.revenue7d"),
       icon: DollarSign,
       value: centsToBRL(revenueCents7d),
-      hint: "Pedidos entregues nos últimos 7 dias",
+      hint: t("dashboard.revenue7dHint"),
       loading: ordersAllQ.isLoading,
       href: "/orders",
     },
     {
-      label: "Produtos cadastrados",
+      label: t("dashboard.registeredProducts"),
       icon: Package,
       value: productsQ.data?.meta.total ?? "—",
-      hint: "Catálogo global",
+      hint: t("dashboard.globalCatalog"),
       loading: productsQ.isLoading,
       href: "/products",
     },
     ...(isAdmin
       ? [
           {
-            label: "Lojas ativas",
+            label: t("dashboard.activeStores"),
             icon: Store,
             value: sellersQ.data?.meta.total ?? "—",
-            hint: "Sellers cadastrados",
+            hint: t("dashboard.registeredSellers"),
             loading: sellersQ.isLoading,
             href: "/sellers",
           },
           {
-            label: "Motoristas",
+            label: t("dashboard.drivers"),
             icon: Truck,
             value: driversQ.data?.meta.total ?? "—",
-            hint: "Total aprovados + pendentes",
+            hint: t("dashboard.driversHint"),
             loading: driversQ.isLoading,
             href: "/drivers",
           },
@@ -180,11 +185,13 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`Olá, ${user?.name?.split(" ")[0] ?? "visitante"}`}
+        title={t("dashboard.greeting", {
+          name: user?.name?.split(" ")[0] ?? t("dashboard.visitor"),
+        })}
         description={
           isAdmin
-            ? "Visão geral da operação PediObra."
-            : "Visão geral dos pedidos e catálogo da sua loja."
+            ? t("dashboard.adminDescription")
+            : t("dashboard.sellerDescription")
         }
       />
 
@@ -200,7 +207,7 @@ export default function DashboardPage() {
                       {card.label}
                     </CardDescription>
                   </div>
-                  <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center text-[oklch(0.35_0.1_60)]">
+                  <div className="size-9 rounded-md bg-primary/10 flex items-center justify-center text-[oklch(0.35_0.1_60)] dark:bg-primary/12 dark:text-[oklch(0.84_0.15_78)]">
                     <Icon className="size-4" />
                   </div>
                 </CardHeader>
@@ -224,14 +231,14 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle>Pedidos recentes</CardTitle>
-              <CardDescription>Os últimos 5 pedidos da operação.</CardDescription>
+              <CardTitle>{t("dashboard.recentOrders")}</CardTitle>
+              <CardDescription>{t("dashboard.lastFiveOrders")}</CardDescription>
             </div>
             <Link
               href="/orders"
               className="text-sm text-primary hover:underline inline-flex items-center gap-1"
             >
-              Ver todos
+              {t("dashboard.viewAll")}
               <ArrowRight className="size-3.5" />
             </Link>
           </CardHeader>
@@ -244,7 +251,7 @@ export default function DashboardPage() {
               </div>
             ) : recentOrders.length === 0 ? (
               <div className="px-6 pb-6 text-sm text-muted-foreground">
-                Nenhum pedido ainda.
+                {t("dashboard.noOrders")}
               </div>
             ) : (
               <ul className="divide-y divide-border">
@@ -259,7 +266,8 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">
-                          {order.seller?.name ?? `Loja #${order.sellerId}`}
+                          {order.seller?.name ??
+                            t("app.sellerFallback", { id: order.sellerId })}
                         </div>
                         <div className="text-xs text-muted-foreground truncate">
                           {formatDateTime(order.createdAt)}
@@ -281,8 +289,8 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Distribuição por status</CardTitle>
-            <CardDescription>Pedidos nos últimos 100 registros.</CardDescription>
+            <CardTitle>{t("dashboard.statusDistribution")}</CardTitle>
+            <CardDescription>{t("dashboard.last100Orders")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2.5">
             {ordersAllQ.isLoading ? (

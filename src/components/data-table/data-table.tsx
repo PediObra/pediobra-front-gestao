@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import type { PaginationMeta } from "@/lib/api/types";
+import { useTranslation } from "@/lib/i18n/language-store";
 
 export interface DataTableProps<TData> {
   data: TData[];
@@ -41,10 +42,11 @@ export function DataTable<TData>({
   onPageChange,
   isLoading,
   isFetching,
-  emptyMessage = "Nenhum resultado encontrado.",
+  emptyMessage,
   onRowClick,
   rowClassName,
 }: DataTableProps<TData>) {
+  const t = useTranslation();
   const table = useReactTable({
     data,
     columns,
@@ -85,7 +87,7 @@ export function DataTable<TData>({
                 >
                   <div className="flex items-center justify-center gap-2 text-muted-foreground">
                     <Loader2 className="size-4 animate-spin" />
-                    Carregando…
+                    {t("app.loading")}
                   </div>
                 </TableCell>
               </TableRow>
@@ -95,7 +97,7 @@ export function DataTable<TData>({
                   colSpan={columns.length}
                   className="h-40 text-center text-muted-foreground text-sm"
                 >
-                  {emptyMessage}
+                  {emptyMessage ?? t("dataTable.empty")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -126,15 +128,21 @@ export function DataTable<TData>({
       {meta && meta.totalPages > 1 && (
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <div>
-            Página {meta.page} de {meta.totalPages}
+            {t("dataTable.page", {
+              page: meta.page,
+              totalPages: meta.totalPages,
+            })}
             {isFetching && (
               <span className="ml-2 inline-flex items-center gap-1 text-xs">
                 <Loader2 className="size-3 animate-spin" />
-                atualizando
+                {t("app.updating")}
               </span>
             )}
             <span className="ml-3 text-xs">
-              {meta.total} resultado{meta.total === 1 ? "" : "s"}
+              {t("dataTable.results", {
+                total: meta.total,
+                plural: meta.total === 1 ? "" : "s",
+              })}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -145,7 +153,7 @@ export function DataTable<TData>({
               onClick={() => onPageChange(page - 1)}
             >
               <ChevronLeft className="size-4" />
-              Anterior
+              {t("dataTable.previous")}
             </Button>
             <Button
               variant="outline"
@@ -153,7 +161,7 @@ export function DataTable<TData>({
               disabled={!hasNext}
               onClick={() => onPageChange(page + 1)}
             >
-              Próxima
+              {t("dataTable.next")}
               <ChevronRight className="size-4" />
             </Button>
           </div>

@@ -32,8 +32,9 @@ import { ApiError } from "@/lib/api/client";
 import {
   centsToBRL,
   formatDateTime,
-  PAYMENT_STATUS_LABEL,
+  paymentStatusLabel,
 } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/language-store";
 import type { Payment, PaymentStatus } from "@/lib/api/types";
 
 const PAYMENT_STATUSES: PaymentStatus[] = [
@@ -46,6 +47,7 @@ const PAYMENT_STATUSES: PaymentStatus[] = [
 ];
 
 export default function PaymentsListPage() {
+  const t = useTranslation();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("ALL");
@@ -68,13 +70,13 @@ export default function PaymentsListPage() {
 
   const updateMutation = useMutation({
     mutationFn: () => {
-      if (!editing) throw new Error("Sem pagamento selecionado");
+      if (!editing) throw new Error(t("payments.noPaymentSelected"));
       return paymentsService.updateStatus(editing.id, newStatus);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
-      toast.success("Status do pagamento atualizado");
+      toast.success(t("payments.updated"));
       setEditing(null);
     },
     onError: (err: unknown) => {
@@ -83,7 +85,7 @@ export default function PaymentsListPage() {
           ? err.displayMessage
           : err instanceof Error
             ? err.message
-            : "Não foi possível atualizar";
+            : t("payments.updateFailed");
       toast.error(msg);
     },
   });
@@ -102,7 +104,7 @@ export default function PaymentsListPage() {
       },
       {
         id: "order",
-        header: "Pedido",
+        header: t("payments.order"),
         cell: ({ row }) => (
           <Link
             href={`/orders/${row.original.orderId}`}
@@ -114,7 +116,7 @@ export default function PaymentsListPage() {
       },
       {
         id: "provider",
-        header: "Provedor / método",
+        header: t("payments.providerMethod"),
         cell: ({ row }) => (
           <div className="text-sm">
             <div>{row.original.provider ?? "—"}</div>
@@ -126,7 +128,7 @@ export default function PaymentsListPage() {
       },
       {
         accessorKey: "amountCents",
-        header: "Valor",
+        header: t("payments.amount"),
         cell: ({ row }) => (
           <span className="font-mono text-sm font-semibold">
             {centsToBRL(row.original.amountCents)}
@@ -135,12 +137,12 @@ export default function PaymentsListPage() {
       },
       {
         accessorKey: "status",
-        header: "Status",
+        header: t("common.status"),
         cell: ({ row }) => <PaymentStatusBadge status={row.original.status} />,
       },
       {
         accessorKey: "createdAt",
-        header: "Criado",
+        header: t("payments.created"),
         cell: ({ row }) => (
           <span className="text-xs text-muted-foreground">
             {formatDateTime(row.original.createdAt)}
@@ -161,26 +163,26 @@ export default function PaymentsListPage() {
               }}
             >
               <Pencil className="size-4" />
-              Status
+              {t("common.status")}
             </Button>
             <Button asChild variant="ghost" size="sm">
               <Link href={`/orders/${row.original.orderId}`}>
                 <Eye className="size-4" />
-                Pedido
+                {t("payments.order")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pagamentos"
-        description="Lista global de pagamentos do marketplace (ainda em modo mock)."
+        title={t("payments.title")}
+        description={t("payments.description")}
       />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -192,13 +194,13 @@ export default function PaymentsListPage() {
           }}
         >
           <SelectTrigger className="sm:w-52">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("common.status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Todos os status</SelectItem>
+            <SelectItem value="ALL">{t("orders.allStatuses")}</SelectItem>
             {PAYMENT_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
-                {PAYMENT_STATUS_LABEL[s]}
+                {paymentStatusLabel(s)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -213,7 +215,7 @@ export default function PaymentsListPage() {
         onPageChange={setPage}
         isLoading={query.isLoading}
         isFetching={query.isFetching}
-        emptyMessage="Nenhum pagamento encontrado."
+        emptyMessage={t("payments.empty")}
       />
 
       <Dialog
@@ -224,14 +226,17 @@ export default function PaymentsListPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Atualizar status do pagamento</DialogTitle>
+            <DialogTitle>{t("payments.updateTitle")}</DialogTitle>
             <DialogDescription>
-              Pagamento #{editing?.id} do pedido #{editing?.orderId}.
+              {t("payments.updateDescription", {
+                paymentId: editing?.id ?? "—",
+                orderId: editing?.orderId ?? "—",
+              })}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-2">
-            <Label>Novo status</Label>
+            <Label>{t("payments.newStatus")}</Label>
             <Select
               value={newStatus}
               onValueChange={(v) => setNewStatus(v as PaymentStatus)}
@@ -242,7 +247,7 @@ export default function PaymentsListPage() {
               <SelectContent>
                 {PAYMENT_STATUSES.map((s) => (
                   <SelectItem key={s} value={s}>
-                    {PAYMENT_STATUS_LABEL[s]}
+                    {paymentStatusLabel(s)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -251,7 +256,7 @@ export default function PaymentsListPage() {
 
           <DialogFooter>
             <Button variant="ghost" onClick={() => setEditing(null)}>
-              Cancelar
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={() => updateMutation.mutate()}
@@ -260,7 +265,7 @@ export default function PaymentsListPage() {
               {updateMutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />
               )}
-              Salvar
+              {t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>

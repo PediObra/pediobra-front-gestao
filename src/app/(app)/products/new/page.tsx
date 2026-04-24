@@ -26,44 +26,46 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
+import { translate, useTranslation } from "@/lib/i18n/language-store";
 
-const schema = z.object({
-  name: z.string().min(2, "Informe o nome"),
-  description: z.string().optional().or(z.literal("")),
-  brand: z.string().optional().or(z.literal("")),
-  unit: z.string().optional().or(z.literal("")),
-  size: z.string().optional().or(z.literal("")),
-  weight: z.string().optional().or(z.literal("")),
-  categoryId: z.string().optional().or(z.literal("")),
-  images: z
-    .array(
+function createSchema(t: typeof translate) {
+  return z.object({
+    name: z.string().min(2, t("product.nameRequired")),
+    description: z.string().optional().or(z.literal("")),
+    brand: z.string().optional().or(z.literal("")),
+    unit: z.string().optional().or(z.literal("")),
+    size: z.string().optional().or(z.literal("")),
+    weight: z.string().optional().or(z.literal("")),
+    categoryId: z.string().optional().or(z.literal("")),
+    images: z.array(
       z.object({
         file: z
           .any()
           .refine(
             (value) => typeof File !== "undefined" && value instanceof File,
-            "Selecione uma imagem",
+            t("order.selectImage"),
           ),
         isPrimary: z.boolean().optional(),
       }),
     ),
-  barcodes: z
-    .array(
+    barcodes: z.array(
       z.object({
-        barcode: z.string().min(1, "Código obrigatório"),
+        barcode: z.string().min(1, t("product.barcodeRequired")),
         barcodeType: z.string().optional().or(z.literal("")),
       }),
     ),
-});
+  });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof createSchema>>;
 
 export default function NewProductPage() {
   const router = useRouter();
+  const t = useTranslation();
   const qc = useQueryClient();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(createSchema(t)),
     defaultValues: {
       name: "",
       description: "",
@@ -108,14 +110,14 @@ export default function NewProductPage() {
     },
     onSuccess: (product) => {
       qc.invalidateQueries({ queryKey: queryKeys.products.all() });
-      toast.success(`Produto "${product.name}" criado`);
+      toast.success(t("product.created", { product: product.name }));
       router.push(`/products/${product.id}`);
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível criar o produto";
+          : t("product.createFailed");
       toast.error(msg);
     },
   });
@@ -126,14 +128,14 @@ export default function NewProductPage() {
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/products">
             <ArrowLeft className="size-4" />
-            Voltar
+            {t("common.back")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title="Novo produto"
-        description="Cadastre um produto no catálogo global."
+        title={t("product.newTitle")}
+        description={t("product.newDescription")}
       />
 
       <form
@@ -143,11 +145,11 @@ export default function NewProductPage() {
       >
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Informações básicas</CardTitle>
+            <CardTitle>{t("product.basicInfo")}</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name">{t("common.name")}</Label>
               <Input id="name" {...form.register("name")} />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">
@@ -157,7 +159,7 @@ export default function NewProductPage() {
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="description">Descrição</Label>
+              <Label htmlFor="description">{t("common.description")}</Label>
               <Textarea
                 id="description"
                 rows={3}
@@ -166,26 +168,26 @@ export default function NewProductPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="brand">Marca</Label>
+              <Label htmlFor="brand">{t("product.brand")}</Label>
               <Input id="brand" {...form.register("brand")} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="unit">Unidade</Label>
+              <Label htmlFor="unit">{t("product.unit")}</Label>
               <Input
                 id="unit"
-                placeholder="UN, KG, SC, M²…"
+                placeholder={t("product.unitPlaceholder")}
                 {...form.register("unit")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="size">Tamanho / dimensão</Label>
+              <Label htmlFor="size">{t("product.size")}</Label>
               <Input id="size" {...form.register("size")} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="weight">Peso (g)</Label>
+              <Label htmlFor="weight">{t("product.weight")}</Label>
               <Input
                 id="weight"
                 type="number"
@@ -195,12 +197,12 @@ export default function NewProductPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="categoryId">ID da categoria (opcional)</Label>
+              <Label htmlFor="categoryId">{t("product.categoryId")}</Label>
               <Input
                 id="categoryId"
                 type="number"
                 min={1}
-                placeholder="Ex: 1"
+                placeholder={t("product.categoryPlaceholder")}
                 {...form.register("categoryId")}
               />
             </div>
@@ -211,8 +213,8 @@ export default function NewProductPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div>
-                <CardTitle>Imagens</CardTitle>
-                <CardDescription>Arquivos do produto.</CardDescription>
+                <CardTitle>{t("product.images")}</CardTitle>
+                <CardDescription>{t("product.imagesDescription")}</CardDescription>
               </div>
               <Button
                 type="button"
@@ -226,13 +228,13 @@ export default function NewProductPage() {
                 }
               >
                 <Plus className="size-4" />
-                Adicionar
+                {t("common.add")}
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {imagesFA.fields.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Nenhuma imagem.
+                  {t("product.noImages")}
                 </p>
               )}
               {imagesFA.fields.map((field, index) => {
@@ -252,13 +254,17 @@ export default function NewProductPage() {
                         file={selectedFile}
                         alt={
                           selectedFile
-                            ? `Prévia da imagem ${selectedFile.name}`
-                            : "Prévia da imagem do produto"
+                            ? t("product.imagePreviewAlt", {
+                                file: selectedFile.name,
+                              })
+                            : t("product.imagePreviewGenericAlt")
                         }
                         className="size-20 shrink-0"
                       />
                       <div className="min-w-0 flex-1 space-y-1.5">
-                        <Label htmlFor={`image-${field.id}`}>Arquivo</Label>
+                        <Label htmlFor={`image-${field.id}`}>
+                          {t("common.file")}
+                        </Label>
                         <Input
                           id={`image-${field.id}`}
                           type="file"
@@ -307,7 +313,7 @@ export default function NewProductPage() {
                             );
                           }}
                         />
-                        Imagem principal
+                        {t("product.primaryImage")}
                       </label>
                       <Button
                         type="button"
@@ -328,8 +334,8 @@ export default function NewProductPage() {
           <Card>
             <CardHeader className="flex-row items-center justify-between space-y-0">
               <div>
-                <CardTitle>Códigos de barras</CardTitle>
-                <CardDescription>EAN, UPC, etc.</CardDescription>
+                <CardTitle>{t("product.barcodes")}</CardTitle>
+                <CardDescription>{t("product.barcodesDescription")}</CardDescription>
               </div>
               <Button
                 type="button"
@@ -338,24 +344,24 @@ export default function NewProductPage() {
                 onClick={() => barcodesFA.append({ barcode: "" })}
               >
                 <Plus className="size-4" />
-                Adicionar
+                {t("common.add")}
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {barcodesFA.fields.length === 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Nenhum código.
+                  {t("product.noBarcode")}
                 </p>
               )}
               {barcodesFA.fields.map((field, index) => (
                 <div key={field.id} className="flex items-center gap-2">
                   <Input
-                    placeholder="Código"
+                    placeholder={t("product.barcodeCode")}
                     className="font-mono"
                     {...form.register(`barcodes.${index}.barcode` as const)}
                   />
                   <Input
-                    placeholder="Tipo"
+                    placeholder={t("product.barcodeType")}
                     className="w-24"
                     {...form.register(
                       `barcodes.${index}.barcodeType` as const,
@@ -378,7 +384,7 @@ export default function NewProductPage() {
 
         <div className="lg:col-span-3 flex justify-end gap-2">
           <Button type="button" variant="ghost" asChild>
-            <Link href="/products">Cancelar</Link>
+            <Link href="/products">{t("common.cancel")}</Link>
           </Button>
           <Button type="submit" disabled={mutation.isPending}>
             {mutation.isPending ? (
@@ -386,7 +392,7 @@ export default function NewProductPage() {
             ) : (
               <Save className="size-4" />
             )}
-            Criar produto
+            {t("product.create")}
           </Button>
         </div>
       </form>

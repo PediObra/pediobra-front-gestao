@@ -25,9 +25,11 @@ import {
   centsToBRL,
   formatDateTime,
   formatOrderCode,
+  orderStatusLabel,
 } from "@/lib/formatters";
 import type { Order, OrderStatus } from "@/lib/api/types";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useTranslation } from "@/lib/i18n/language-store";
 
 const ORDER_STATUSES: OrderStatus[] = [
   "PENDING",
@@ -42,6 +44,7 @@ const ORDER_STATUSES: OrderStatus[] = [
 ];
 
 export default function OrdersListPage() {
+  const t = useTranslation();
   const { isAdmin, sellerIds } = useAuth();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -80,7 +83,7 @@ export default function OrdersListPage() {
     () => [
       {
         id: "code",
-        header: "Pedido",
+        header: t("orders.order"),
         cell: ({ row }) => (
           <div>
             <div className="font-mono text-xs font-semibold">
@@ -94,31 +97,32 @@ export default function OrdersListPage() {
       },
       {
         id: "client",
-        header: "Cliente",
+        header: t("orders.client"),
         cell: ({ row }) => (
           <div className="text-sm">
             {row.original.clientUser?.name ??
-              `Usuário #${row.original.clientUserId}`}
+              t("app.userFallback", { id: row.original.clientUserId })}
           </div>
         ),
       },
       {
         id: "seller",
-        header: "Loja",
+        header: t("orders.store"),
         cell: ({ row }) => (
           <span className="text-sm">
-            {row.original.seller?.name ?? `Loja #${row.original.sellerId}`}
+            {row.original.seller?.name ??
+              t("app.sellerFallback", { id: row.original.sellerId })}
           </span>
         ),
       },
       {
         accessorKey: "status",
-        header: "Status",
+        header: t("common.status"),
         cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
       },
       {
         id: "payment",
-        header: "Pagamento",
+        header: t("orders.payment"),
         cell: ({ row }) =>
           row.original.paymentStatus ? (
             <PaymentStatusBadge status={row.original.paymentStatus} />
@@ -128,7 +132,7 @@ export default function OrdersListPage() {
       },
       {
         accessorKey: "totalAmountCents",
-        header: "Total",
+        header: t("orders.total"),
         cell: ({ row }) => (
           <span className="font-mono text-sm font-semibold">
             {centsToBRL(row.original.totalAmountCents)}
@@ -143,24 +147,24 @@ export default function OrdersListPage() {
             <Button asChild variant="ghost" size="sm">
               <Link href={`/orders/${row.original.id}`}>
                 <Eye className="size-4" />
-                Abrir
+                {t("actions.open")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pedidos"
+        title={t("orders.title")}
         description={
           isAdmin
-            ? "Todos os pedidos do marketplace."
-            : "Pedidos das lojas em que você atua."
+            ? t("orders.adminDescription")
+            : t("orders.sellerDescription")
         }
       />
 
@@ -173,13 +177,13 @@ export default function OrdersListPage() {
           }}
         >
           <SelectTrigger className="sm:w-52">
-            <SelectValue placeholder="Status" />
+            <SelectValue placeholder={t("common.status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Todos os status</SelectItem>
+            <SelectItem value="ALL">{t("orders.allStatuses")}</SelectItem>
             {ORDER_STATUSES.map((s) => (
               <SelectItem key={s} value={s}>
-                {s}
+                {orderStatusLabel(s)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -194,10 +198,10 @@ export default function OrdersListPage() {
             }}
           >
             <SelectTrigger className="sm:w-60">
-              <SelectValue placeholder="Todas as lojas" />
+              <SelectValue placeholder={t("orders.allStores")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">Todas as lojas</SelectItem>
+              <SelectItem value="ALL">{t("orders.allStores")}</SelectItem>
               {(sellersQ.data?.data ?? []).map((s) => (
                 <SelectItem key={s.id} value={String(s.id)}>
                   {s.name}
@@ -209,7 +213,7 @@ export default function OrdersListPage() {
 
         {isAdmin && (
           <Input
-            placeholder="ID do cliente"
+            placeholder={t("orders.clientId")}
             className="sm:w-48"
             value={clientUserIdInput}
             onChange={(e) => {
@@ -229,7 +233,7 @@ export default function OrdersListPage() {
         onPageChange={setPage}
         isLoading={query.isLoading}
         isFetching={query.isFetching}
-        emptyMessage="Nenhum pedido encontrado."
+        emptyMessage={t("orders.empty")}
       />
     </div>
   );

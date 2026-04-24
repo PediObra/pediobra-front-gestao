@@ -6,24 +6,21 @@ import type {
   PaymentStatus,
   RoleName,
 } from "@/lib/api/types";
+import { getLanguageSnapshot, translate } from "@/lib/i18n/language-store";
 
-const BRL = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-
-const dateOnlyFormatter = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-});
+function intlLocale() {
+  const language = getLanguageSnapshot().language;
+  if (language === "en") return "en-US";
+  if (language === "es") return "es-ES";
+  return "pt-BR";
+}
 
 export function centsToBRL(cents: number | null | undefined) {
   if (cents === null || cents === undefined) return "—";
-  return BRL.format(cents / 100);
+  return new Intl.NumberFormat(intlLocale(), {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
 }
 
 export function centsToDecimalString(cents: number | null | undefined) {
@@ -41,7 +38,10 @@ export function decimalStringToCents(value: string): number {
 export function formatDateTime(date: string | Date | null | undefined) {
   if (!date) return "—";
   try {
-    return dateFormatter.format(new Date(date));
+    return new Intl.DateTimeFormat(intlLocale(), {
+      dateStyle: "short",
+      timeStyle: "short",
+    }).format(new Date(date));
   } catch {
     return "—";
   }
@@ -50,7 +50,9 @@ export function formatDateTime(date: string | Date | null | undefined) {
 export function formatDate(date: string | Date | null | undefined) {
   if (!date) return "—";
   try {
-    return dateOnlyFormatter.format(new Date(date));
+    return new Intl.DateTimeFormat(intlLocale(), {
+      dateStyle: "short",
+    }).format(new Date(date));
   } catch {
     return "—";
   }
@@ -89,6 +91,10 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   CANCELLED: "Cancelado",
 };
 
+export function orderStatusLabel(status: OrderStatus) {
+  return translate(`status.order.${status}` as Parameters<typeof translate>[0]);
+}
+
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   PENDING: "Pendente",
   AUTHORIZED: "Autorizado",
@@ -98,12 +104,24 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   CANCELLED: "Cancelado",
 };
 
+export function paymentStatusLabel(status: PaymentStatus) {
+  return translate(
+    `status.payment.${status}` as Parameters<typeof translate>[0],
+  );
+}
+
 export const DRIVER_STATUS_LABEL: Record<DriverStatus, string> = {
   PENDING: "Pendente",
   APPROVED: "Aprovado",
   REJECTED: "Rejeitado",
   BLOCKED: "Bloqueado",
 };
+
+export function driverStatusLabel(status: DriverStatus) {
+  return translate(
+    `status.driver.${status}` as Parameters<typeof translate>[0],
+  );
+}
 
 export const ROLE_LABEL: Record<RoleName, string> = {
   ADMIN: "Admin",
@@ -112,10 +130,18 @@ export const ROLE_LABEL: Record<RoleName, string> = {
   DRIVER: "Motorista",
 };
 
+export function roleLabel(role: RoleName) {
+  return translate(`role.${role}` as Parameters<typeof translate>[0]);
+}
+
 export const MEMBERSHIP_ROLE_LABEL: Record<MembershipRole, string> = {
   OWNER: "Proprietário",
   EMPLOYEE: "Funcionário",
 };
+
+export function membershipRoleLabel(role: MembershipRole) {
+  return translate(`membership.${role}` as Parameters<typeof translate>[0]);
+}
 
 export const EVIDENCE_TYPE_LABEL: Record<EvidenceType, string> = {
   SELLER_CONFIRMATION: "Confirmação do vendedor",
@@ -124,6 +150,10 @@ export const EVIDENCE_TYPE_LABEL: Record<EvidenceType, string> = {
   PICKUP_PHOTO: "Foto da coleta",
   GENERAL: "Geral",
 };
+
+export function evidenceTypeLabel(type: EvidenceType) {
+  return translate(`evidence.${type}` as Parameters<typeof translate>[0]);
+}
 
 export function formatOrderCode(order: {
   code?: string | null;

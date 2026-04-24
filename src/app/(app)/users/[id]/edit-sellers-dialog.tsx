@@ -26,6 +26,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { membershipRoleLabel } from "@/lib/formatters";
+import { useTranslation } from "@/lib/i18n/language-store";
 import {
   Select,
   SelectContent,
@@ -46,6 +48,7 @@ export function EditSellersDialog({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslation();
   const [drafts, setDrafts] = useState<MembershipDraft[]>(() =>
     user.sellers.map((s) => ({
       sellerId: s.sellerId,
@@ -71,14 +74,14 @@ export function EditSellersDialog({
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.users.byId(user.id), updated);
       qc.invalidateQueries({ queryKey: queryKeys.users.all() });
-      toast.success("Vínculos com lojas atualizados");
+      toast.success(t("sellerLinks.updated"));
       setOpen(false);
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível salvar os vínculos";
+          : t("sellerLinks.saveFailed");
       toast.error(msg);
     },
   });
@@ -131,16 +134,16 @@ export function EditSellersDialog({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Editar vínculos com lojas</DialogTitle>
+          <DialogTitle>{t("sellerLinks.editTitle")}</DialogTitle>
           <DialogDescription>
-            Defina em quais lojas {user.name} atua e com quais permissões.
+            {t("sellerLinks.editDescription", { user: user.name })}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
           {drafts.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-6">
-              Nenhum vínculo. Clique em &quot;Adicionar loja&quot; para criar.
+              {t("sellerLinks.emptyDraft")}
             </p>
           )}
 
@@ -151,7 +154,7 @@ export function EditSellersDialog({
             >
               <div className="flex items-start gap-3">
                 <div className="flex-1 space-y-2">
-                  <Label className="text-xs">Loja</Label>
+                  <Label className="text-xs">{t("sellerProducts.store")}</Label>
                   <Select
                     value={String(draft.sellerId || "")}
                     onValueChange={(v) =>
@@ -159,7 +162,7 @@ export function EditSellersDialog({
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma loja" />
+                      <SelectValue placeholder={t("sellerLinks.selectStore")} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableSellers.map((s) => (
@@ -171,7 +174,7 @@ export function EditSellersDialog({
                   </Select>
                 </div>
                 <div className="w-40 space-y-2">
-                  <Label className="text-xs">Papel</Label>
+                  <Label className="text-xs">{t("team.role")}</Label>
                   <Select
                     value={draft.membershipRole}
                     onValueChange={(v) =>
@@ -184,8 +187,12 @@ export function EditSellersDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="OWNER">Proprietário</SelectItem>
-                      <SelectItem value="EMPLOYEE">Funcionário</SelectItem>
+                      <SelectItem value="OWNER">
+                        {membershipRoleLabel("OWNER")}
+                      </SelectItem>
+                      <SelectItem value="EMPLOYEE">
+                        {membershipRoleLabel("EMPLOYEE")}
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -200,13 +207,13 @@ export function EditSellersDialog({
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Cargo (opcional)</Label>
+                <Label className="text-xs">{t("sellerLinks.jobTitle")}</Label>
                 <Input
                   value={draft.jobTitle ?? ""}
                   onChange={(e) =>
                     updateDraft(index, { jobTitle: e.target.value || null })
                   }
-                  placeholder="Ex: Gerente, Estoquista…"
+                  placeholder={t("sellerLinks.jobTitlePlaceholder")}
                 />
               </div>
 
@@ -218,7 +225,7 @@ export function EditSellersDialog({
                       updateDraft(index, { canEditSeller: v === true })
                     }
                   />
-                  editar loja
+                  {t("team.editStore")}
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <Checkbox
@@ -229,7 +236,7 @@ export function EditSellersDialog({
                       })
                     }
                   />
-                  gerenciar ofertas
+                  {t("sellerLinks.manageOffers")}
                 </label>
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <Checkbox
@@ -240,7 +247,7 @@ export function EditSellersDialog({
                       })
                     }
                   />
-                  gerenciar equipe
+                  {t("sellerLinks.manageStaff")}
                 </label>
               </div>
             </div>
@@ -248,18 +255,18 @@ export function EditSellersDialog({
 
           <Button variant="outline" onClick={addDraft} className="w-full">
             <Plus className="size-4" />
-            Adicionar loja
+            {t("sellerLinks.addStore")}
           </Button>
         </div>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => setOpen(false)}>
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={() => {
               if (drafts.some((d) => !d.sellerId)) {
-                toast.error("Selecione uma loja para todos os vínculos.");
+                toast.error(t("sellerLinks.selectAllStores"));
                 return;
               }
               mutation.mutate(drafts);
@@ -267,7 +274,7 @@ export function EditSellersDialog({
             disabled={mutation.isPending}
           >
             {mutation.isPending && <Loader2 className="size-4 animate-spin" />}
-            Salvar vínculos
+            {t("sellerLinks.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

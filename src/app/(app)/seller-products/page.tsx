@@ -7,7 +7,6 @@ import { Eye, Plus } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,9 +24,11 @@ import { sellersService } from "@/lib/api/sellers";
 import { queryKeys } from "@/lib/query-keys";
 import { centsToBRL } from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/lib/i18n/language-store";
 import type { SellerProduct } from "@/lib/api/types";
 
 export default function SellerProductsListPage() {
+  const t = useTranslation();
   const { isAdmin, sellerIds } = useAuth();
   const [page, setPage] = useState(1);
   const [sellerId, setSellerId] = useState<string>(
@@ -72,11 +73,12 @@ export default function SellerProductsListPage() {
       },
       {
         id: "product",
-        header: "Produto",
+        header: t("sellerProducts.product"),
         cell: ({ row }) => (
           <div>
             <div className="font-medium">
-              {row.original.product?.name ?? `Produto #${row.original.productId}`}
+              {row.original.product?.name ??
+                t("app.productFallback", { id: row.original.productId })}
             </div>
             <div className="text-xs text-muted-foreground">
               {row.original.product?.brand ?? "—"}
@@ -87,16 +89,17 @@ export default function SellerProductsListPage() {
       },
       {
         id: "seller",
-        header: "Loja",
+        header: t("sellerProducts.store"),
         cell: ({ row }) => (
           <span className="text-sm">
-            {row.original.seller?.name ?? `Loja #${row.original.sellerId}`}
+            {row.original.seller?.name ??
+              t("app.sellerFallback", { id: row.original.sellerId })}
           </span>
         ),
       },
       {
         accessorKey: "unitPriceCents",
-        header: "Preço",
+        header: t("sellerProducts.price"),
         cell: ({ row }) => (
           <span className="font-mono text-sm font-semibold">
             {centsToBRL(row.original.unitPriceCents)}
@@ -105,12 +108,12 @@ export default function SellerProductsListPage() {
       },
       {
         accessorKey: "stockAmount",
-        header: "Estoque",
+        header: t("sellerProducts.stock"),
         cell: ({ row }) => {
           const stock = row.original.stockAmount;
           return (
             <Badge variant={stock > 0 ? "success" : "destructive"}>
-              {stock} un
+              {stock} {t("sellerProducts.unitAbbr")}
             </Badge>
           );
         },
@@ -123,14 +126,14 @@ export default function SellerProductsListPage() {
             <Button asChild variant="ghost" size="sm">
               <Link href={`/seller-products/${row.original.id}`}>
                 <Eye className="size-4" />
-                Ver
+                {t("actions.view")}
               </Link>
             </Button>
           </div>
         ),
       },
     ],
-    [],
+    [t],
   );
 
   const canCreate = isAdmin || sellerIds.length > 0;
@@ -138,14 +141,14 @@ export default function SellerProductsListPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ofertas da loja"
-        description="Produtos publicados pelas lojas com preço e estoque."
+        title={t("sellerProducts.title")}
+        description={t("sellerProducts.description")}
         actions={
           canCreate && (
             <Button asChild>
               <Link href="/seller-products/new">
                 <Plus className="size-4" />
-                Nova oferta
+                {t("sellerProducts.new")}
               </Link>
             </Button>
           )
@@ -162,10 +165,10 @@ export default function SellerProductsListPage() {
             }}
           >
             <SelectTrigger className="sm:w-64">
-              <SelectValue placeholder="Todas as lojas" />
+              <SelectValue placeholder={t("orders.allStores")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">Todas as lojas</SelectItem>
+              <SelectItem value="ALL">{t("orders.allStores")}</SelectItem>
               {(sellersQ.data?.data ?? []).map((s) => (
                 <SelectItem key={s.id} value={String(s.id)}>
                   {s.name}
@@ -185,9 +188,11 @@ export default function SellerProductsListPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="ALL">Todos</SelectItem>
-            <SelectItem value="YES">Com estoque</SelectItem>
-            <SelectItem value="NO">Sem estoque</SelectItem>
+            <SelectItem value="ALL">{t("sellerProducts.all")}</SelectItem>
+            <SelectItem value="YES">{t("sellerProducts.withStock")}</SelectItem>
+            <SelectItem value="NO">
+              {t("sellerProducts.withoutStock")}
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -25,27 +25,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
+import { translate, useTranslation } from "@/lib/i18n/language-store";
 
-const schema = z.object({
-  name: z.string().min(2, "Informe o nome"),
-  email: z.string().email("Email inválido"),
-  address: z.string().min(3, "Informe o endereço"),
-  cep: z.string().min(8, "CEP deve ter 8 dígitos"),
-  phone: z.string().min(8, "Informe o telefone"),
-  primaryColor: z.string().optional().or(z.literal("")),
-  secondaryColor: z.string().optional().or(z.literal("")),
-});
+function createSchema(t: typeof translate) {
+  return z.object({
+    name: z.string().min(2, t("product.nameRequired")),
+    email: z.string().email(t("login.invalidEmail")),
+    address: z.string().min(3, t("seller.addressRequired")),
+    cep: z.string().min(8, t("seller.cepRequired")),
+    phone: z.string().min(8, t("seller.phoneRequired")),
+    primaryColor: z.string().optional().or(z.literal("")),
+    secondaryColor: z.string().optional().or(z.literal("")),
+  });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof createSchema>>;
 
 export default function NewSellerPage() {
   const router = useRouter();
+  const t = useTranslation();
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
   const [logoFile, setLogoFile] = useState<File | undefined>();
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(createSchema(t)),
     defaultValues: {
       name: "",
       email: "",
@@ -73,14 +77,14 @@ export default function NewSellerPage() {
     },
     onSuccess: (seller) => {
       qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
-      toast.success(`Loja "${seller.name}" criada`);
+      toast.success(t("seller.created", { seller: seller.name }));
       router.push(`/sellers/${seller.id}`);
     },
     onError: (err: unknown) => {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível criar a loja";
+          : t("seller.createFailed");
       toast.error(msg);
     },
   });
@@ -89,7 +93,7 @@ export default function NewSellerPage() {
     return (
       <Card>
         <CardContent className="py-12 text-center text-muted-foreground">
-          Apenas administradores podem criar lojas.
+          {t("seller.adminOnlyCreate")}
         </CardContent>
       </Card>
     );
@@ -101,21 +105,21 @@ export default function NewSellerPage() {
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/sellers">
             <ArrowLeft className="size-4" />
-            Voltar
+            {t("common.back")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title="Nova loja"
-        description="Cadastre uma nova loja parceira."
+        title={t("sellers.new")}
+        description={t("seller.newDescription")}
       />
 
       <Card>
         <CardHeader>
-          <CardTitle>Dados da loja</CardTitle>
+          <CardTitle>{t("seller.data")}</CardTitle>
           <CardDescription>
-            Preencha os dados operacionais da loja.
+            {t("seller.dataDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -125,7 +129,7 @@ export default function NewSellerPage() {
             noValidate
           >
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name">{t("common.name")}</Label>
               <Input id="name" {...form.register("name")} />
               {form.formState.errors.name && (
                 <p className="text-xs text-destructive">
@@ -135,7 +139,7 @@ export default function NewSellerPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email de contato</Label>
+              <Label htmlFor="email">{t("seller.contactEmail")}</Label>
               <Input id="email" type="email" {...form.register("email")} />
               {form.formState.errors.email && (
                 <p className="text-xs text-destructive">
@@ -145,7 +149,7 @@ export default function NewSellerPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="phone">{t("common.phone")}</Label>
               <Input
                 id="phone"
                 placeholder="(11) 98765-4321"
@@ -159,10 +163,10 @@ export default function NewSellerPage() {
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="address">Endereço</Label>
+              <Label htmlFor="address">{t("common.address")}</Label>
               <Input
                 id="address"
-                placeholder="Rua, número, bairro, cidade/UF"
+                placeholder={t("seller.addressPlaceholder")}
                 {...form.register("address")}
               />
               {form.formState.errors.address && (
@@ -187,14 +191,14 @@ export default function NewSellerPage() {
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="logo">Logo (opcional)</Label>
+              <Label htmlFor="logo">{t("seller.logoOptional")}</Label>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <ImageFilePreview
                   file={logoFile}
                   alt={
                     logoFile
-                      ? `Prévia da logo ${logoFile.name}`
-                      : "Prévia da logo"
+                      ? t("seller.logoPreviewFile", { file: logoFile.name })
+                      : t("seller.logoPreview")
                   }
                   className="size-16 shrink-0"
                 />
@@ -217,7 +221,7 @@ export default function NewSellerPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="primaryColor">Cor primária (opcional)</Label>
+              <Label htmlFor="primaryColor">{t("seller.primaryColor")}</Label>
               <Input
                 id="primaryColor"
                 placeholder="#F59E0B"
@@ -227,7 +231,7 @@ export default function NewSellerPage() {
 
             <div className="space-y-2">
               <Label htmlFor="secondaryColor">
-                Cor secundária (opcional)
+                {t("seller.secondaryColor")}
               </Label>
               <Input
                 id="secondaryColor"
@@ -238,7 +242,7 @@ export default function NewSellerPage() {
 
             <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
               <Button type="button" variant="ghost" asChild>
-                <Link href="/sellers">Cancelar</Link>
+                <Link href="/sellers">{t("common.cancel")}</Link>
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? (
@@ -246,7 +250,7 @@ export default function NewSellerPage() {
                 ) : (
                   <Save className="size-4" />
                 )}
-                Criar loja
+                {t("seller.create")}
               </Button>
             </div>
           </form>

@@ -1,4 +1,5 @@
 import { getAuthSnapshot, useAuthStore } from "@/lib/auth/store";
+import { getLanguageSnapshot } from "@/lib/i18n/language-store";
 import type { ApiErrorBody } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
@@ -74,7 +75,10 @@ async function refreshAccessToken(): Promise<boolean> {
     try {
       const response = await fetch(buildUrl("/auth/refresh"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Accept-Language": getLanguageSnapshot().language,
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ refreshToken }),
       });
 
@@ -111,6 +115,7 @@ async function executeRequest<T>(
 
   const headers: Record<string, string> = {
     Accept: "application/json",
+    "Accept-Language": getLanguageSnapshot().language,
   };
 
   if (body !== undefined && body !== null && !(body instanceof FormData)) {

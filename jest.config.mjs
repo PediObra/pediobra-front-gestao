@@ -12,6 +12,10 @@ const config = {
   collectCoverageFrom: [
     "src/components/forms/image-file-preview.tsx",
     "src/components/layout/sidebar.tsx",
+    "src/components/theme/theme-toggle.tsx",
+    "src/lib/theme.ts",
+    "src/lib/theme-provider.tsx",
+    "src/lib/theme-store.ts",
   ],
   coverageDirectory: "coverage",
   coverageReporters: ["text", "lcov"],

@@ -16,6 +16,7 @@ import {
   Menu,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,7 +28,15 @@ import {
 } from "@/components/ui/dialog";
 
 type NavItem = {
-  label: string;
+  labelKey:
+    | "nav.dashboard"
+    | "nav.orders"
+    | "nav.products"
+    | "nav.sellerProducts"
+    | "nav.sellers"
+    | "nav.drivers"
+    | "nav.users"
+    | "nav.payments";
   href: string;
   icon: typeof LayoutDashboard;
   show: (ctx: { isAdmin: boolean; isSeller: boolean }) => boolean;
@@ -35,49 +44,49 @@ type NavItem = {
 
 const NAV_ITEMS: NavItem[] = [
   {
-    label: "Dashboard",
+    labelKey: "nav.dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
     show: () => true,
   },
   {
-    label: "Pedidos",
+    labelKey: "nav.orders",
     href: "/orders",
     icon: ClipboardList,
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {
-    label: "Produtos",
+    labelKey: "nav.products",
     href: "/products",
     icon: Package,
     show: () => true,
   },
   {
-    label: "Ofertas da loja",
+    labelKey: "nav.sellerProducts",
     href: "/seller-products",
     icon: PackageCheck,
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {
-    label: "Lojas",
+    labelKey: "nav.sellers",
     href: "/sellers",
     icon: Store,
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {
-    label: "Motoristas",
+    labelKey: "nav.drivers",
     href: "/drivers",
     icon: Truck,
     show: ({ isAdmin }) => isAdmin,
   },
   {
-    label: "Usuários",
+    labelKey: "nav.users",
     href: "/users",
     icon: Users,
     show: ({ isAdmin }) => isAdmin,
   },
   {
-    label: "Pagamentos",
+    labelKey: "nav.payments",
     href: "/payments",
     icon: Receipt,
     show: ({ isAdmin }) => isAdmin,
@@ -106,11 +115,12 @@ function SidebarNav({
 }) {
   const pathname = usePathname();
   const { isAdmin, isSeller } = useAuth();
+  const t = useTranslation();
 
   const items = NAV_ITEMS.filter((item) => item.show({ isAdmin, isSeller }));
 
   return (
-    <nav aria-label="Navegação principal" className={className}>
+    <nav aria-label={t("sidebar.nav")} className={className}>
       {items.map((item) => {
         const active =
           pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -130,7 +140,7 @@ function SidebarNav({
             )}
           >
             <Icon className="size-4 shrink-0" />
-            {item.label}
+            {t(item.labelKey)}
           </Link>
         );
       })}
@@ -140,6 +150,7 @@ function SidebarNav({
 
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
+  const t = useTranslation();
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -148,7 +159,7 @@ export function MobileSidebar() {
           type="button"
           variant="ghost"
           size="icon"
-          aria-label="Abrir menu de navegação"
+          aria-label={t("sidebar.open")}
           className="-ml-2 size-11 md:hidden"
         >
           <Menu className="size-5" />
@@ -157,9 +168,9 @@ export function MobileSidebar() {
       <DialogContent
         className="left-0 top-0 flex h-dvh w-[min(20rem,calc(100vw-2rem))] max-w-none translate-x-0 translate-y-0 flex-col gap-0 border-y-0 border-l-0 border-r border-sidebar-border bg-sidebar p-0 text-sidebar-foreground shadow-2xl data-[state=closed]:slide-out-to-left data-[state=open]:slide-in-from-left sm:rounded-none [&>button]:right-2 [&>button]:top-2 [&>button]:flex [&>button]:size-11 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-md [&>button]:text-sidebar-foreground"
       >
-        <DialogTitle className="sr-only">Menu de navegação</DialogTitle>
+        <DialogTitle className="sr-only">{t("sidebar.menu")}</DialogTitle>
         <DialogDescription className="sr-only">
-          Escolha uma seção do painel para navegar.
+          {t("sidebar.description")}
         </DialogDescription>
 
         <div className="h-16 flex items-center px-5 pr-14 border-b border-sidebar-border">
@@ -172,7 +183,7 @@ export function MobileSidebar() {
         />
 
         <div className="p-3 text-[11px] text-sidebar-foreground/50 border-t border-sidebar-border">
-          PediObra v1 · painel interno
+          {t("sidebar.footer")}
         </div>
       </DialogContent>
     </Dialog>
@@ -180,6 +191,8 @@ export function MobileSidebar() {
 }
 
 export function Sidebar() {
+  const t = useTranslation();
+
   return (
     <aside className="hidden md:flex w-60 shrink-0 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
       <div className="h-16 flex items-center px-5 border-b border-sidebar-border">
@@ -189,7 +202,7 @@ export function Sidebar() {
       <SidebarNav className="flex-1 p-3 space-y-0.5" />
 
       <div className="p-3 text-[11px] text-sidebar-foreground/50 border-t border-sidebar-border">
-        PediObra v1 · painel interno
+        {t("sidebar.footer")}
       </div>
     </aside>
   );

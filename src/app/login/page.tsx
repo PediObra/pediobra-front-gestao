@@ -9,21 +9,25 @@ import { HardHat, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api/client";
+import { useTranslation } from "@/lib/i18n/language-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const loginSchema = z.object({
-  email: z.string().email("Informe um email válido"),
-  password: z.string().min(1, "Informe a senha"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+type LoginForm = {
+  email: string;
+  password: string;
+};
 
 export default function LoginPage() {
+  const t = useTranslation();
   const router = useRouter();
   const { login } = useAuth();
   const [submitting, setSubmitting] = useState(false);
+  const loginSchema = z.object({
+    email: z.string().email(t("login.invalidEmail")),
+    password: z.string().min(1, t("login.requiredPassword")),
+  });
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -34,13 +38,13 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await login(values);
-      toast.success("Login realizado");
+      toast.success(t("login.success"));
       router.replace("/dashboard");
     } catch (err) {
       const msg =
         err instanceof ApiError
           ? err.displayMessage
-          : "Não foi possível fazer login";
+          : t("login.failed");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -59,15 +63,14 @@ export default function LoginPage() {
         </div>
         <div className="relative space-y-4 max-w-md">
           <h1 className="text-3xl font-semibold leading-tight">
-            Gestão de entregas de materiais de construção.
+            {t("login.heroTitle")}
           </h1>
           <p className="text-sidebar-foreground/70">
-            Painel operacional para admins e vendedores. Controle catálogo,
-            pedidos, motoristas e pagamentos em um lugar só.
+            {t("login.heroSubtitle")}
           </p>
         </div>
         <div className="relative text-xs text-sidebar-foreground/60">
-          v1 — painel interno · PediObra © {new Date().getFullYear()}
+          {t("login.footer", { year: new Date().getFullYear() })}
         </div>
       </div>
 
@@ -84,10 +87,10 @@ export default function LoginPage() {
 
           <div className="space-y-2">
             <h2 className="text-2xl font-semibold tracking-tight">
-              Entrar no painel
+              {t("login.title")}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Use as credenciais do seed local para acessar.
+              {t("login.subtitle")}
             </p>
           </div>
 
@@ -97,7 +100,7 @@ export default function LoginPage() {
             noValidate
           >
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("login.email")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -113,7 +116,7 @@ export default function LoginPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
+              <Label htmlFor="password">{t("login.password")}</Label>
               <Input
                 id="password"
                 type="password"
@@ -130,12 +133,14 @@ export default function LoginPage() {
 
             <Button type="submit" disabled={submitting} className="w-full">
               {submitting && <Loader2 className="size-4 animate-spin" />}
-              Entrar
+              {t("login.submit")}
             </Button>
           </form>
 
           <div className="rounded-md border border-dashed border-border p-4 text-xs text-muted-foreground space-y-1 font-mono">
-            <p className="font-medium text-foreground">Credenciais do seed:</p>
+            <p className="font-medium text-foreground">
+              {t("login.seedCredentials")}
+            </p>
             <p>master@pediobra.local / 123456 (ADMIN)</p>
             <p>marina.centro@pediobra.local / 123456 (SELLER OWNER)</p>
             <p>carlos.estoque@pediobra.local / 123456 (SELLER EMPLOYEE)</p>

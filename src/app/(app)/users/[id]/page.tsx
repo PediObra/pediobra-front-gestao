@@ -20,6 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { RoleBadge, MembershipRoleBadge } from "@/components/badges";
 import { EditRolesDialog } from "./edit-roles-dialog";
 import { EditSellersDialog } from "./edit-sellers-dialog";
+import { useTranslation } from "@/lib/i18n/language-store";
 
 export default function UserDetailPage({
   params,
@@ -27,6 +28,7 @@ export default function UserDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const t = useTranslation();
   const userId = Number(id);
 
   const query = useQuery({
@@ -43,13 +45,13 @@ export default function UserDetailPage({
         <Button asChild variant="ghost" size="sm" className="-ml-3">
           <Link href="/users">
             <ArrowLeft className="size-4" />
-            Voltar para usuários
+            {t("common.backToUsers")}
           </Link>
         </Button>
       </div>
 
       <PageHeader
-        title={user?.name ?? "Carregando…"}
+        title={user?.name ?? t("user.loading")}
         description={user?.email}
       />
 
@@ -61,7 +63,7 @@ export default function UserDetailPage({
       ) : !user ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Usuário não encontrado.
+            {t("user.notFound")}
           </CardContent>
         </Card>
       ) : (
@@ -71,16 +73,16 @@ export default function UserDetailPage({
               <div className="space-y-1">
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="size-4" />
-                  Papéis do sistema
+                  {t("user.systemRoles")}
                 </CardTitle>
                 <CardDescription>
-                  Controla o que o usuário pode acessar.
+                  {t("user.systemRolesDescription")}
                 </CardDescription>
               </div>
               <EditRolesDialog user={user}>
                 <Button variant="outline" size="sm">
                   <Edit3 className="size-4" />
-                  Editar
+                  {t("common.edit")}
                 </Button>
               </EditRolesDialog>
             </CardHeader>
@@ -93,15 +95,15 @@ export default function UserDetailPage({
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Nenhum papel atribuído.
+                  {t("user.noRole")}
                 </p>
               )}
               <dl className="pt-2 text-sm grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
                 <dt className="text-muted-foreground">ID</dt>
                 <dd className="font-mono">#{user.id}</dd>
-                <dt className="text-muted-foreground">Email</dt>
+                <dt className="text-muted-foreground">{t("login.email")}</dt>
                 <dd>{user.email}</dd>
-                <dt className="text-muted-foreground">Criado em</dt>
+                <dt className="text-muted-foreground">{t("users.createdAt")}</dt>
                 <dd>{formatDate(user.createdAt)}</dd>
               </dl>
             </CardContent>
@@ -112,16 +114,16 @@ export default function UserDetailPage({
               <div className="space-y-1">
                 <CardTitle className="flex items-center gap-2">
                   <Store className="size-4" />
-                  Vínculos com lojas
+                  {t("user.storeLinks")}
                 </CardTitle>
                 <CardDescription>
-                  Permissões granulares por loja (OWNER/EMPLOYEE).
+                  {t("user.storeLinksDescription")}
                 </CardDescription>
               </div>
               <EditSellersDialog user={user}>
                 <Button variant="outline" size="sm">
                   <Edit3 className="size-4" />
-                  Editar
+                  {t("common.edit")}
                 </Button>
               </EditSellersDialog>
             </CardHeader>
@@ -146,12 +148,12 @@ export default function UserDetailPage({
                           </p>
                         )}
                         <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
-                          {s.canEditSeller && <span>✓ editar loja</span>}
+                          {s.canEditSeller && <span>{t("user.canEditStore")}</span>}
                           {s.canManageSellerProducts && (
-                            <span>✓ gerenciar ofertas</span>
+                            <span>{t("user.canManageOffers")}</span>
                           )}
                           {s.canManageSellerStaff && (
-                            <span>✓ gerenciar equipe</span>
+                            <span>{t("user.canManageStaff")}</span>
                           )}
                         </div>
                       </div>
@@ -160,7 +162,7 @@ export default function UserDetailPage({
                 </ul>
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  Nenhum vínculo com loja.
+                  {t("user.noStoreLink")}
                 </p>
               )}
             </CardContent>
