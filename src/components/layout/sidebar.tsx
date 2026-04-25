@@ -14,8 +14,10 @@ import {
   Receipt,
   ClipboardList,
   Menu,
+  Newspaper,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,6 +30,7 @@ import {
 
 type NavItem = {
   label: string;
+  labelKey?: string;
   href: string;
   icon: typeof LayoutDashboard;
   show: (ctx: { isAdmin: boolean; isSeller: boolean }) => boolean;
@@ -82,6 +85,13 @@ const NAV_ITEMS: NavItem[] = [
     icon: Receipt,
     show: ({ isAdmin }) => isAdmin,
   },
+  {
+    label: "Blog",
+    labelKey: "nav.blog",
+    href: "/blog-posts",
+    icon: Newspaper,
+    show: ({ isAdmin }) => isAdmin,
+  },
 ];
 
 export function SidebarBrand({ className }: { className?: string }) {
@@ -106,6 +116,7 @@ function SidebarNav({
 }) {
   const pathname = usePathname();
   const { isAdmin, isSeller } = useAuth();
+  const { t } = useI18n();
 
   const items = NAV_ITEMS.filter((item) => item.show({ isAdmin, isSeller }));
 
@@ -130,7 +141,7 @@ function SidebarNav({
             )}
           >
             <Icon className="size-4 shrink-0" />
-            {item.label}
+            {item.labelKey ? t(item.labelKey) : item.label}
           </Link>
         );
       })}

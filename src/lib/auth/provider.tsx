@@ -6,7 +6,14 @@ import { useAuthStore } from "@/lib/auth/store";
 import { authService } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = ["/login", "/register", "/blog"];
+const AUTH_PUBLIC_PATHS = ["/login", "/register"];
+
+function isPublicPath(pathname: string) {
+  return PUBLIC_PATHS.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -36,13 +43,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    const isPublic = PUBLIC_PATHS.some(
-      (p) => pathname === p || pathname.startsWith(`${p}/`),
-    );
-
-    if (!accessToken && !isPublic) {
+    if (!accessToken && !isPublicPath(pathname)) {
       router.replace("/login");
-    } else if (accessToken && user && isPublic) {
+    } else if (
+      accessToken &&
+      user &&
+      AUTH_PUBLIC_PATHS.some(
+        (path) => pathname === path || pathname.startsWith(`${path}/`),
+      )
+    ) {
       router.replace("/dashboard");
     }
   }, [hydrated, accessToken, user, pathname, router]);

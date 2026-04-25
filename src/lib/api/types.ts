@@ -194,6 +194,64 @@ export interface Product {
   barcodes?: ProductBarcode[];
 }
 
+// ---- Blog ----
+
+export type BlogPostStatus = "DRAFT" | "PUBLISHED" | "SCHEDULED" | "ARCHIVED";
+
+export type BlogPostContentFormat = "HTML" | "MARKDOWN" | "JSON";
+
+export interface BlogPostImage {
+  id: number;
+  blogPostId: number;
+  url: string;
+  altText?: string | null;
+  caption?: string | null;
+  position: number;
+  isCover: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  active?: boolean;
+}
+
+export interface BlogTag {
+  id: number;
+  name: string;
+  slug: string;
+  createdAt?: string;
+  updatedAt?: string;
+  active?: boolean;
+}
+
+export interface BlogAuthor {
+  id: number;
+  name: string;
+  email: string;
+}
+
+export interface BlogPost {
+  id: number;
+  authorUserId: number | null;
+  title: string;
+  slug: string;
+  excerpt?: string | null;
+  content: string;
+  contentFormat: BlogPostContentFormat;
+  contentEditorData?: string | null;
+  status: BlogPostStatus;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  seoKeywords?: string | null;
+  canonicalUrl?: string | null;
+  readingTimeMinutes: number;
+  publishedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  active?: boolean;
+  images: BlogPostImage[];
+  tags: BlogTag[];
+  author: BlogAuthor | null;
+}
+
 // ---- Seller Products ----
 
 export interface SellerProduct {

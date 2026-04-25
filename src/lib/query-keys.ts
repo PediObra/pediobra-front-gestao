@@ -7,6 +7,7 @@ import type {
   ListSellersParams,
   ListUsersParams,
   ListAddressesParams,
+  ListAdminBlogPostsParams,
 } from "@/lib/api";
 
 export const queryKeys = {
@@ -55,5 +56,11 @@ export const queryKeys = {
     list: (params: ListAddressesParams) =>
       ["addresses", "list", params] as const,
     byId: (id: number) => ["addresses", "byId", id] as const,
+  },
+  blogPosts: {
+    all: () => ["blogPosts"] as const,
+    list: (params: ListAdminBlogPostsParams) =>
+      ["blogPosts", "list", params] as const,
+    byId: (id: number) => ["blogPosts", "byId", id] as const,
   },
 } as const;

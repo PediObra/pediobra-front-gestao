@@ -152,10 +152,15 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    font-feature-settings:
+      "rlig" 1,
+      "calt" 1,
+      "ss01" 1;
   }
   .font-mono {
-    font-feature-settings: "zero" 1, "ss01" 1;
+    font-feature-settings:
+      "zero" 1,
+      "ss01" 1;
   }
 }
 
@@ -163,8 +168,210 @@
 @layer utilities {
   .bg-blueprint {
     background-image:
-      linear-gradient(to right, oklch(0.9 0.002 285 / 0.5) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(0.9 0.002 285 / 0.5) 1px, transparent 1px);
+      linear-gradient(
+        to right,
+        oklch(0.9 0.002 285 / 0.5) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        oklch(0.9 0.002 285 / 0.5) 1px,
+        transparent 1px
+      );
     background-size: 24px 24px;
+  }
+
+  .blog-theme {
+    font-family: var(--font-blog-sans), var(--font-geist-sans), sans-serif;
+  }
+
+  .blog-display {
+    font-family: var(--font-blog-serif), Georgia, serif;
+    letter-spacing: 0;
+  }
+
+  .blog-prose {
+    color: #342d23;
+    font-size: 1.0625rem;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+  }
+
+  .dark .blog-prose {
+    color: var(--foreground);
+  }
+
+  .blog-prose > * + * {
+    margin-top: 1.25rem;
+  }
+
+  .blog-prose h2,
+  .blog-prose h3,
+  .blog-prose h4 {
+    color: #241f18;
+    font-family: var(--font-blog-serif), Georgia, serif;
+    font-weight: 650;
+    line-height: 1.12;
+    letter-spacing: 0;
+  }
+
+  .dark .blog-prose h2,
+  .dark .blog-prose h3,
+  .dark .blog-prose h4 {
+    color: var(--foreground);
+  }
+
+  .blog-prose h2 {
+    margin-top: 2.5rem;
+    font-size: 2rem;
+  }
+
+  .blog-prose h3 {
+    margin-top: 2rem;
+    font-size: 1.5rem;
+  }
+
+  @media (min-width: 640px) {
+    .blog-prose h2 {
+      font-size: 2.5rem;
+    }
+
+    .blog-prose h3 {
+      font-size: 1.875rem;
+    }
+  }
+
+  .blog-prose p {
+    margin: 0;
+  }
+
+  .blog-prose a {
+    color: #7b4e19;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .dark .blog-prose a {
+    color: var(--primary);
+  }
+
+  .blog-prose ul,
+  .blog-prose ol {
+    padding-left: 1.35rem;
+  }
+
+  .blog-prose li + li {
+    margin-top: 0.5rem;
+  }
+
+  .blog-prose blockquote {
+    border-left: 4px solid #c47b24;
+    color: #4d4338;
+    margin: 2rem 0;
+    padding: 0.5rem 0 0.5rem 1.25rem;
+    font-family: var(--font-blog-serif), Georgia, serif;
+    font-size: 1.35rem;
+    line-height: 1.5;
+  }
+
+  .dark .blog-prose blockquote {
+    color: var(--muted-foreground);
+  }
+
+  .blog-prose img {
+    border-radius: 8px;
+    display: block;
+    height: auto;
+    margin: 2rem 0;
+    max-width: 100%;
+  }
+
+  .blog-prose table {
+    border-collapse: collapse;
+    display: block;
+    margin: 2rem 0;
+    overflow-x: auto;
+    width: 100%;
+  }
+
+  .blog-prose pre {
+    background: rgb(36 31 24 / 0.08);
+    border-radius: 8px;
+    margin: 2rem 0;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 1rem;
+  }
+
+  .dark .blog-prose pre {
+    background: var(--muted);
+  }
+
+  .blog-prose th,
+  .blog-prose td {
+    border: 1px solid rgb(36 31 24 / 0.14);
+    padding: 0.75rem;
+    text-align: left;
+  }
+
+  .dark .blog-prose th,
+  .dark .blog-prose td {
+    border-color: var(--border);
+  }
+
+  .blog-prose code {
+    background: rgb(36 31 24 / 0.08);
+    border-radius: 4px;
+    padding: 0.12rem 0.28rem;
+  }
+
+  .blog-prose pre code {
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  .dark .blog-prose code {
+    background: var(--muted);
+  }
+
+  .blog-editor-prose h2,
+  .blog-editor-prose h3 {
+    font-weight: 650;
+    line-height: 1.2;
+    margin-top: 1.25rem;
+  }
+
+  .blog-editor-prose h2 {
+    font-size: 1.625rem;
+  }
+
+  .blog-editor-prose h3 {
+    font-size: 1.25rem;
+  }
+
+  .blog-editor-prose p {
+    margin: 0.75rem 0;
+  }
+
+  .blog-editor-prose blockquote {
+    border-left: 3px solid var(--primary);
+    color: var(--muted-foreground);
+    margin: 1rem 0;
+    padding-left: 1rem;
+  }
+
+  .blog-editor-prose ul,
+  .blog-editor-prose ol {
+    padding-left: 1.25rem;
+  }
+
+  .blog-editor-prose img {
+    border-radius: 8px;
+    display: block;
+    height: auto;
+    margin: 1rem 0;
+    max-width: 100%;
   }
 }

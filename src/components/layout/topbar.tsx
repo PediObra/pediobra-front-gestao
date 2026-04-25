@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { initials, ROLE_LABEL } from "@/lib/formatters";
 import { MobileSidebar, SidebarBrand } from "@/components/layout/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PreferencesControls } from "@/components/preferences/preferences-controls";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -29,6 +30,8 @@ export function Topbar() {
       </div>
 
       <div className="flex-1" />
+
+      <PreferencesControls />
 
       <DropdownMenu>
         <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">

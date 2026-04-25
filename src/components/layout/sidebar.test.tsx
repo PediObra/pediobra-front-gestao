@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReactElement } from "react";
+import { I18nProvider } from "@/lib/i18n";
 import { MobileSidebar } from "./sidebar";
 
 const mockUsePathname = jest.fn();
@@ -22,7 +24,7 @@ describe("MobileSidebar", () => {
   });
 
   it("opens the primary navigation from the mobile menu button", () => {
-    render(<MobileSidebar />);
+    renderWithProviders(<MobileSidebar />);
 
     fireEvent.click(
       screen.getByRole("button", { name: "Abrir menu de navegação" }),
@@ -44,7 +46,7 @@ describe("MobileSidebar", () => {
   });
 
   it("closes the drawer after choosing a navigation link", () => {
-    render(<MobileSidebar />);
+    renderWithProviders(<MobileSidebar />);
 
     fireEvent.click(
       screen.getByRole("button", { name: "Abrir menu de navegação" }),
@@ -54,3 +56,7 @@ describe("MobileSidebar", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
+
+function renderWithProviders(ui: ReactElement) {
+  return render(<I18nProvider>{ui}</I18nProvider>);
+}

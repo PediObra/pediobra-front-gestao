@@ -6,6 +6,8 @@ import { useState } from "react";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth/provider";
 import { ApiError } from "@/lib/api/client";
+import { I18nProvider } from "@/lib/i18n";
+import { ThemeProvider } from "@/lib/theme/provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -31,7 +33,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>{children}</AuthProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </I18nProvider>
+      </ThemeProvider>
       <Toaster
         position="top-right"
         richColors

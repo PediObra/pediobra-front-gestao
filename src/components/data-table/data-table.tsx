@@ -124,20 +124,20 @@ export function DataTable<TData>({
       </div>
 
       {meta && meta.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm text-muted-foreground">
-          <div>
+        <div className="flex flex-col gap-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             Página {meta.page} de {meta.totalPages}
             {isFetching && (
-              <span className="ml-2 inline-flex items-center gap-1 text-xs">
+              <span className="inline-flex items-center gap-1 text-xs">
                 <Loader2 className="size-3 animate-spin" />
                 atualizando
               </span>
             )}
-            <span className="ml-3 text-xs">
+            <span className="text-xs">
               {meta.total} resultado{meta.total === 1 ? "" : "s"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
             <Button
               variant="outline"
               size="sm"
