@@ -8,4 +8,5 @@ export * from "./orders";
 export * from "./delivery-requests";
 export * from "./payments";
 export * from "./addresses";
+export * from "./geo";
 export * from "./client";

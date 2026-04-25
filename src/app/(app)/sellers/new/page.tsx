@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
@@ -13,6 +13,7 @@ import { sellersService, type CreateSellerPayload } from "@/lib/api/sellers";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { PageHeader } from "@/components/layout/page-header";
+import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
 import {
   Card,
   CardContent,
@@ -31,13 +32,12 @@ function createSchema(t: typeof translate) {
   return z.object({
     name: z.string().min(2, t("product.nameRequired")),
     email: z.string().email(t("login.invalidEmail")),
+    placeId: z.string().min(3, "Selecione um endereço nas sugestões."),
     address: z.string().min(3, t("seller.addressRequired")),
-    cep: z.string().min(8, t("seller.cepRequired")),
+    cep: z.string().optional().or(z.literal("")),
     phone: z.string().min(8, t("seller.phoneRequired")),
     primaryColor: z.string().optional().or(z.literal("")),
     secondaryColor: z.string().optional().or(z.literal("")),
-    latitude: z.string().optional().or(z.literal("")),
-    longitude: z.string().optional().or(z.literal("")),
   });
 }
 
@@ -49,35 +49,38 @@ export default function NewSellerPage() {
   const qc = useQueryClient();
   const { isAdmin } = useAuth();
   const [logoFile, setLogoFile] = useState<File | undefined>();
+  const [placesSessionToken] = useState(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createSchema(t)),
     defaultValues: {
       name: "",
       email: "",
+      placeId: "",
       address: "",
       cep: "",
       phone: "",
       primaryColor: "",
       secondaryColor: "",
-      latitude: "",
-      longitude: "",
     },
   });
+  const addressValue = useWatch({ control: form.control, name: "address" });
+  const selectedPlaceId = useWatch({ control: form.control, name: "placeId" });
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) => {
       const payload: CreateSellerPayload = {
         name: values.name,
         email: values.email,
+        placeId: values.placeId,
         address: values.address,
-        cep: values.cep.replace(/\D/g, ""),
+        cep: values.cep?.replace(/\D/g, "") || undefined,
         phone: values.phone.replace(/\D/g, ""),
         logo: logoFile,
         primaryColor: values.primaryColor || undefined,
         secondaryColor: values.secondaryColor || undefined,
-        latitude: values.latitude || undefined,
-        longitude: values.longitude || undefined,
       };
       return sellersService.create(payload);
     },
@@ -170,10 +173,23 @@ export default function NewSellerPage() {
 
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="address">{t("common.address")}</Label>
-              <Input
-                id="address"
+              <AddressAutocomplete
+                value={addressValue}
                 placeholder={t("seller.addressPlaceholder")}
-                {...form.register("address")}
+                sessionToken={placesSessionToken}
+                selectedPlaceId={selectedPlaceId}
+                onChange={(value) => {
+                  form.setValue("address", value, { shouldValidate: true });
+                  form.setValue("placeId", "", { shouldValidate: true });
+                }}
+                onSelect={(place) => {
+                  form.setValue("address", place.description, {
+                    shouldValidate: true,
+                  });
+                  form.setValue("placeId", place.placeId, {
+                    shouldValidate: true,
+                  });
+                }}
               />
               {form.formState.errors.address && (
                 <p className="text-xs text-destructive">
@@ -194,24 +210,6 @@ export default function NewSellerPage() {
                   {form.formState.errors.cep.message}
                 </p>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="latitude">{t("seller.latitude")}</Label>
-              <Input
-                id="latitude"
-                placeholder="-23.550520"
-                {...form.register("latitude")}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="longitude">{t("seller.longitude")}</Label>
-              <Input
-                id="longitude"
-                placeholder="-46.633308"
-                {...form.register("longitude")}
-              />
             </div>
 
             <div className="space-y-2 sm:col-span-2">

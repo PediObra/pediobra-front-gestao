@@ -7,6 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Calculator, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
+import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
 import {
   Card,
   CardContent,
@@ -51,14 +52,14 @@ export default function NewDeliveryRequestPage() {
   const [pickupCep, setPickupCep] = useState("");
   const [pickupContactName, setPickupContactName] = useState("");
   const [pickupContactPhone, setPickupContactPhone] = useState("");
+  const [pickupPlaceId, setPickupPlaceId] = useState("");
   const [pickupLatitude, setPickupLatitude] = useState("");
   const [pickupLongitude, setPickupLongitude] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
   const [dropoffCep, setDropoffCep] = useState("");
   const [dropoffContactName, setDropoffContactName] = useState("");
   const [dropoffContactPhone, setDropoffContactPhone] = useState("");
-  const [dropoffLatitude, setDropoffLatitude] = useState("");
-  const [dropoffLongitude, setDropoffLongitude] = useState("");
+  const [dropoffPlaceId, setDropoffPlaceId] = useState("");
   const [packageDescription, setPackageDescription] = useState("");
   const [packageSize, setPackageSize] = useState("");
   const [packageWeightGrams, setPackageWeightGrams] = useState("");
@@ -67,6 +68,9 @@ export default function NewDeliveryRequestPage() {
   const [quotedFeeCents, setQuotedFeeCents] = useState<number | null>(null);
   const [quotedDistanceMeters, setQuotedDistanceMeters] = useState<number | null>(
     null,
+  );
+  const [placesSessionToken] = useState(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
 
   const sellersQ = useQuery({
@@ -81,16 +85,17 @@ export default function NewDeliveryRequestPage() {
   }, [isAdmin, sellerIds, sellersQ.data?.data]);
 
   const canQuote = Boolean(
-    pickupLatitude && pickupLongitude && dropoffLatitude && dropoffLongitude,
+    (pickupPlaceId || (pickupLatitude && pickupLongitude)) && dropoffPlaceId,
   );
 
   const quoteMutation = useMutation({
     mutationFn: () =>
       deliveryRequestsService.quote({
-        pickupLatitude,
-        pickupLongitude,
-        dropoffLatitude,
-        dropoffLongitude,
+        pickupPlaceId: pickupPlaceId || undefined,
+        pickupLatitude: pickupPlaceId ? undefined : pickupLatitude,
+        pickupLongitude: pickupPlaceId ? undefined : pickupLongitude,
+        dropoffPlaceId,
+        placesSessionToken,
         pickupCep: pickupCep || undefined,
         dropoffCep: dropoffCep || undefined,
       }),
@@ -109,7 +114,13 @@ export default function NewDeliveryRequestPage() {
 
   const createMutation = useMutation({
     mutationFn: () => {
-      if (!pickupAddress || !dropoffAddress || !packageDescription) {
+      if (
+        !pickupAddress ||
+        !dropoffAddress ||
+        !packageDescription ||
+        !dropoffPlaceId ||
+        (!pickupPlaceId && (!pickupLatitude || !pickupLongitude))
+      ) {
         throw new Error(t("deliveries.requiredFields"));
       }
 
@@ -120,14 +131,15 @@ export default function NewDeliveryRequestPage() {
         pickupCep: pickupCep || undefined,
         pickupContactName: pickupContactName || undefined,
         pickupContactPhone: pickupContactPhone || undefined,
-        pickupLatitude: pickupLatitude || undefined,
-        pickupLongitude: pickupLongitude || undefined,
+        pickupPlaceId: pickupPlaceId || undefined,
+        pickupLatitude: pickupPlaceId ? undefined : pickupLatitude || undefined,
+        pickupLongitude: pickupPlaceId ? undefined : pickupLongitude || undefined,
         dropoffAddress,
         dropoffCep: dropoffCep || undefined,
         dropoffContactName: dropoffContactName || undefined,
         dropoffContactPhone: dropoffContactPhone || undefined,
-        dropoffLatitude: dropoffLatitude || undefined,
-        dropoffLongitude: dropoffLongitude || undefined,
+        dropoffPlaceId,
+        placesSessionToken,
         packageDescription,
         packageSize: packageSize || undefined,
         packageWeightGrams: packageWeightGrams
@@ -192,6 +204,7 @@ export default function NewDeliveryRequestPage() {
                   setPickupAddress(seller.address);
                   setPickupCep(seller.cep);
                   setPickupContactPhone(seller.phone);
+                  setPickupPlaceId("");
                   setPickupLatitude(seller.latitude ?? "");
                   setPickupLongitude(seller.longitude ?? "");
                 }
@@ -219,14 +232,17 @@ export default function NewDeliveryRequestPage() {
             setAddress={setPickupAddress}
             cep={pickupCep}
             setCep={setPickupCep}
+            placeId={pickupPlaceId}
+            setPlaceId={setPickupPlaceId}
+            sessionToken={placesSessionToken}
             contactName={pickupContactName}
             setContactName={setPickupContactName}
             contactPhone={pickupContactPhone}
             setContactPhone={setPickupContactPhone}
-            latitude={pickupLatitude}
-            setLatitude={setPickupLatitude}
-            longitude={pickupLongitude}
-            setLongitude={setPickupLongitude}
+            onAddressChanged={() => {
+              setPickupLatitude("");
+              setPickupLongitude("");
+            }}
           />
 
           <AddressFields
@@ -235,14 +251,13 @@ export default function NewDeliveryRequestPage() {
             setAddress={setDropoffAddress}
             cep={dropoffCep}
             setCep={setDropoffCep}
+            placeId={dropoffPlaceId}
+            setPlaceId={setDropoffPlaceId}
+            sessionToken={placesSessionToken}
             contactName={dropoffContactName}
             setContactName={setDropoffContactName}
             contactPhone={dropoffContactPhone}
             setContactPhone={setDropoffContactPhone}
-            latitude={dropoffLatitude}
-            setLatitude={setDropoffLatitude}
-            longitude={dropoffLongitude}
-            setLongitude={setDropoffLongitude}
           />
 
           <div className="space-y-2 lg:col-span-2">
@@ -353,28 +368,28 @@ function AddressFields({
   setAddress,
   cep,
   setCep,
+  placeId,
+  setPlaceId,
+  sessionToken,
   contactName,
   setContactName,
   contactPhone,
   setContactPhone,
-  latitude,
-  setLatitude,
-  longitude,
-  setLongitude,
+  onAddressChanged,
 }: {
   title: string;
   address: string;
   setAddress: (value: string) => void;
   cep: string;
   setCep: (value: string) => void;
+  placeId: string;
+  setPlaceId: (value: string) => void;
+  sessionToken: string;
   contactName: string;
   setContactName: (value: string) => void;
   contactPhone: string;
   setContactPhone: (value: string) => void;
-  latitude: string;
-  setLatitude: (value: string) => void;
-  longitude: string;
-  setLongitude: (value: string) => void;
+  onAddressChanged?: () => void;
 }) {
   const t = useTranslation();
 
@@ -384,7 +399,21 @@ function AddressFields({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-2 sm:col-span-2">
           <Label>{t("common.address")}</Label>
-          <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+          <AddressAutocomplete
+            value={address}
+            sessionToken={sessionToken}
+            selectedPlaceId={placeId}
+            onChange={(value) => {
+              setAddress(value);
+              setPlaceId("");
+              onAddressChanged?.();
+            }}
+            onSelect={(place) => {
+              setAddress(place.description);
+              setPlaceId(place.placeId);
+              onAddressChanged?.();
+            }}
+          />
         </div>
         <div className="space-y-2">
           <Label>CEP</Label>
@@ -402,22 +431,6 @@ function AddressFields({
           <Input
             value={contactName}
             onChange={(e) => setContactName(e.target.value)}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>{t("seller.latitude")}</Label>
-          <Input
-            value={latitude}
-            onChange={(e) => setLatitude(e.target.value)}
-            placeholder="-23.550520"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>{t("seller.longitude")}</Label>
-          <Input
-            value={longitude}
-            onChange={(e) => setLongitude(e.target.value)}
-            placeholder="-46.633308"
           />
         </div>
       </div>

@@ -28,10 +28,13 @@ export interface DeliveryRequestStats {
 }
 
 export interface QuoteDeliveryRequestPayload {
-  pickupLatitude: string;
-  pickupLongitude: string;
-  dropoffLatitude: string;
-  dropoffLongitude: string;
+  pickupLatitude?: string;
+  pickupLongitude?: string;
+  dropoffLatitude?: string;
+  dropoffLongitude?: string;
+  pickupPlaceId?: string;
+  dropoffPlaceId?: string;
+  placesSessionToken?: string;
   pickupCep?: string;
   dropoffCep?: string;
 }
@@ -55,12 +58,15 @@ export interface CreateDeliveryRequestPayload {
   pickupContactPhone?: string;
   pickupLatitude?: string;
   pickupLongitude?: string;
+  pickupPlaceId?: string;
   dropoffAddress: string;
   dropoffCep?: string;
   dropoffContactName?: string;
   dropoffContactPhone?: string;
   dropoffLatitude?: string;
   dropoffLongitude?: string;
+  dropoffPlaceId?: string;
+  placesSessionToken?: string;
   packageDescription: string;
   packageSize?: string;
   packageWeightGrams?: number;

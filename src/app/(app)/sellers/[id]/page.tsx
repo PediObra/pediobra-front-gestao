@@ -11,6 +11,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { formatCep, formatPhone } from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/layout/page-header";
+import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
 import {
   Card,
   CardContent,
@@ -50,10 +51,12 @@ export default function SellerDetailPage({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  const [placeId, setPlaceId] = useState("");
   const [cep, setCep] = useState("");
   const [phone, setPhone] = useState("");
-  const [latitude, setLatitude] = useState("");
-  const [longitude, setLongitude] = useState("");
+  const [placesSessionToken] = useState(
+    () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
   const [logoFile, setLogoFile] = useState<File | undefined>();
   const [clearLogo, setClearLogo] = useState(false);
   const [logoInputKey, setLogoInputKey] = useState(0);
@@ -64,26 +67,29 @@ export default function SellerDetailPage({
       setName(seller.name);
       setEmail(seller.email);
       setAddress(seller.address);
+      setPlaceId("");
       setCep(seller.cep);
       setPhone(seller.phone);
-      setLatitude(seller.latitude ?? "");
-      setLongitude(seller.longitude ?? "");
     }
   }, [seller?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mutation = useMutation({
-    mutationFn: () =>
-      sellersService.update(sellerId, {
+    mutationFn: () => {
+      if (seller && address !== seller.address && !placeId) {
+        throw new Error("Selecione o novo endereco nas sugestões.");
+      }
+
+      return sellersService.update(sellerId, {
         name,
         email,
+        placeId: placeId || undefined,
         address,
         cep,
         phone,
-        latitude: latitude || undefined,
-        longitude: longitude || undefined,
         logo: logoFile,
         clearLogo: clearLogo || undefined,
-      }),
+      });
+    },
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.sellers.byId(sellerId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
@@ -179,11 +185,19 @@ export default function SellerDetailPage({
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="address">{t("common.address")}</Label>
-              <Input
-                id="address"
+              <AddressAutocomplete
                 disabled={!canEdit}
                 value={address}
-                onChange={(e) => setAddress(e.target.value)}
+                sessionToken={placesSessionToken}
+                selectedPlaceId={placeId}
+                onChange={(value) => {
+                  setAddress(value);
+                  setPlaceId("");
+                }}
+                onSelect={(place) => {
+                  setAddress(place.description);
+                  setPlaceId(place.placeId);
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -197,26 +211,6 @@ export default function SellerDetailPage({
               <p className="text-xs text-muted-foreground">
                 {formatCep(seller.cep)}
               </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="latitude">{t("seller.latitude")}</Label>
-              <Input
-                id="latitude"
-                disabled={!canEdit}
-                value={latitude}
-                onChange={(e) => setLatitude(e.target.value)}
-                placeholder="-23.550520"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="longitude">{t("seller.longitude")}</Label>
-              <Input
-                id="longitude"
-                disabled={!canEdit}
-                value={longitude}
-                onChange={(e) => setLongitude(e.target.value)}
-                placeholder="-46.633308"
-              />
             </div>
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="logo">{t("seller.logo")}</Label>

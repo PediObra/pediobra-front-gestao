@@ -12,8 +12,9 @@ export interface ListSellersParams {
 export interface CreateSellerPayload {
   name: string;
   email: string;
-  address: string;
-  cep: string;
+  placeId?: string;
+  address?: string;
+  cep?: string;
   phone: string;
   logo?: File;
   primaryColor?: string;
@@ -44,6 +45,7 @@ function buildSellerFormData(
 
   appendOptional(formData, "name", payload.name);
   appendOptional(formData, "email", payload.email);
+  appendOptional(formData, "placeId", payload.placeId);
   appendOptional(formData, "address", payload.address);
   appendOptional(formData, "cep", payload.cep);
   appendOptional(formData, "phone", payload.phone);
