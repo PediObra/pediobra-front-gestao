@@ -80,7 +80,11 @@ export default function OrderDetailPage({
   });
 
   const driversQ = useQuery({
-    queryKey: queryKeys.drivers.list({ page: 1, limit: 50, status: "APPROVED" }),
+    queryKey: queryKeys.drivers.list({
+      page: 1,
+      limit: 50,
+      status: "APPROVED",
+    }),
     queryFn: () =>
       driversService.list({ page: 1, limit: 50, status: "APPROVED" }),
     enabled: isAdmin,
@@ -224,9 +228,7 @@ export default function OrderDetailPage({
       </div>
 
       <PageHeader
-        title={
-          <span className="font-mono">{formatOrderCode(order)}</span>
-        }
+        title={<span className="font-mono">{formatOrderCode(order)}</span>}
         description={t("order.createdAt", {
           date: formatDateTime(order.createdAt),
         })}
@@ -301,7 +303,9 @@ export default function OrderDetailPage({
               <div className="flex justify-between text-base font-semibold">
                 <span>{t("order.total")}</span>
                 <span className="font-mono">
-                  {centsToBRL(order.totalAmountCents)}
+                  {centsToBRL(
+                    order.totalAmountCents + (order.deliveryFeeCents ?? 0),
+                  )}
                 </span>
               </div>
             </CardContent>
@@ -310,7 +314,9 @@ export default function OrderDetailPage({
           <Card>
             <CardHeader>
               <CardTitle>{t("order.timeline")}</CardTitle>
-              <CardDescription>{t("order.timelineDescription")}</CardDescription>
+              <CardDescription>
+                {t("order.timelineDescription")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {order.statusHistory?.length ? (
@@ -639,9 +645,7 @@ export default function OrderDetailPage({
             <Card>
               <CardHeader>
                 <CardTitle>{t("order.changeStatus")}</CardTitle>
-                <CardDescription>
-                  {t("order.allowedStatuses")}
-                </CardDescription>
+                <CardDescription>{t("order.allowedStatuses")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Select

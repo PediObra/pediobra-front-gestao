@@ -135,7 +135,10 @@ export default function OrdersListPage() {
         header: t("orders.total"),
         cell: ({ row }) => (
           <span className="font-mono text-sm font-semibold">
-            {centsToBRL(row.original.totalAmountCents)}
+            {centsToBRL(
+              row.original.totalAmountCents +
+                (row.original.deliveryFeeCents ?? 0),
+            )}
           </span>
         ),
       },
@@ -162,9 +165,7 @@ export default function OrdersListPage() {
       <PageHeader
         title={t("orders.title")}
         description={
-          isAdmin
-            ? t("orders.adminDescription")
-            : t("orders.sellerDescription")
+          isAdmin ? t("orders.adminDescription") : t("orders.sellerDescription")
         }
       />
 

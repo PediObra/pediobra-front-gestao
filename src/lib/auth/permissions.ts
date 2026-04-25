@@ -28,7 +28,10 @@ export function isOwnerOf(user: AuthUser | null, sellerId: number): boolean {
   return membershipFor(user, sellerId)?.membershipRole === "OWNER";
 }
 
-export function canEditSeller(user: AuthUser | null, sellerId: number): boolean {
+export function canEditSeller(
+  user: AuthUser | null,
+  sellerId: number,
+): boolean {
   if (isAdmin(user)) return true;
   const m = membershipFor(user, sellerId);
   if (!m) return false;
@@ -53,7 +56,10 @@ export function canManageSellerStaff(
   return isOwnerOf(user, sellerId);
 }
 
-export function canAccessSeller(user: AuthUser | null, sellerId: number): boolean {
+export function canAccessSeller(
+  user: AuthUser | null,
+  sellerId: number,
+): boolean {
   if (isAdmin(user)) return true;
   return sellerIdsOf(user).includes(sellerId);
 }
@@ -64,10 +70,22 @@ export function canAccessSeller(user: AuthUser | null, sellerId: number): boolea
  */
 export function allowedOrderStatusTransitions(
   user: AuthUser | null,
-  order: { sellerId: number; assignedDriverProfileId?: number | null; status: string },
+  order: {
+    sellerId: number;
+    assignedDriverProfileId?: number | null;
+    status: string;
+    paymentStatus?: string | null;
+  },
 ) {
+  const filterPaymentLockedDispatch = <T extends readonly string[]>(
+    statuses: T,
+  ) =>
+    ["PAID", "AUTHORIZED"].includes(order.paymentStatus ?? "")
+      ? statuses
+      : statuses.filter((status) => status !== "READY_FOR_PICKUP");
+
   if (isAdmin(user)) {
-    return [
+    return filterPaymentLockedDispatch([
       "CONFIRMED",
       "PREPARING",
       "READY_FOR_PICKUP",
@@ -76,16 +94,16 @@ export function allowedOrderStatusTransitions(
       "DELIVERED",
       "DELIVERY_FAILED",
       "CANCELLED",
-    ] as const;
+    ] as const);
   }
 
   if (canAccessSeller(user, order.sellerId)) {
-    return [
+    return filterPaymentLockedDispatch([
       "CONFIRMED",
       "PREPARING",
       "READY_FOR_PICKUP",
       "CANCELLED",
-    ] as const;
+    ] as const);
   }
 
   const driverProfileIds = user?.driverProfiles.map((d) => d.id) ?? [];
