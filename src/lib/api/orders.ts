@@ -34,7 +34,6 @@ export interface CreateOrderPayload {
   deliveryCep?: string;
   contactPhone?: string;
   notes?: string;
-  confirmationCode?: string;
   items: Array<{ sellerProductId: number; quantity: number }>;
 }
 
@@ -46,6 +45,10 @@ export interface UpdateOrderStatusPayload {
 
 export interface AssignDriverPayload {
   driverProfileId: number;
+}
+
+export interface ConfirmOrderCodePayload {
+  code: string;
 }
 
 export interface CreateOrderEvidencePayload {
@@ -73,14 +76,19 @@ export const ordersService = {
 
   getById: (id: number) => api.get<Order>(`/orders/${id}`),
 
-  create: (payload: CreateOrderPayload) =>
-    api.post<Order>("/orders", payload),
+  create: (payload: CreateOrderPayload) => api.post<Order>("/orders", payload),
 
   updateStatus: (id: number, payload: UpdateOrderStatusPayload) =>
     api.patch<Order>(`/orders/${id}/status`, payload),
 
   assignDriver: (id: number, payload: AssignDriverPayload) =>
     api.patch<Order>(`/orders/${id}/assign-driver`, payload),
+
+  confirmPickup: (id: number, payload: ConfirmOrderCodePayload) =>
+    api.patch<Order>(`/orders/${id}/confirm-pickup`, payload),
+
+  confirmDelivery: (id: number, payload: ConfirmOrderCodePayload) =>
+    api.patch<Order>(`/orders/${id}/confirm-delivery`, payload),
 
   addEvidence: (id: number, payload: CreateOrderEvidencePayload) =>
     api.post<OrderEvidence>(

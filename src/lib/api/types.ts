@@ -403,6 +403,8 @@ export interface Order {
   contactPhone?: string | null;
   notes?: string | null;
   confirmationCode?: string | null;
+  pickupConfirmationCode?: string | null;
+  deliveryConfirmationCode?: string | null;
   deliveryFeeCents?: number | null;
   totalAmountCents: number;
   distanceMeters?: number | null;

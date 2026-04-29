@@ -28,7 +28,10 @@ import {
   formatPhone,
   orderStatusLabel,
 } from "@/lib/formatters";
-import { allowedOrderStatusTransitions } from "@/lib/auth/permissions";
+import {
+  allowedOrderStatusTransitions,
+  canAccessSeller,
+} from "@/lib/auth/permissions";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -97,6 +100,7 @@ export default function OrderDetailPage({
   );
 
   const [nextStatus, setNextStatus] = useState<OrderStatus | "">("");
+  const [pickupCode, setPickupCode] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [cancelDetails, setCancelDetails] = useState("");
   const [driverSel, setDriverSel] = useState<string>("");
@@ -158,6 +162,26 @@ export default function OrderDetailPage({
     },
   });
 
+  const pickupMutation = useMutation({
+    mutationFn: () =>
+      ordersService.confirmPickup(orderId, { code: pickupCode.trim() }),
+    onSuccess: (updated) => {
+      qc.setQueryData(queryKeys.orders.byId(orderId), updated);
+      qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
+      toast.success(t("order.pickupConfirmed"));
+      setPickupCode("");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : t("order.pickupConfirmationFailed");
+      toast.error(msg);
+    },
+  });
+
   const evidenceMutation = useMutation({
     mutationFn: () => {
       if (!evFile) throw new Error(t("order.selectImage"));
@@ -215,6 +239,9 @@ export default function OrderDetailPage({
   }
 
   const canChangeStatus = transitions.length > 0;
+  const canConfirmPickup =
+    order.status === "READY_FOR_PICKUP" &&
+    (isAdmin || canAccessSeller(user, order.sellerId));
 
   return (
     <div className="space-y-6">
@@ -690,6 +717,45 @@ export default function OrderDetailPage({
                     <Loader2 className="size-4 animate-spin" />
                   )}
                   {t("common.apply")}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {canConfirmPickup && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("order.pickupConfirmation")}</CardTitle>
+                <CardDescription>
+                  {t("order.pickupConfirmationDescription")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="pickup-code">{t("order.pickupCode")}</Label>
+                  <Input
+                    id="pickup-code"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={pickupCode}
+                    onChange={(e) =>
+                      setPickupCode(e.target.value.replace(/\D/g, ""))
+                    }
+                    placeholder="0000"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => pickupMutation.mutate()}
+                  disabled={pickupCode.length !== 4 || pickupMutation.isPending}
+                >
+                  {pickupMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="size-4" />
+                  )}
+                  {t("order.confirmPickup")}
                 </Button>
               </CardContent>
             </Card>

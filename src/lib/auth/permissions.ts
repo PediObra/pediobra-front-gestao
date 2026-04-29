@@ -44,6 +44,11 @@ const DRIVER_WORK_STATUSES: readonly (OrderStatus | DeliveryRequestStatus)[] = [
   "DELIVERY_FAILED",
 ] as const;
 
+const ORDER_CODE_PROTECTED_STATUSES: readonly OrderStatus[] = [
+  "PICKED_UP",
+  "DELIVERED",
+] as const;
+
 export function hasRole(user: AuthUser | null, role: RoleName): boolean {
   return !!user?.roles.includes(role);
 }
@@ -130,10 +135,16 @@ export function allowedOrderStatusTransitions(
     order.assignedDriverProfileId
       ? statuses
       : statuses.filter((status) => !DRIVER_WORK_STATUSES.includes(status));
+  const filterCodeProtectedStatuses = (statuses: readonly OrderStatus[]) =>
+    statuses.filter(
+      (status) => !ORDER_CODE_PROTECTED_STATUSES.includes(status),
+    );
 
   if (isAdmin(user)) {
-    return filterUnassignedDriverStatuses(
-      filterPaymentLockedDispatch(graphTransitions),
+    return filterCodeProtectedStatuses(
+      filterUnassignedDriverStatuses(
+        filterPaymentLockedDispatch(graphTransitions),
+      ),
     );
   }
 
@@ -150,8 +161,10 @@ export function allowedOrderStatusTransitions(
     order.assignedDriverProfileId &&
     driverProfileIds.includes(order.assignedDriverProfileId)
   ) {
-    return graphTransitions.filter((status) =>
-      DRIVER_WORK_STATUSES.includes(status),
+    return filterCodeProtectedStatuses(
+      graphTransitions.filter((status) =>
+        DRIVER_WORK_STATUSES.includes(status),
+      ),
     );
   }
 
