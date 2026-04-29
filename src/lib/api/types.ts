@@ -464,4 +464,17 @@ export interface ApiErrorBody {
   message: string | string[];
   error?: string;
   details?: unknown;
+  code?: string;
+  currentSellerId?: number;
+  requestedProductId?: number;
+  activeSellerIds?: number[];
+  options?: SmartCartSellerOption[];
+}
+
+export interface SmartCartSellerOption {
+  sellerId: number;
+  sellerProductIds: number[];
+  totalProductsCents: number;
+  distanceMeters?: number;
+  estimatedDeliveryFeeCents?: number;
 }
