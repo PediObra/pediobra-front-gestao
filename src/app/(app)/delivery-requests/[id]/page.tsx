@@ -50,6 +50,7 @@ import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { allowedDeliveryRequestStatusTransitions } from "@/lib/auth/permissions";
+import { formatDeliveryRequestHistoryEntry } from "@/lib/status-history";
 import {
   centsToBRL,
   deliveryRequestStatusLabel,
@@ -362,24 +363,32 @@ export default function DeliveryRequestDetailPage() {
                         new Date(b.createdAt).getTime() -
                         new Date(a.createdAt).getTime(),
                     )
-                    .map((h) => (
-                      <li key={h.id} className="ml-4">
-                        <div className="absolute -left-1.5 size-3 rounded-full border-2 border-background bg-primary" />
-                        <div className="flex items-center gap-2">
-                          <DeliveryRequestStatusBadge
-                            status={h.toStatus ?? h.status ?? "PENDING"}
-                          />
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateTime(h.createdAt)}
-                          </span>
-                        </div>
-                        {h.note && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {h.note}
-                          </p>
-                        )}
-                      </li>
-                    ))}
+                    .map((h) => {
+                      const event = formatDeliveryRequestHistoryEntry(h, t);
+
+                      return (
+                        <li key={h.id} className="ml-4">
+                          <div className="absolute -left-1.5 size-3 rounded-full border-2 border-background bg-primary" />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium text-foreground">
+                              {event.title}
+                            </p>
+                            <DeliveryRequestStatusBadge
+                              status={event.status}
+                            />
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            <span>{formatDateTime(h.createdAt)}</span>
+                            {event.actor ? <span>{event.actor}</span> : null}
+                          </div>
+                          {event.note && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {event.note}
+                            </p>
+                          )}
+                        </li>
+                      );
+                    })}
                 </ol>
               ) : (
                 <p className="text-sm text-muted-foreground">

@@ -32,6 +32,7 @@ import {
   allowedOrderStatusTransitions,
   canAccessSeller,
 } from "@/lib/auth/permissions";
+import { formatOrderHistoryEntry } from "@/lib/status-history";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -355,27 +356,26 @@ export default function OrderDetailPage({
                         new Date(a.createdAt).getTime(),
                     )
                     .map((h) => {
-                      const status = h.toStatus ?? h.status ?? "PENDING";
+                      const event = formatOrderHistoryEntry(h, t);
 
                       return (
                         <li key={h.id} className="ml-4">
                           <div className="absolute -left-1.5 size-3 rounded-full bg-primary border-2 border-background" />
-                          <div className="flex items-center gap-2">
-                            <OrderStatusBadge status={status} />
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-medium text-foreground">
+                              {event.title}
+                            </p>
+                            <OrderStatusBadge status={event.status} />
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span className="text-xs text-muted-foreground">
                               {formatDateTime(h.createdAt)}
                             </span>
+                            {event.actor ? <span>{event.actor}</span> : null}
                           </div>
-                          {h.note && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {h.note}
-                            </p>
-                          )}
-                          {h.changedByUser && (
-                            <p className="text-xs text-muted-foreground">
-                              {t("order.changedBy", {
-                                name: h.changedByUser.name,
-                              })}
+                          {event.note && (
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {event.note}
                             </p>
                           )}
                         </li>
