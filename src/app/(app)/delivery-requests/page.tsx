@@ -178,7 +178,10 @@ export default function DeliveryRequestsListPage() {
         cell: ({ row }) => (
           <div className="flex justify-end">
             <Button asChild variant="ghost" size="sm">
-              <Link href={`/delivery-requests/${row.original.id}`}>
+              <Link
+                href={`/delivery-requests/${row.original.id}`}
+                prefetch={false}
+              >
                 <Eye className="size-4" />
                 {t("actions.open")}
               </Link>

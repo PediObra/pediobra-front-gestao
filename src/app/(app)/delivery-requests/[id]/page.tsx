@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -81,12 +82,8 @@ const MOCK_PAYMENT_STATUSES: PaymentStatus[] = [
   "CANCELLED",
 ];
 
-export default function DeliveryRequestDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
+export default function DeliveryRequestDetailPage() {
+  const { id } = useParams<{ id: string }>();
   const deliveryRequestId = Number(id);
   const t = useTranslation();
   const qc = useQueryClient();

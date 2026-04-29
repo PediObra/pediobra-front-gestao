@@ -34,6 +34,19 @@ pids="$(find_port_pids | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
 
 if [ -n "$pids" ]; then
   echo "[frontend-dev] Liberando porta ${PORT}: ${pids}"
+  current_pgid="$(ps -o pgid= -p "$$" | tr -d ' ' || true)"
+  pgids="$(
+    for pid in $pids; do
+      ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' '
+    done | sed '/^$/d' | sort -u
+  )"
+
+  for pgid in $pgids; do
+    if [ -n "$pgid" ] && [ "$pgid" != "$current_pgid" ]; then
+      kill -- "-$pgid" 2>/dev/null || true
+    fi
+  done
+
   kill $pids 2>/dev/null || true
 
   for _ in $(seq 1 30); do
@@ -50,4 +63,6 @@ if [ -n "$pids" ]; then
   fi
 fi
 
-exec bash ./scripts/use-node.sh next dev --port "$PORT"
+rm -rf .next/dev 2>/dev/null || true
+
+exec bash ./scripts/use-node.sh ./node_modules/.bin/next dev --webpack --port "$PORT"
