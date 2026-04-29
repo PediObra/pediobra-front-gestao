@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { geoService, type PlaceSuggestion } from "@/lib/api/geo";
+
+const AUTOCOMPLETE_DEBOUNCE_MS = 500;
 
 type AddressAutocompleteProps = {
   value: string;
@@ -26,10 +28,22 @@ export function AddressAutocomplete({
   onSelect,
 }: AddressAutocompleteProps) {
   const [open, setOpen] = useState(false);
-  const canSearch = value.trim().length >= 3 && !selectedPlaceId && !disabled;
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  const searchValue = debouncedValue.trim();
+  const canSearch = searchValue.length >= 3 && !selectedPlaceId && !disabled;
+
+  useEffect(() => {
+    const timeout = setTimeout(
+      () => setDebouncedValue(value),
+      AUTOCOMPLETE_DEBOUNCE_MS,
+    );
+
+    return () => clearTimeout(timeout);
+  }, [value]);
+
   const suggestionsQ = useQuery({
-    queryKey: ["geo-autocomplete", value.trim(), sessionToken],
-    queryFn: () => geoService.autocomplete(value.trim(), sessionToken),
+    queryKey: ["geo-autocomplete", searchValue, sessionToken],
+    queryFn: () => geoService.autocomplete(searchValue, sessionToken),
     enabled: open && canSearch,
     staleTime: 60_000,
   });
