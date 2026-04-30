@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { useAuthStore } from "@/lib/auth/store";
+import { hydrateAuthStore, useAuthStore } from "@/lib/auth/store";
 import { authService } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 
@@ -17,6 +17,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setUser = useAuthStore((s) => s.setUser);
   const clear = useAuthStore((s) => s.clear);
   const fetchedOnce = useRef(false);
+
+  useEffect(() => {
+    hydrateAuthStore();
+  }, []);
 
   useEffect(() => {
     if (!hydrated) return;

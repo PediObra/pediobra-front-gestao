@@ -18,6 +18,8 @@ interface AuthState {
   markHydrated: () => void;
 }
 
+let authHydrationStarted = false;
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -44,9 +46,23 @@ export const useAuthStore = create<AuthState>()(
       onRehydrateStorage: () => (state) => {
         state?.markHydrated();
       },
+      skipHydration: true,
     },
   ),
 );
+
+export function hydrateAuthStore() {
+  if (typeof window === "undefined") return;
+
+  if (useAuthStore.persist.hasHydrated()) {
+    useAuthStore.getState().markHydrated();
+    return;
+  }
+
+  if (authHydrationStarted) return;
+  authHydrationStarted = true;
+  void useAuthStore.persist.rehydrate();
+}
 
 export function getAuthSnapshot() {
   return useAuthStore.getState();
