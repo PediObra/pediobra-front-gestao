@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, Loader2, Pencil } from "lucide-react";
+import { Eye, Loader2, Pencil, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -52,7 +53,10 @@ export default function PaymentsListPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("ALL");
   const [editing, setEditing] = useState<Payment | null>(null);
+  const [refunding, setRefunding] = useState<Payment | null>(null);
   const [newStatus, setNewStatus] = useState<PaymentStatus>("PAID");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundNote, setRefundNote] = useState("");
 
   const params: ListPaymentsParams = useMemo(
     () => ({
@@ -90,6 +94,41 @@ export default function PaymentsListPage() {
     },
   });
 
+  const refundMutation = useMutation({
+    mutationFn: () => {
+      if (!refunding) throw new Error("Nenhum pagamento selecionado");
+      const amountCents = parseRefundAmountCents(refundAmount);
+
+      if (refundAmount.trim() && amountCents === undefined) {
+        throw new Error("Valor de refund invalido");
+      }
+
+      return paymentsService.refund(refunding.id, {
+        amountCents,
+        reason: "requested_by_customer",
+        note: refundNote.trim() || undefined,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+      qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
+      qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
+      toast.success("Refund solicitado");
+      setRefunding(null);
+      setRefundAmount("");
+      setRefundNote("");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : "Nao foi possivel criar refund";
+      toast.error(msg);
+    },
+  });
+
   const columns = useMemo<ColumnDef<Payment>[]>(
     () => [
       {
@@ -105,9 +144,7 @@ export default function PaymentsListPage() {
       {
         id: "target",
         header: t("payments.target"),
-        cell: ({ row }) => (
-          <PaymentTarget payment={row.original} />
-        ),
+        cell: ({ row }) => <PaymentTarget payment={row.original} />,
       },
       {
         id: "provider",
@@ -136,6 +173,21 @@ export default function PaymentsListPage() {
         cell: ({ row }) => <PaymentStatusBadge status={row.original.status} />,
       },
       {
+        id: "refunds",
+        header: "Refunds",
+        cell: ({ row }) => {
+          const refundedCents = (row.original.refunds ?? [])
+            .filter((refund) => refund.status === "SUCCEEDED")
+            .reduce((sum, refund) => sum + refund.amountCents, 0);
+
+          return (
+            <span className="font-mono text-xs text-muted-foreground">
+              {refundedCents > 0 ? centsToBRL(refundedCents) : "—"}
+            </span>
+          );
+        },
+      },
+      {
         accessorKey: "createdAt",
         header: t("payments.created"),
         cell: ({ row }) => (
@@ -159,6 +211,19 @@ export default function PaymentsListPage() {
             >
               <Pencil className="size-4" />
               {t("common.status")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={row.original.status !== "PAID"}
+              onClick={() => {
+                setRefunding(row.original);
+                setRefundAmount("");
+                setRefundNote("");
+              }}
+            >
+              <Undo2 className="size-4" />
+              Refund
             </Button>
             <Button asChild variant="ghost" size="sm">
               <Link
@@ -275,8 +340,66 @@ export default function PaymentsListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog
+        open={!!refunding}
+        onOpenChange={(o) => {
+          if (!o) setRefunding(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Solicitar refund</DialogTitle>
+            <DialogDescription>
+              Deixe o valor em branco para reembolsar o saldo restante do
+              pagamento #{refunding?.id ?? "—"}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <Label>Valor opcional</Label>
+              <Input
+                inputMode="decimal"
+                placeholder="Ex.: 25,90"
+                value={refundAmount}
+                onChange={(event) => setRefundAmount(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Nota interna</Label>
+              <Input
+                value={refundNote}
+                onChange={(event) => setRefundNote(event.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setRefunding(null)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={() => refundMutation.mutate()}
+              disabled={refundMutation.isPending}
+            >
+              {refundMutation.isPending && (
+                <Loader2 className="size-4 animate-spin" />
+              )}
+              Confirmar refund
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function parseRefundAmountCents(value: string) {
+  const normalized = value.trim().replace(/\./g, "").replace(",", ".");
+  if (!normalized) return undefined;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) : undefined;
 }
 
 function PaymentTarget({ payment }: { payment: Payment }) {

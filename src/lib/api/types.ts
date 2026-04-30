@@ -438,6 +438,21 @@ export interface Payment {
   updatedAt?: string;
   order?: Order | null;
   deliveryRequest?: DeliveryRequest | null;
+  refunds?: PaymentRefund[];
+}
+
+export interface PaymentRefund {
+  id: number;
+  paymentId: number;
+  providerRefundId?: string | null;
+  amountCents: number;
+  status: "PENDING" | "SUCCEEDED" | "FAILED" | "CANCELLED";
+  reason?: string | null;
+  note?: string | null;
+  requestedByUserId?: number | null;
+  providerStatus?: string | null;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 // ---- Cart ----

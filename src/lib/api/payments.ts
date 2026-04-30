@@ -16,6 +16,12 @@ export interface CreateMockPaymentPayload {
   status?: PaymentStatus;
 }
 
+export interface CreateRefundPayload {
+  amountCents?: number;
+  reason?: "duplicate" | "fraudulent" | "requested_by_customer" | "other";
+  note?: string;
+}
+
 export const paymentsService = {
   list: (params: ListPaymentsParams = {}) =>
     api.get<Paginated<Payment>>("/payments", { query: params }),
@@ -42,4 +48,7 @@ export const paymentsService = {
 
   updateStatus: (id: number, status: PaymentStatus) =>
     api.patch<Payment>(`/payments/${id}/status`, { status }),
+
+  refund: (id: number, payload: CreateRefundPayload) =>
+    api.post<Payment>(`/payments/${id}/refund`, payload),
 };
