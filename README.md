@@ -75,6 +75,14 @@ Outros papéis disponíveis no seed (verificar `backend/src/database/seed.ts` pa
 
 > A tela de registro público **não** está habilitada na v1 do painel. Para testar com outras contas, use o seed ou crie-as via `POST /auth/register` e depois ajuste as roles em `/users/[id]`.
 
+## Estado atual
+
+- Gestão de produtos base e ofertas de loja.
+- Ofertas de loja têm preço e status ativa/inativa; estoque fica como dado operacional legado e não controla compra no MVP.
+- Lista de ofertas filtra por ativa/inativa/todas e permite alternar disponibilidade quando o usuário tem permissão.
+- Pedidos e pagamentos já refletem o fluxo real com endereço do cliente e Stripe/PaymentSheet no app cliente.
+- Painel acompanha pedidos, evidências, entregadores, pagamentos, usuários, lojas e permissões por seller.
+
 ## Estrutura do projeto
 
 ```
@@ -147,9 +155,7 @@ Na raiz do monorepo:
 
 ## Pós-MVP (fora do escopo desta v1)
 
-- Storefront do cliente (catálogo público, carrinho, checkout)
 - App do motorista (localização em tempo real, aceite/recusa)
 - Registro público pelo painel
 - Upload real de imagens (hoje usamos URLs textuais, formato aceito pela API)
-- Integração Stripe real (pagamentos continuam mockados)
 - Notificações real-time

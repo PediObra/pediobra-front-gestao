@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Eye, Plus, ToggleLeft, ToggleRight } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,14 +30,15 @@ import type { SellerProduct } from "@/lib/api/types";
 
 export default function SellerProductsListPage() {
   const t = useTranslation();
-  const { isAdmin, sellerIds } = useAuth();
+  const { isAdmin, sellerIds, canManageSellerProducts } = useAuth();
+  const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [sellerId, setSellerId] = useState<string>(
     isAdmin ? "ALL" : sellerIds[0] ? String(sellerIds[0]) : "ALL",
   );
-  const [inStockFilter, setInStockFilter] = useState<"ALL" | "YES" | "NO">(
-    "ALL",
-  );
+  const [activeFilter, setActiveFilter] = useState<
+    "ALL" | "ACTIVE" | "INACTIVE"
+  >("ACTIVE");
 
   const sellersQ = useQuery({
     queryKey: queryKeys.sellers.list({ page: 1, limit: 100 }),
@@ -49,14 +51,27 @@ export default function SellerProductsListPage() {
       page,
       limit: 10,
       sellerId: sellerId === "ALL" ? undefined : Number(sellerId),
-      inStock: inStockFilter === "ALL" ? undefined : inStockFilter === "YES",
+      active:
+        activeFilter === "ALL" ? undefined : activeFilter === "ACTIVE",
+      includeInactive: activeFilter === "ALL" ? true : undefined,
     }),
-    [page, sellerId, inStockFilter],
+    [page, sellerId, activeFilter],
   );
 
   const query = useQuery({
     queryKey: queryKeys.sellerProducts.list(params),
     queryFn: () => sellerProductsService.list(params),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: (sellerProduct: SellerProduct) =>
+      sellerProductsService.update(sellerProduct.id, {
+        active: !sellerProduct.active,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.sellerProducts.all() });
+      toast.success(t("sellerProduct.updated"));
+    },
   });
 
   const columns = useMemo<ColumnDef<SellerProduct>[]>(
@@ -107,14 +122,36 @@ export default function SellerProductsListPage() {
         ),
       },
       {
-        accessorKey: "stockAmount",
-        header: t("sellerProducts.stock"),
+        accessorKey: "active",
+        header: t("sellerProducts.status"),
         cell: ({ row }) => {
-          const stock = row.original.stockAmount;
+          const active = row.original.active !== false;
+          const canToggle = canManageSellerProducts(row.original.sellerId);
           return (
-            <Badge variant={stock > 0 ? "success" : "destructive"}>
-              {stock} {t("sellerProducts.unitAbbr")}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={active ? "success" : "secondary"}>
+                {active
+                  ? t("sellerProducts.active")
+                  : t("sellerProducts.inactive")}
+              </Badge>
+              {canToggle ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleMutation.mutate(row.original)}
+                  disabled={toggleMutation.isPending}
+                >
+                  {active ? (
+                    <ToggleRight className="size-4" />
+                  ) : (
+                    <ToggleLeft className="size-4" />
+                  )}
+                  {active
+                    ? t("sellerProducts.deactivate")
+                    : t("sellerProducts.activate")}
+                </Button>
+              ) : null}
+            </div>
           );
         },
       },
@@ -133,7 +170,7 @@ export default function SellerProductsListPage() {
         ),
       },
     ],
-    [t],
+    [canManageSellerProducts, t, toggleMutation],
   );
 
   const canCreate = isAdmin || sellerIds.length > 0;
@@ -178,10 +215,10 @@ export default function SellerProductsListPage() {
           </Select>
         )}
         <Select
-          value={inStockFilter}
+          value={activeFilter}
           onValueChange={(v) => {
             setPage(1);
-            setInStockFilter(v as typeof inStockFilter);
+            setActiveFilter(v as typeof activeFilter);
           }}
         >
           <SelectTrigger className="sm:w-48">
@@ -189,9 +226,11 @@ export default function SellerProductsListPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">{t("sellerProducts.all")}</SelectItem>
-            <SelectItem value="YES">{t("sellerProducts.withStock")}</SelectItem>
-            <SelectItem value="NO">
-              {t("sellerProducts.withoutStock")}
+            <SelectItem value="ACTIVE">
+              {t("sellerProducts.active")}
+            </SelectItem>
+            <SelectItem value="INACTIVE">
+              {t("sellerProducts.inactive")}
             </SelectItem>
           </SelectContent>
         </Select>

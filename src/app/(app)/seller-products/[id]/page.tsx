@@ -9,6 +9,8 @@ import {
   Image as ImageIcon,
   Loader2,
   Save,
+  ToggleLeft,
+  ToggleRight,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -65,6 +67,7 @@ export default function SellerProductDetailPage({
   const [priceCents, setPriceCents] = useState(0);
   const [stock, setStock] = useState(0);
   const [sku, setSku] = useState("");
+  const [active, setActive] = useState(true);
 
   useEffect(() => {
     if (sp) {
@@ -72,6 +75,7 @@ export default function SellerProductDetailPage({
       setPriceCents(sp.unitPriceCents);
       setStock(sp.stockAmount);
       setSku(sp.sku ?? "");
+      setActive(sp.active !== false);
     }
   }, [sp?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -80,6 +84,7 @@ export default function SellerProductDetailPage({
       sellerProductsService.update(sellerProductId, {
         unitPriceCents: priceCents,
         stockAmount: stock,
+        active,
         sku: sku || undefined,
       }),
     onSuccess: (updated) => {
@@ -215,7 +220,7 @@ export default function SellerProductDetailPage({
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>{t("sellerProduct.priceStock")}</CardTitle>
+              <CardTitle>{t("sellerProduct.offerSettings")}</CardTitle>
               <CardDescription>
                 {canManage
                   ? t("sellerProduct.editValues")
@@ -223,6 +228,27 @@ export default function SellerProductDetailPage({
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2 sm:col-span-2">
+                <Label>{t("sellerProduct.availability")}</Label>
+                <Button
+                  type="button"
+                  variant={active ? "secondary" : "outline"}
+                  disabled={!canManage}
+                  onClick={() => setActive((current) => !current)}
+                >
+                  {active ? (
+                    <ToggleRight className="size-4" />
+                  ) : (
+                    <ToggleLeft className="size-4" />
+                  )}
+                  {active
+                    ? t("sellerProducts.active")
+                    : t("sellerProducts.inactive")}
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  {t("sellerProduct.availabilityHint")}
+                </p>
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="price">{t("sellerProduct.unitPrice")}</Label>
                 <MoneyInput
@@ -232,7 +258,9 @@ export default function SellerProductDetailPage({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="stock">{t("sellerProducts.stock")}</Label>
+                <Label htmlFor="stock">
+                  {t("sellerProduct.operationalStock")}
+                </Label>
                 <Input
                   id="stock"
                   type="number"

@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save, ToggleLeft, ToggleRight } from "lucide-react";
 import { toast } from "sonner";
 import { sellerProductsService } from "@/lib/api/seller-products";
 import { productsService } from "@/lib/api/products";
@@ -47,6 +47,7 @@ export default function NewSellerProductPage() {
   const [productSearch, setProductSearch] = useState("");
   const [priceCents, setPriceCents] = useState(0);
   const [stock, setStock] = useState(0);
+  const [active, setActive] = useState(true);
   const [sku, setSku] = useState("");
 
   const debouncedSearch = useDebouncedValue(productSearch, 300);
@@ -91,6 +92,7 @@ export default function NewSellerProductPage() {
         productId: Number(productId),
         unitPriceCents: priceCents,
         stockAmount: stock,
+        active,
         sku: sku || undefined,
       });
     },
@@ -183,7 +185,7 @@ export default function NewSellerProductPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="stock">{t("sellerProducts.stock")}</Label>
+            <Label htmlFor="stock">{t("sellerProduct.operationalStock")}</Label>
             <Input
               id="stock"
               type="number"
@@ -191,6 +193,27 @@ export default function NewSellerProductPage() {
               value={stock}
               onChange={(e) => setStock(Number(e.target.value) || 0)}
             />
+          </div>
+
+          <div className="space-y-2 sm:col-span-2">
+            <Label>{t("sellerProduct.availability")}</Label>
+            <Button
+              type="button"
+              variant={active ? "secondary" : "outline"}
+              onClick={() => setActive((current) => !current)}
+            >
+              {active ? (
+                <ToggleRight className="size-4" />
+              ) : (
+                <ToggleLeft className="size-4" />
+              )}
+              {active
+                ? t("sellerProducts.active")
+                : t("sellerProducts.inactive")}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              {t("sellerProduct.availabilityHint")}
+            </p>
           </div>
 
           <div className="space-y-2 sm:col-span-2">

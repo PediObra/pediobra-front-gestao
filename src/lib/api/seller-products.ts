@@ -9,14 +9,16 @@ export interface ListSellerProductsParams {
   sku?: string;
   minPriceCents?: number;
   maxPriceCents?: number;
-  inStock?: boolean;
+  active?: boolean;
+  includeInactive?: boolean;
 }
 
 export interface CreateSellerProductPayload {
   sellerId: number;
   productId: number;
-  stockAmount: number;
+  stockAmount?: number;
   unitPriceCents: number;
+  active?: boolean;
   sku?: string;
 }
 
