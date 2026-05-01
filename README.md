@@ -11,6 +11,7 @@ MVP do painel administrativo e de vendedores do **PediObra**, construído em Nex
 - React Hook Form + Zod
 - TanStack Table (server-side pagination)
 - Zustand (auth store, persistido em `localStorage`)
+- socket.io-client (eventos operacionais em tempo real)
 - sonner (toasts)
 - lucide-react (ícones)
 
@@ -82,6 +83,9 @@ Outros papéis disponíveis no seed (verificar `backend/src/database/seed.ts` pa
 - Lista de ofertas filtra por ativa/inativa/todas e permite alternar disponibilidade quando o usuário tem permissão.
 - Pedidos e pagamentos já refletem o fluxo real com endereço do cliente e Stripe/PaymentSheet no app cliente.
 - Painel acompanha pedidos, evidências, entregadores, pagamentos, usuários, lojas e permissões por seller.
+- Tela `/operations` mostra resumo operacional, fila de atenção, jobs/ofertas e ações rápidas de despacho.
+- Eventos `operations.*` via Socket.IO invalidam queries e mostram toast quando pedido, pagamento, motorista, entrega ou oferta muda.
+- Detalhes de pedido e entrega avulsa expõem atalho para pagamento/refund; admin também pode criar pagamento mock de pedido/entrega em dev.
 
 ## Estrutura do projeto
 
@@ -95,6 +99,7 @@ src/
 │   │   ├── seller-products/
 │   │   ├── sellers/
 │   │   ├── drivers/              (admin)
+│   │   ├── operations/           (admin + seller)
 │   │   ├── users/                (admin)
 │   │   ├── payments/             (admin)
 │   │   └── profile/
@@ -109,6 +114,7 @@ src/
 ├── lib/
 │   ├── api/                      client.ts (fetch + Bearer + refresh on 401) + services
 │   ├── auth/                     store (Zustand), provider, permissions
+│   ├── realtime/                 socket de eventos operacionais
 │   ├── formatters.ts
 │   ├── query-keys.ts
 │   └── utils.ts
@@ -135,9 +141,10 @@ src/
 | `/products` | Todos leem; criar/editar só ADMIN |
 | `/seller-products` | Filtrado por `sellerIds` do usuário; criar/editar com `canManageSellerProducts` |
 | `/orders` | ADMIN vê tudo; SELLER filtra pelos próprios sellers |
-| `/orders/[id]` | FSM respeita o backend (seller: CONFIRMED/PREPARING/READY_FOR_PICKUP/CANCELLED; admin: tudo). Atribuir motorista é ADMIN-only. Evidências ficam liberadas para quem tem acesso ao pedido |
+| `/orders/[id]` | FSM respeita o backend (seller: CONFIRMED/PREPARING/READY_FOR_PICKUP/CANCELLED; admin: tudo). Atribuir motorista é ADMIN-only. Evidências ficam liberadas para quem tem acesso ao pedido. Admin pode criar pagamento mock em dev |
+| `/operations` | ADMIN vê tudo e pode reprocessar despacho/expirar oferta; SELLER vê operações das lojas vinculadas |
 | `/drivers`, `/drivers/[id]` | ADMIN (aprovar/rejeitar/bloquear) |
-| `/payments` | ADMIN (listagem e atualização de status) |
+| `/payments` | ADMIN (listagem, atualização de status e refund) |
 
 ## Scripts
 
@@ -153,9 +160,8 @@ Na raiz do monorepo:
 - `bun run dev` — backend + frontend em paralelo
 - `bun run dev:backend` / `bun run dev:frontend` — isoladamente
 
-## Pós-MVP (fora do escopo desta v1)
+## Ainda fora da v1
 
-- App do motorista (localização em tempo real, aceite/recusa)
 - Registro público pelo painel
-- Upload real de imagens (hoje usamos URLs textuais, formato aceito pela API)
-- Notificações real-time
+- Central completa de suporte/SLA/auditoria
+- Dashboard financeiro de repasses/Stripe Connect
