@@ -1,6 +1,7 @@
 import type {
   ListDriversParams,
   ListDeliveryRequestsParams,
+  ListOperationsOverviewParams,
   ListOrdersParams,
   ListPaymentsParams,
   ListProductsParams,
@@ -64,7 +65,8 @@ export const queryKeys = {
   },
   operations: {
     all: () => ["operations"] as const,
-    overview: () => ["operations", "overview"] as const,
+    overview: (params: ListOperationsOverviewParams = {}) =>
+      ["operations", "overview", params] as const,
   },
   addresses: {
     all: () => ["addresses"] as const,

@@ -9,8 +9,6 @@ import {
   Image as ImageIcon,
   Loader2,
   Save,
-  ToggleLeft,
-  ToggleRight,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,6 +31,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MoneyInput } from "@/components/forms/money-input";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -229,22 +228,25 @@ export default function SellerProductDetailPage({
             </CardHeader>
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
-                <Label>{t("sellerProduct.availability")}</Label>
-                <Button
-                  type="button"
-                  variant={active ? "secondary" : "outline"}
-                  disabled={!canManage}
-                  onClick={() => setActive((current) => !current)}
-                >
-                  {active ? (
-                    <ToggleRight className="size-4" />
-                  ) : (
-                    <ToggleLeft className="size-4" />
-                  )}
-                  {active
-                    ? t("sellerProducts.active")
-                    : t("sellerProducts.inactive")}
-                </Button>
+                <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2.5">
+                  <div className="space-y-0.5">
+                    <Label htmlFor="active">
+                      {t("sellerProduct.availability")}
+                    </Label>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {active
+                        ? t("sellerProducts.active")
+                        : t("sellerProducts.inactive")}
+                    </p>
+                  </div>
+                  <Switch
+                    id="active"
+                    checked={active}
+                    disabled={!canManage}
+                    onCheckedChange={setActive}
+                    aria-label={t("sellerProduct.availability")}
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {t("sellerProduct.availabilityHint")}
                 </p>

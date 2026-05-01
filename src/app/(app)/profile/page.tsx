@@ -27,7 +27,6 @@ import { RoleBadge, MembershipRoleBadge } from "@/components/badges";
 
 type ProfileForm = {
   name: string;
-  email: string;
 };
 
 export default function ProfilePage() {
@@ -36,17 +35,16 @@ export default function ProfilePage() {
   const setUser = useAuthStore((s) => s.setUser);
   const profileSchema = z.object({
     name: z.string().min(2, t("profile.nameMin")),
-    email: z.string().email(t("profile.invalidEmail")),
   });
 
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: "", email: "" },
+    defaultValues: { name: "" },
   });
 
   useEffect(() => {
     if (user) {
-      form.reset({ name: user.name, email: user.email });
+      form.reset({ name: user.name });
     }
   }, [user, form]);
 
@@ -60,7 +58,6 @@ export default function ProfilePage() {
         setUser({
           ...user,
           name: updated.name,
-          email: updated.email,
         });
       }
       toast.success(t("profile.updated"));
@@ -106,12 +103,16 @@ export default function ProfilePage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">{t("profile.email")}</Label>
-                <Input id="email" type="email" {...form.register("email")} />
-                {form.formState.errors.email && (
-                  <p className="text-xs text-destructive">
-                    {form.formState.errors.email.message}
-                  </p>
-                )}
+                <Input
+                  id="email"
+                  type="email"
+                  value={user?.email ?? ""}
+                  readOnly
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("profile.emailLocked")}
+                </p>
               </div>
               <Button type="submit" disabled={mutation.isPending}>
                 {mutation.isPending ? (

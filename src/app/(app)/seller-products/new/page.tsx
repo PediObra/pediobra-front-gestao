@@ -4,11 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Save, ToggleLeft, ToggleRight } from "lucide-react";
+import { ArrowLeft, Check, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { sellerProductsService } from "@/lib/api/seller-products";
 import { productsService } from "@/lib/api/products";
 import { sellersService } from "@/lib/api/sellers";
+import type { Product } from "@/lib/api/types";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
@@ -33,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MoneyInput } from "@/components/forms/money-input";
+import { Switch } from "@/components/ui/switch";
 
 export default function NewSellerProductPage() {
   const router = useRouter();
@@ -45,6 +47,7 @@ export default function NewSellerProductPage() {
   );
   const [productId, setProductId] = useState<string>("");
   const [productSearch, setProductSearch] = useState("");
+  const [productSearchOpen, setProductSearchOpen] = useState(false);
   const [priceCents, setPriceCents] = useState(0);
   const [stock, setStock] = useState(0);
   const [active, setActive] = useState(true);
@@ -157,23 +160,26 @@ export default function NewSellerProductPage() {
 
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("sellerProducts.product")}</Label>
-            <Input
+            <ProductCombobox
+              value={productId}
+              search={productSearch}
+              open={productSearchOpen}
+              products={productsQ.data?.data ?? []}
+              isLoading={productsQ.isFetching}
               placeholder={t("sellerProduct.searchProduct")}
-              value={productSearch}
-              onChange={(e) => setProductSearch(e.target.value)}
+              emptyLabel={t("sellerProduct.noProductsFound")}
+              loadingLabel={t("app.loading")}
+              onOpenChange={setProductSearchOpen}
+              onSearchChange={(nextSearch) => {
+                setProductSearch(nextSearch);
+                setProductId("");
+              }}
+              onValueChange={(nextProductId, product) => {
+                setProductId(nextProductId);
+                setProductSearch(productLabel(product));
+                setProductSearchOpen(false);
+              }}
             />
-            <Select value={productId} onValueChange={setProductId}>
-              <SelectTrigger>
-                <SelectValue placeholder={t("sellerProduct.selectProduct")} />
-              </SelectTrigger>
-              <SelectContent>
-                {(productsQ.data?.data ?? []).map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>
-                    {p.name} {p.brand ? `· ${p.brand}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
           <div className="space-y-2">
@@ -196,21 +202,22 @@ export default function NewSellerProductPage() {
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label>{t("sellerProduct.availability")}</Label>
-            <Button
-              type="button"
-              variant={active ? "secondary" : "outline"}
-              onClick={() => setActive((current) => !current)}
-            >
-              {active ? (
-                <ToggleRight className="size-4" />
-              ) : (
-                <ToggleLeft className="size-4" />
-              )}
-              {active
-                ? t("sellerProducts.active")
-                : t("sellerProducts.inactive")}
-            </Button>
+            <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2.5">
+              <div className="space-y-0.5">
+                <Label htmlFor="active">{t("sellerProduct.availability")}</Label>
+                <p className="text-xs font-medium text-muted-foreground">
+                  {active
+                    ? t("sellerProducts.active")
+                    : t("sellerProducts.inactive")}
+                </p>
+              </div>
+              <Switch
+                id="active"
+                checked={active}
+                onCheckedChange={setActive}
+                aria-label={t("sellerProduct.availability")}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
               {t("sellerProduct.availabilityHint")}
             </p>
@@ -251,4 +258,114 @@ export default function NewSellerProductPage() {
       </Card>
     </div>
   );
+}
+
+function ProductCombobox({
+  value,
+  search,
+  open,
+  products,
+  isLoading,
+  placeholder,
+  emptyLabel,
+  loadingLabel,
+  onOpenChange,
+  onSearchChange,
+  onValueChange,
+}: {
+  value: string;
+  search: string;
+  open: boolean;
+  products: Product[];
+  isLoading: boolean;
+  placeholder: string;
+  emptyLabel: string;
+  loadingLabel: string;
+  onOpenChange: (open: boolean) => void;
+  onSearchChange: (search: string) => void;
+  onValueChange: (value: string, product: Product) => void;
+}) {
+  const firstProduct = products[0];
+
+  return (
+    <div className="relative">
+      <Input
+        role="combobox"
+        aria-expanded={open}
+        aria-controls="seller-product-product-options"
+        aria-autocomplete="list"
+        value={search}
+        placeholder={placeholder}
+        onFocus={() => onOpenChange(true)}
+        onChange={(event) => {
+          onSearchChange(event.target.value);
+          onOpenChange(true);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") onOpenChange(false);
+          if (event.key === "Enter" && firstProduct) {
+            event.preventDefault();
+            onValueChange(String(firstProduct.id), firstProduct);
+          }
+        }}
+        onBlur={() => window.setTimeout(() => onOpenChange(false), 120)}
+      />
+
+      {open ? (
+        <div
+          id="seller-product-product-options"
+          role="listbox"
+          className="absolute z-50 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg"
+        >
+          {isLoading ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">
+              {loadingLabel}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="px-3 py-2 text-sm text-muted-foreground">
+              {emptyLabel}
+            </div>
+          ) : (
+            products.map((product) => (
+              <button
+                key={product.id}
+                type="button"
+                role="option"
+                aria-selected={value === String(product.id)}
+                className="flex w-full items-start gap-2 rounded-sm px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => onValueChange(String(product.id), product)}
+              >
+                <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center">
+                  {value === String(product.id) ? (
+                    <Check className="size-4" />
+                  ) : null}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">
+                    {product.name}
+                  </span>
+                  <span className="block truncate text-xs text-muted-foreground">
+                    {productMeta(product)}
+                  </span>
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function productLabel(product: Product) {
+  return [product.name, product.brand].filter(Boolean).join(" · ");
+}
+
+function productMeta(product: Product) {
+  const meta = [product.brand, product.size, product.unit]
+    .filter(Boolean)
+    .join(" · ");
+
+  return meta || `#${product.id}`;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -26,8 +27,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ApiError } from "@/lib/api/client";
 import { operationsService } from "@/lib/api/operations";
+import { sellersService } from "@/lib/api/sellers";
 import type {
   OperationIssue,
   OperationJob,
@@ -70,12 +79,33 @@ const SUMMARY_ITEMS = [
 ] as const;
 
 export default function OperationsPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const qc = useQueryClient();
+  const [sellerFilter, setSellerFilter] = useState("ALL");
+
+  const sellersQuery = useQuery({
+    queryKey: queryKeys.sellers.list({ page: 1, limit: 100 }),
+    queryFn: () => sellersService.list({ page: 1, limit: 100 }),
+    enabled: isAdmin,
+  });
+
+  const sellerOptions = useMemo(
+    () =>
+      isAdmin
+        ? (sellersQuery.data?.data ?? [])
+        : (user?.sellers.map((membership) => membership.seller) ?? []),
+    [isAdmin, sellersQuery.data?.data, user?.sellers],
+  );
+
+  const overviewParams = useMemo(
+    () =>
+      sellerFilter === "ALL" ? {} : { sellerId: Number(sellerFilter) },
+    [sellerFilter],
+  );
 
   const overviewQuery = useQuery({
-    queryKey: queryKeys.operations.overview(),
-    queryFn: operationsService.overview,
+    queryKey: queryKeys.operations.overview(overviewParams),
+    queryFn: () => operationsService.overview(overviewParams),
   });
 
   const refreshOperations = () => {
@@ -115,6 +145,23 @@ export default function OperationsPage() {
         description="Fila de atenção, despacho e status em tempo real."
         actions={
           <>
+            <Select value={sellerFilter} onValueChange={setSellerFilter}>
+              <SelectTrigger
+                id="operations-seller-filter"
+                aria-label="Empresas"
+                className="w-full sm:w-64"
+              >
+                <SelectValue placeholder="Todas as empresas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Todas as empresas</SelectItem>
+                {sellerOptions.map((seller) => (
+                  <SelectItem key={seller.id} value={String(seller.id)}>
+                    {seller.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button
               variant="outline"
               onClick={() => overviewQuery.refetch()}
@@ -172,7 +219,7 @@ export default function OperationsPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <AttentionQueue issues={overview?.issues ?? []} />
+        <AttentionQueue issues={overview?.issues ?? []} isAdmin={isAdmin} />
         <OffersList
           offers={overview?.offers ?? []}
           isAdmin={isAdmin}
@@ -182,12 +229,18 @@ export default function OperationsPage() {
         />
       </div>
 
-      <JobsList jobs={overview?.jobs ?? []} />
+      <JobsList jobs={overview?.jobs ?? []} isAdmin={isAdmin} />
     </div>
   );
 }
 
-function AttentionQueue({ issues }: { issues: OperationIssue[] }) {
+function AttentionQueue({
+  issues,
+  isAdmin,
+}: {
+  issues: OperationIssue[];
+  isAdmin: boolean;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -221,7 +274,7 @@ function AttentionQueue({ issues }: { issues: OperationIssue[] }) {
                   {issueDescription(issue)}
                 </p>
               </div>
-              <IssueActions issue={issue} />
+              <IssueActions issue={issue} isAdmin={isAdmin} />
             </div>
           ))
         )}
@@ -230,18 +283,39 @@ function AttentionQueue({ issues }: { issues: OperationIssue[] }) {
   );
 }
 
-function IssueActions({ issue }: { issue: OperationIssue }) {
-  const links = targetLinks({
-    orderId: issue.orderId,
-    deliveryRequestId: issue.deliveryRequestId,
-    driverProfileId: issue.driverProfileId,
-    paymentId: issue.paymentId,
-  });
+function IssueActions({
+  issue,
+  isAdmin,
+}: {
+  issue: OperationIssue;
+  isAdmin: boolean;
+}) {
+  const links = targetLinks(
+    {
+      orderId: issue.orderId,
+      deliveryRequestId: issue.deliveryRequestId,
+      driverProfileId: issue.driverProfileId,
+      paymentId: issue.paymentId,
+    },
+    {
+      includeDriver: isAdmin,
+      includePayment: isAdmin,
+    },
+  );
 
-  if (links.length === 0) return null;
+  const showDriverBadge = !isAdmin && issue.driverProfileId;
+  const showPaymentBadge = !isAdmin && issue.paymentId;
+
+  if (links.length === 0 && !showDriverBadge && !showPaymentBadge) return null;
 
   return (
     <div className="flex shrink-0 flex-wrap gap-2">
+      {showDriverBadge ? (
+        <Badge variant="muted">Motorista #{issue.driverProfileId}</Badge>
+      ) : null}
+      {showPaymentBadge ? (
+        <Badge variant="muted">Pagamento #{issue.paymentId}</Badge>
+      ) : null}
       {links.map((link) => (
         <Button key={link.href} asChild variant="outline" size="sm">
           <Link href={link.href}>
@@ -303,7 +377,10 @@ function OffersList({
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
-                  {targetLinks(offer).map((link) => (
+                  {targetLinks(offer, {
+                    includeDriver: isAdmin,
+                    includePayment: isAdmin,
+                  }).map((link) => (
                     <Button key={link.href} asChild variant="ghost" size="sm">
                       <Link href={link.href}>{link.label}</Link>
                     </Button>
@@ -332,7 +409,13 @@ function OffersList({
   );
 }
 
-function JobsList({ jobs }: { jobs: OperationJob[] }) {
+function JobsList({
+  jobs,
+  isAdmin,
+}: {
+  jobs: OperationJob[];
+  isAdmin: boolean;
+}) {
   return (
     <Card>
       <CardHeader>
@@ -384,12 +467,15 @@ function JobsList({ jobs }: { jobs: OperationJob[] }) {
                 </p>
               </div>
               <div className="flex flex-wrap gap-2 lg:justify-end">
-                {targetLinks(job).map((link) => (
+                {targetLinks(job, {
+                  includeDriver: isAdmin,
+                  includePayment: isAdmin,
+                }).map((link) => (
                   <Button key={link.href} asChild variant="outline" size="sm">
                     <Link href={link.href}>{link.label}</Link>
                   </Button>
                 ))}
-                {job.acceptedByDriverProfileId ? (
+                {job.acceptedByDriverProfileId && isAdmin ? (
                   <Button asChild variant="ghost" size="sm">
                     <Link href={`/drivers/${job.acceptedByDriverProfileId}`}>
                       Motorista
@@ -421,12 +507,18 @@ function TargetBadge({ job }: { job: OperationJob }) {
   return <Badge variant="muted">Sem origem</Badge>;
 }
 
-function targetLinks(target: {
-  orderId?: number | null;
-  deliveryRequestId?: number | null;
-  driverProfileId?: number | null;
-  paymentId?: number | null;
-}) {
+function targetLinks(
+  target: {
+    orderId?: number | null;
+    deliveryRequestId?: number | null;
+    driverProfileId?: number | null;
+    paymentId?: number | null;
+  },
+  options: {
+    includeDriver: boolean;
+    includePayment: boolean;
+  },
+) {
   const links: Array<{ href: string; label: string }> = [];
 
   if (target.orderId) {
@@ -440,11 +532,11 @@ function targetLinks(target: {
     });
   }
 
-  if (target.driverProfileId) {
+  if (target.driverProfileId && options.includeDriver) {
     links.push({ href: `/drivers/${target.driverProfileId}`, label: "Motorista" });
   }
 
-  if (target.paymentId) {
+  if (target.paymentId && options.includePayment) {
     links.push({ href: "/payments", label: "Pagamento/refund" });
   }
 
@@ -452,6 +544,11 @@ function targetLinks(target: {
 }
 
 function issueDescription(issue: OperationIssue) {
+  if (issue.type === "ONLINE_DRIVER_STALE_LOCATION") {
+    return issue.lastLocationAt
+      ? `Última localização em ${formatDateTime(issue.lastLocationAt)}. Oriente o motorista a abrir o app e reenviar localização.`
+      : "Motorista online sem localização registrada. Oriente o motorista a abrir o app e reenviar localização.";
+  }
   if (issue.createdAt) return `Criado em ${formatDateTime(issue.createdAt)}.`;
   if (issue.lastLocationAt) {
     return `Última localização em ${formatDateTime(issue.lastLocationAt)}.`;

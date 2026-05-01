@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, Plus, ToggleLeft, ToggleRight } from "lucide-react";
+import { Eye, Plus } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { DataTable } from "@/components/data-table/data-table";
 import {
   sellerProductsService,
@@ -26,7 +26,29 @@ import { queryKeys } from "@/lib/query-keys";
 import { centsToBRL } from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/lib/i18n/language-store";
-import type { SellerProduct } from "@/lib/api/types";
+import type { Paginated, SellerProduct } from "@/lib/api/types";
+
+type ToggleSellerProductVariables = {
+  sellerProduct: SellerProduct;
+  active: boolean;
+};
+
+const SELLER_PRODUCTS_LIST_QUERY_KEY = ["sellerProducts", "list"] as const;
+
+function updateSellerProductActive(
+  data: Paginated<SellerProduct> | undefined,
+  id: number,
+  active: boolean,
+) {
+  if (!data) return data;
+
+  return {
+    ...data,
+    data: data.data.map((sellerProduct) =>
+      sellerProduct.id === id ? { ...sellerProduct, active } : sellerProduct,
+    ),
+  };
+}
 
 export default function SellerProductsListPage() {
   const t = useTranslation();
@@ -64,10 +86,43 @@ export default function SellerProductsListPage() {
   });
 
   const toggleMutation = useMutation({
-    mutationFn: (sellerProduct: SellerProduct) =>
+    mutationFn: ({ sellerProduct, active }: ToggleSellerProductVariables) =>
       sellerProductsService.update(sellerProduct.id, {
-        active: !sellerProduct.active,
+        active,
       }),
+    onMutate: async ({ sellerProduct, active }) => {
+      await qc.cancelQueries({ queryKey: queryKeys.sellerProducts.all() });
+
+      const previousLists =
+        qc.getQueriesData<Paginated<SellerProduct>>({
+          queryKey: SELLER_PRODUCTS_LIST_QUERY_KEY,
+        });
+      const previousDetail = qc.getQueryData<SellerProduct>(
+        queryKeys.sellerProducts.byId(sellerProduct.id),
+      );
+
+      qc.setQueriesData<Paginated<SellerProduct>>(
+        { queryKey: SELLER_PRODUCTS_LIST_QUERY_KEY },
+        (current) =>
+          updateSellerProductActive(current, sellerProduct.id, active),
+      );
+      qc.setQueryData<SellerProduct>(
+        queryKeys.sellerProducts.byId(sellerProduct.id),
+        (current) => (current ? { ...current, active } : current),
+      );
+
+      return { previousLists, previousDetail };
+    },
+    onError: (_error, { sellerProduct }, context) => {
+      context?.previousLists.forEach(([queryKey, data]) => {
+        qc.setQueryData(queryKey, data);
+      });
+      qc.setQueryData(
+        queryKeys.sellerProducts.byId(sellerProduct.id),
+        context?.previousDetail,
+      );
+      toast.error(t("sellerProduct.updateFailed"));
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.sellerProducts.all() });
       toast.success(t("sellerProduct.updated"));
@@ -128,29 +183,24 @@ export default function SellerProductsListPage() {
           const active = row.original.active !== false;
           const canToggle = canManageSellerProducts(row.original.sellerId);
           return (
-            <div className="flex items-center gap-2">
-              <Badge variant={active ? "success" : "secondary"}>
+            <div className="flex items-center gap-3">
+              <Switch
+                checked={active}
+                disabled={!canToggle}
+                onCheckedChange={(nextActive) => {
+                  if (toggleMutation.isPending) return;
+                  toggleMutation.mutate({
+                    sellerProduct: row.original,
+                    active: nextActive,
+                  });
+                }}
+                aria-label={t("sellerProduct.availability")}
+              />
+              <span className="text-xs font-medium text-muted-foreground">
                 {active
                   ? t("sellerProducts.active")
                   : t("sellerProducts.inactive")}
-              </Badge>
-              {canToggle ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleMutation.mutate(row.original)}
-                  disabled={toggleMutation.isPending}
-                >
-                  {active ? (
-                    <ToggleRight className="size-4" />
-                  ) : (
-                    <ToggleLeft className="size-4" />
-                  )}
-                  {active
-                    ? t("sellerProducts.deactivate")
-                    : t("sellerProducts.activate")}
-                </Button>
-              ) : null}
+              </span>
             </div>
           );
         },

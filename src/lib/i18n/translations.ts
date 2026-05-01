@@ -97,6 +97,8 @@ export const translations = {
     "profile.personalDataDescription": "Alterações afetam apenas sua conta.",
     "profile.name": "Nome",
     "profile.email": "Email",
+    "profile.emailLocked":
+      "O email é usado para login e não pode ser alterado pelo perfil.",
     "profile.save": "Salvar alterações",
     "profile.access": "Acessos",
     "profile.accessDescription": "Papéis e lojas vinculadas à sua conta.",
@@ -432,6 +434,7 @@ export const translations = {
     "product.nameRequired": "Informe o nome",
     "sellerProduct.offer": "Oferta",
     "sellerProduct.updated": "Oferta atualizada",
+    "sellerProduct.updateFailed": "Não foi possível atualizar a oferta",
     "sellerProduct.archived": "Oferta arquivada",
     "sellerProduct.archiveTitle": "Arquivar oferta?",
     "sellerProduct.archiveDescription": "A oferta deixará de aparecer na loja.",
@@ -459,6 +462,7 @@ export const translations = {
     "sellerProduct.selectStore": "Selecione a loja",
     "sellerProduct.searchProduct": "Buscar produto…",
     "sellerProduct.selectProduct": "Selecione um produto",
+    "sellerProduct.noProductsFound": "Nenhum produto encontrado.",
     "sellerProduct.managePermissionError":
       "Você não tem permissão de gerenciar ofertas nessa loja.",
     "sellerProduct.skuOptional": "SKU (opcional)",
@@ -640,6 +644,8 @@ export const translations = {
     "profile.personalDataDescription": "Changes affect only your account.",
     "profile.name": "Name",
     "profile.email": "Email",
+    "profile.emailLocked":
+      "Email is used for login and cannot be changed from the profile.",
     "profile.save": "Save changes",
     "profile.access": "Access",
     "profile.accessDescription": "Roles and stores linked to your account.",
@@ -973,6 +979,7 @@ export const translations = {
     "product.nameRequired": "Enter the name",
     "sellerProduct.offer": "Offer",
     "sellerProduct.updated": "Offer updated",
+    "sellerProduct.updateFailed": "Could not update offer",
     "sellerProduct.archived": "Offer archived",
     "sellerProduct.archiveTitle": "Archive offer?",
     "sellerProduct.archiveDescription":
@@ -1000,6 +1007,7 @@ export const translations = {
     "sellerProduct.selectStore": "Select the store",
     "sellerProduct.searchProduct": "Search product…",
     "sellerProduct.selectProduct": "Select a product",
+    "sellerProduct.noProductsFound": "No products found.",
     "sellerProduct.managePermissionError":
       "You do not have permission to manage offers in this store.",
     "sellerProduct.skuOptional": "SKU (optional)",
@@ -1182,6 +1190,8 @@ export const translations = {
     "profile.personalDataDescription": "Los cambios afectan solo tu cuenta.",
     "profile.name": "Nombre",
     "profile.email": "Email",
+    "profile.emailLocked":
+      "El email se usa para iniciar sesión y no se puede cambiar desde el perfil.",
     "profile.save": "Guardar cambios",
     "profile.access": "Accesos",
     "profile.accessDescription": "Roles y tiendas vinculadas a tu cuenta.",
@@ -1519,6 +1529,7 @@ export const translations = {
     "product.nameRequired": "Informa el nombre",
     "sellerProduct.offer": "Oferta",
     "sellerProduct.updated": "Oferta actualizada",
+    "sellerProduct.updateFailed": "No se pudo actualizar la oferta",
     "sellerProduct.archived": "Oferta archivada",
     "sellerProduct.archiveTitle": "¿Archivar oferta?",
     "sellerProduct.archiveDescription":
@@ -1547,6 +1558,7 @@ export const translations = {
     "sellerProduct.selectStore": "Selecciona la tienda",
     "sellerProduct.searchProduct": "Buscar producto…",
     "sellerProduct.selectProduct": "Selecciona un producto",
+    "sellerProduct.noProductsFound": "No se encontraron productos.",
     "sellerProduct.managePermissionError":
       "No tienes permiso para gestionar ofertas en esta tienda.",
     "sellerProduct.skuOptional": "SKU (opcional)",
