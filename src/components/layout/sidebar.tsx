@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Menu,
   Route,
+  RadioTower,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { PediObraLogo } from "@/components/brand/pediobra-logo";
@@ -45,7 +46,8 @@ type NavItem = {
     | "nav.sellers"
     | "nav.drivers"
     | "nav.users"
-    | "nav.payments";
+    | "nav.payments"
+    | "nav.operations";
   href: string;
   icon: typeof LayoutDashboard;
   show: (ctx: { isAdmin: boolean; isSeller: boolean }) => boolean;
@@ -105,6 +107,12 @@ const NAV_ITEMS: NavItem[] = [
     href: "/payments",
     icon: Receipt,
     show: ({ isAdmin }) => isAdmin,
+  },
+  {
+    labelKey: "nav.operations",
+    href: "/operations",
+    icon: RadioTower,
+    show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
 ];
 

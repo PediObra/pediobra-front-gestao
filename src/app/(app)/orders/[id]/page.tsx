@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   Camera,
   CheckCircle2,
+  CreditCard,
   Image as ImageIcon,
   Loader2,
   MapPin,
@@ -17,6 +18,7 @@ import {
 import { toast } from "sonner";
 import { ordersService } from "@/lib/api/orders";
 import { driversService } from "@/lib/api/drivers";
+import { paymentsService } from "@/lib/api/payments";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
@@ -27,6 +29,7 @@ import {
   formatOrderCode,
   formatPhone,
   orderStatusLabel,
+  paymentStatusLabel,
 } from "@/lib/formatters";
 import {
   allowedOrderStatusTransitions,
@@ -56,7 +59,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/badges";
-import type { EvidenceType, OrderStatus } from "@/lib/api/types";
+import type { EvidenceType, OrderStatus, PaymentStatus } from "@/lib/api/types";
 
 const EVIDENCE_TYPES: EvidenceType[] = [
   "SELLER_CONFIRMATION",
@@ -64,6 +67,15 @@ const EVIDENCE_TYPES: EvidenceType[] = [
   "DELIVERY_PHOTO",
   "PICKUP_PHOTO",
   "GENERAL",
+];
+
+const MOCK_PAYMENT_STATUSES: PaymentStatus[] = [
+  "PENDING",
+  "AUTHORIZED",
+  "PAID",
+  "FAILED",
+  "REFUNDED",
+  "CANCELLED",
 ];
 
 export default function OrderDetailPage({
@@ -109,6 +121,7 @@ export default function OrderDetailPage({
   const [evFile, setEvFile] = useState<File | null>(null);
   const [evNote, setEvNote] = useState("");
   const [evFileInputKey, setEvFileInputKey] = useState(0);
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("PAID");
 
   const statusMutation = useMutation({
     mutationFn: () => {
@@ -208,6 +221,28 @@ export default function OrderDetailPage({
           : err instanceof Error
             ? err.message
             : t("order.addFailed");
+      toast.error(msg);
+    },
+  });
+
+  const paymentMutation = useMutation({
+    mutationFn: () =>
+      paymentsService.createMock(orderId, {
+        status: paymentStatus,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.orders.byId(orderId) });
+      qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
+      qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+      toast.success(t("payments.mockCreated"));
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : t("payments.createFailed");
       toast.error(msg);
     },
   });
@@ -524,18 +559,20 @@ export default function OrderDetailPage({
             </CardContent>
           </Card>
 
-          {order.payments?.length ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {t("order.payments", { count: order.payments.length })}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="size-4" />
+                {t("order.payments", { count: order.payments?.length ?? 0 })}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {order.payments?.length ? (
+                <div className="space-y-2">
                 {order.payments.map((p) => (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0"
+                    className="flex flex-col gap-3 border-b border-border pb-2 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <div className="text-sm font-medium">
@@ -545,17 +582,61 @@ export default function OrderDetailPage({
                         {formatDateTime(p.createdAt)}
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
                       <PaymentStatusBadge status={p.status} />
                       <span className="font-mono text-sm font-semibold">
                         {centsToBRL(p.amountCents)}
                       </span>
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href="/payments">Pagamento/refund</Link>
+                      </Button>
                     </div>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          ) : null}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {t("payments.empty")}
+                </p>
+              )}
+
+              {isAdmin && (
+                <div className="space-y-2 border-t border-border pt-3">
+                  <Label>{t("payments.newStatus")}</Label>
+                  <Select
+                    value={paymentStatus}
+                    onValueChange={(value) =>
+                      setPaymentStatus(value as PaymentStatus)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MOCK_PAYMENT_STATUSES.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {paymentStatusLabel(status)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => paymentMutation.mutate()}
+                    disabled={paymentMutation.isPending}
+                  >
+                    {paymentMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="size-4" />
+                    )}
+                    {t("payments.createMock")}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">

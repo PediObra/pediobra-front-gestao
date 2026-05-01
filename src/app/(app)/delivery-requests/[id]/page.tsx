@@ -672,7 +672,7 @@ export default function DeliveryRequestDetailPage() {
                   {deliveryRequest.payments.map((payment) => (
                     <div
                       key={payment.id}
-                      className="flex items-center justify-between border-b border-border pb-2 last:border-0 last:pb-0"
+                      className="flex flex-col gap-3 border-b border-border pb-2 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
                     >
                       <div>
                         <div className="text-sm font-medium">
@@ -682,7 +682,15 @@ export default function DeliveryRequestDetailPage() {
                           {formatDateTime(payment.createdAt)}
                         </div>
                       </div>
-                      <PaymentStatusBadge status={payment.status} />
+                      <div className="flex flex-wrap items-center gap-3">
+                        <PaymentStatusBadge status={payment.status} />
+                        <span className="font-mono text-sm font-semibold">
+                          {centsToBRL(payment.amountCents)}
+                        </span>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href="/payments">Pagamento/refund</Link>
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>

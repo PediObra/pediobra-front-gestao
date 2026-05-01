@@ -5,6 +5,7 @@ import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/lib/i18n/language-store";
+import { useOperationsRealtime } from "@/lib/realtime/use-operations-realtime";
 
 export default function AppLayout({
   children,
@@ -13,6 +14,7 @@ export default function AppLayout({
 }) {
   const { isAuthenticated, isLoading } = useAuth();
   const t = useTranslation();
+  useOperationsRealtime();
 
   if (isLoading || !isAuthenticated) {
     return (

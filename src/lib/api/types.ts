@@ -36,6 +36,14 @@ export type DeliveryRequestStatus =
 
 export type DeliveryJobStatus = "OPEN" | "ACCEPTED" | "CANCELLED" | "COMPLETED";
 
+export type DeliveryJobOfferStatus =
+  | "OFFERED"
+  | "ACCEPTING"
+  | "ACCEPTED"
+  | "DECLINED"
+  | "EXPIRED"
+  | "CANCELLED";
+
 export type PricingSource = "MANUAL" | "ESTIMATED";
 
 export type PaymentStatus =
@@ -453,6 +461,76 @@ export interface PaymentRefund {
   providerStatus?: string | null;
   createdAt: string;
   updatedAt?: string;
+}
+
+// ---- Operations ----
+
+export type OperationIssueSeverity = "warning" | "critical";
+
+export type OperationIssueType =
+  | "ORDER_PAYMENT_PENDING"
+  | "DELIVERY_PAYMENT_PENDING"
+  | "READY_ORDER_WITHOUT_JOB"
+  | "OFFER_ACCEPTING_STALE"
+  | "ONLINE_DRIVER_STALE_LOCATION"
+  | "DELIVERY_FAILED"
+  | "CANCELLED_ORDER_PAID"
+  | "CANCELLED_DELIVERY_PAID";
+
+export interface OperationSummary {
+  activeOrders: number;
+  activeDeliveryRequests: number;
+  openJobs: number;
+  activeOffers: number;
+  onlineDrivers: number;
+}
+
+export interface OperationIssue {
+  type: OperationIssueType;
+  title: string;
+  severity: OperationIssueSeverity;
+  orderId?: number | null;
+  deliveryRequestId?: number | null;
+  deliveryJobId?: number | null;
+  offerId?: number | null;
+  driverProfileId?: number | null;
+  paymentId?: number | null;
+  createdAt?: string | null;
+  lastLocationAt?: string | null;
+}
+
+export interface OperationJob {
+  id: number;
+  status: DeliveryJobStatus;
+  orderId?: number | null;
+  deliveryRequestId?: number | null;
+  acceptedByDriverProfileId?: number | null;
+  createdAt: string;
+  updatedAt?: string | null;
+  orderStatus?: OrderStatus | null;
+  orderPaymentStatus?: PaymentStatus | null;
+  deliveryRequestStatus?: DeliveryRequestStatus | null;
+  deliveryRequestPaymentStatus?: PaymentStatus | null;
+}
+
+export interface OperationOffer {
+  id: number;
+  deliveryJobId: number;
+  driverProfileId: number;
+  status: DeliveryJobOfferStatus;
+  expiresAt: string;
+  offeredAt: string;
+  distanceMeters?: number | null;
+  orderId?: number | null;
+  deliveryRequestId?: number | null;
+  driverName?: string | null;
+}
+
+export interface OperationOverview {
+  summary: OperationSummary;
+  issues: OperationIssue[];
+  jobs: OperationJob[];
+  offers: OperationOffer[];
 }
 
 // ---- Cart ----

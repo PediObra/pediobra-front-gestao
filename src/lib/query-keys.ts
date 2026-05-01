@@ -62,6 +62,10 @@ export const queryKeys = {
     byDeliveryRequest: (deliveryRequestId: number) =>
       ["payments", "byDeliveryRequest", deliveryRequestId] as const,
   },
+  operations: {
+    all: () => ["operations"] as const,
+    overview: () => ["operations", "overview"] as const,
+  },
   addresses: {
     all: () => ["addresses"] as const,
     list: (params: ListAddressesParams) =>

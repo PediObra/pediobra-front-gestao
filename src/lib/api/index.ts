@@ -7,6 +7,7 @@ export * from "./drivers";
 export * from "./orders";
 export * from "./delivery-requests";
 export * from "./payments";
+export * from "./operations";
 export * from "./addresses";
 export * from "./geo";
 export * from "./client";
