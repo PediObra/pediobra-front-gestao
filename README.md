@@ -44,8 +44,12 @@ cp frontend/.env.example frontend/.env.local
 Conteúdo padrão:
 
 ```
-NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 ```
+
+`NEXT_PUBLIC_API_URL` é opcional em dev local; quando ausente, a gestão usa
+`http://localhost:3000`. No workspace `public-test`, o script injeta a URL
+pública do roteador/ngrok automaticamente.
 
 3. Rode backend e frontend juntos (na raiz):
 

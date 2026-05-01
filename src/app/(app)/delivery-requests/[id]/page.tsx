@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -37,13 +37,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
+import { DeliveryRequestStripeDialog } from "@/components/payments/delivery-request-stripe-dialog";
 import {
   DeliveryRequestStatusBadge,
   PaymentStatusBadge,
 } from "@/components/badges";
-import {
-  deliveryRequestsService,
-} from "@/lib/api/delivery-requests";
+import { deliveryRequestsService } from "@/lib/api/delivery-requests";
 import { driversService } from "@/lib/api/drivers";
 import { paymentsService } from "@/lib/api/payments";
 import { ApiError } from "@/lib/api/client";
@@ -61,6 +60,7 @@ import {
   paymentStatusLabel,
 } from "@/lib/formatters";
 import { useTranslation } from "@/lib/i18n/language-store";
+import { STRIPE_PUBLISHABLE_KEY } from "@/lib/stripe/config";
 import type {
   DeliveryRequestStatus,
   EvidenceType,
@@ -85,10 +85,11 @@ const MOCK_PAYMENT_STATUSES: PaymentStatus[] = [
 
 export default function DeliveryRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const deliveryRequestId = Number(id);
   const t = useTranslation();
   const qc = useQueryClient();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, sellerIds } = useAuth();
 
   const query = useQuery({
     queryKey: queryKeys.deliveryRequests.byId(deliveryRequestId),
@@ -97,7 +98,11 @@ export default function DeliveryRequestDetailPage() {
   });
 
   const driversQ = useQuery({
-    queryKey: queryKeys.drivers.list({ page: 1, limit: 50, status: "APPROVED" }),
+    queryKey: queryKeys.drivers.list({
+      page: 1,
+      limit: 50,
+      status: "APPROVED",
+    }),
     queryFn: () =>
       driversService.list({ page: 1, limit: 50, status: "APPROVED" }),
     enabled: isAdmin,
@@ -123,6 +128,33 @@ export default function DeliveryRequestDetailPage() {
   const [evNote, setEvNote] = useState("");
   const [evFileInputKey, setEvFileInputKey] = useState(0);
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("PAID");
+  const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(
+    null,
+  );
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const autoPaymentStartedRef = useRef(false);
+
+  const canPayDeliveryRequest = Boolean(
+    deliveryRequest &&
+    (isAdmin ||
+      user?.id === deliveryRequest.requesterUserId ||
+      (deliveryRequest.requesterSellerId !== null &&
+        deliveryRequest.requesterSellerId !== undefined &&
+        sellerIds.includes(deliveryRequest.requesterSellerId))),
+  );
+  const hasReleasedPayment = Boolean(
+    ["AUTHORIZED", "PAID"].includes(deliveryRequest?.paymentStatus ?? "") ||
+    deliveryRequest?.payments?.some((payment) =>
+      ["AUTHORIZED", "PAID"].includes(payment.status),
+    ),
+  );
+  const canStartStripePayment = Boolean(
+    deliveryRequest &&
+    canPayDeliveryRequest &&
+    deliveryRequest.status === "PENDING" &&
+    deliveryRequest.deliveryFeeCents > 0 &&
+    !hasReleasedPayment,
+  );
 
   const statusMutation = useMutation({
     mutationFn: () => {
@@ -136,7 +168,10 @@ export default function DeliveryRequestDetailPage() {
       });
     },
     onSuccess: (updated) => {
-      qc.setQueryData(queryKeys.deliveryRequests.byId(deliveryRequestId), updated);
+      qc.setQueryData(
+        queryKeys.deliveryRequests.byId(deliveryRequestId),
+        updated,
+      );
       qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
       toast.success(t("order.statusUpdated"));
       setNextStatus("");
@@ -162,7 +197,10 @@ export default function DeliveryRequestDetailPage() {
       });
     },
     onSuccess: (updated) => {
-      qc.setQueryData(queryKeys.deliveryRequests.byId(deliveryRequestId), updated);
+      qc.setQueryData(
+        queryKeys.deliveryRequests.byId(deliveryRequestId),
+        updated,
+      );
       qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
       toast.success(t("order.driverAssigned"));
       setDriverSel("");
@@ -222,10 +260,79 @@ export default function DeliveryRequestDetailPage() {
     },
     onError: (err: unknown) => {
       toast.error(
-        err instanceof ApiError ? err.displayMessage : t("payments.createFailed"),
+        err instanceof ApiError
+          ? err.displayMessage
+          : t("payments.createFailed"),
       );
     },
   });
+
+  const stripePaymentMutation = useMutation({
+    mutationFn: () => {
+      if (!STRIPE_PUBLISHABLE_KEY) {
+        throw new Error(t("payments.stripeKeyMissing"));
+      }
+
+      return paymentsService.createStripeForDeliveryRequest(deliveryRequestId);
+    },
+    onSuccess: (response) => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.deliveryRequests.byId(deliveryRequestId),
+      });
+      qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+
+      if (["AUTHORIZED", "PAID"].includes(response.payment.status)) {
+        toast.success(t("payments.deliveryPaymentAlreadyConfirmed"));
+        return;
+      }
+
+      if (!response.clientSecret) {
+        toast.error(t("payments.stripeClientSecretMissing"));
+        return;
+      }
+
+      setStripeClientSecret(response.clientSecret);
+      setPaymentDialogOpen(true);
+    },
+    onError: (err: unknown) => {
+      toast.error(
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : t("payments.createFailed"),
+      );
+    },
+  });
+
+  useEffect(() => {
+    if (
+      searchParams.get("pay") !== "1" ||
+      autoPaymentStartedRef.current ||
+      !canStartStripePayment
+    ) {
+      return;
+    }
+
+    autoPaymentStartedRef.current = true;
+    stripePaymentMutation.mutate();
+  }, [canStartStripePayment, searchParams, stripePaymentMutation]);
+
+  function handleDeliveryPaymentSuccess() {
+    setPaymentDialogOpen(false);
+    setStripeClientSecret(null);
+    qc.invalidateQueries({
+      queryKey: queryKeys.deliveryRequests.byId(deliveryRequestId),
+    });
+    qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
+    qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+    window.setTimeout(() => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.deliveryRequests.byId(deliveryRequestId),
+      });
+      qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+    }, 1500);
+  }
 
   if (query.isLoading) {
     return (
@@ -317,7 +424,10 @@ export default function DeliveryRequestDetailPage() {
             <CardContent className="space-y-3 text-sm">
               <p>{deliveryRequest.packageDescription}</p>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Info label={t("deliveries.packageSize")} value={deliveryRequest.packageSize} />
+                <Info
+                  label={t("deliveries.packageSize")}
+                  value={deliveryRequest.packageSize}
+                />
                 <Info
                   label={t("deliveries.packageWeight")}
                   value={
@@ -352,7 +462,9 @@ export default function DeliveryRequestDetailPage() {
           <Card>
             <CardHeader>
               <CardTitle>{t("order.timeline")}</CardTitle>
-              <CardDescription>{t("order.timelineDescription")}</CardDescription>
+              <CardDescription>
+                {t("order.timelineDescription")}
+              </CardDescription>
             </CardHeader>
             <CardContent>
               {deliveryRequest.statusHistory?.length ? (
@@ -373,9 +485,7 @@ export default function DeliveryRequestDetailPage() {
                             <p className="text-sm font-medium text-foreground">
                               {event.title}
                             </p>
-                            <DeliveryRequestStatusBadge
-                              status={event.status}
-                            />
+                            <DeliveryRequestStatusBadge status={event.status} />
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span>{formatDateTime(h.createdAt)}</span>
@@ -603,9 +713,7 @@ export default function DeliveryRequestDetailPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t("order.changeStatus")}</CardTitle>
-                <CardDescription>
-                  {t("order.allowedStatuses")}
-                </CardDescription>
+                <CardDescription>{t("order.allowedStatuses")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Select
@@ -700,6 +808,32 @@ export default function DeliveryRequestDetailPage() {
                 </p>
               )}
 
+              {canStartStripePayment && (
+                <div className="space-y-3 rounded-md border border-primary/30 bg-primary/10 p-3">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold">
+                      {t("payments.deliveryPendingPayment")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {t("payments.deliveryPendingPaymentDescription")}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => stripePaymentMutation.mutate()}
+                    disabled={stripePaymentMutation.isPending}
+                  >
+                    {stripePaymentMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="size-4" />
+                    )}
+                    {t("payments.payAndDispatch")}
+                  </Button>
+                </div>
+              )}
+
               {isAdmin && (
                 <div className="space-y-2 border-t border-border pt-3">
                   <Label>{t("payments.newStatus")}</Label>
@@ -739,6 +873,13 @@ export default function DeliveryRequestDetailPage() {
           </Card>
         </div>
       </div>
+      <DeliveryRequestStripeDialog
+        open={paymentDialogOpen}
+        clientSecret={stripeClientSecret}
+        amountLabel={centsToBRL(deliveryRequest.deliveryFeeCents)}
+        onOpenChange={setPaymentDialogOpen}
+        onSuccess={handleDeliveryPaymentSuccess}
+      />
     </div>
   );
 }

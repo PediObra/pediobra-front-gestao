@@ -22,6 +22,12 @@ export interface CreateRefundPayload {
   note?: string;
 }
 
+export interface StripePaymentResponse {
+  payment: Payment;
+  clientSecret: string | null;
+  paymentIntentId: string | null;
+}
+
 export const paymentsService = {
   list: (params: ListPaymentsParams = {}) =>
     api.get<Paginated<Payment>>("/payments", { query: params }),
@@ -44,6 +50,11 @@ export const paymentsService = {
     api.post<Payment>(
       `/payments/delivery-requests/${deliveryRequestId}/mock`,
       payload,
+    ),
+
+  createStripeForDeliveryRequest: (deliveryRequestId: number) =>
+    api.post<StripePaymentResponse>(
+      `/payments/delivery-requests/${deliveryRequestId}/stripe`,
     ),
 
   updateStatus: (id: number, status: PaymentStatus) =>

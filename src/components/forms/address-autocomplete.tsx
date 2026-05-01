@@ -1,10 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CheckCircle2 } from "lucide-react";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { CheckCircle2, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { geoService, type PlaceSuggestion } from "@/lib/api/geo";
+import {
+  calculateDistanceMeters,
+  formatDistanceShort,
+  hasGeoPoint,
+  type GeoPoint,
+} from "@/lib/geo-distance";
 
 const AUTOCOMPLETE_DEBOUNCE_MS = 500;
 
@@ -14,6 +20,7 @@ type AddressAutocompleteProps = {
   sessionToken: string;
   selectedPlaceId?: string;
   disabled?: boolean;
+  referencePoint?: GeoPoint | null;
   onChange: (value: string) => void;
   onSelect: (place: PlaceSuggestion) => void;
 };
@@ -24,6 +31,7 @@ export function AddressAutocomplete({
   sessionToken,
   selectedPlaceId,
   disabled,
+  referencePoint,
   onChange,
   onSelect,
 }: AddressAutocompleteProps) {
@@ -47,6 +55,17 @@ export function AddressAutocomplete({
     enabled: open && canSearch,
     staleTime: 60_000,
   });
+  const suggestions = suggestionsQ.data ?? [];
+  const visibleSuggestions = suggestions.slice(0, 5);
+  const shouldResolveDistance = hasGeoPoint(referencePoint);
+  const suggestionPlaceQueries = useQueries({
+    queries: visibleSuggestions.map((item) => ({
+      queryKey: ["geo-resolve", item.placeId, sessionToken],
+      queryFn: () => geoService.resolve(item.placeId, sessionToken),
+      enabled: open && canSearch && shouldResolveDistance,
+      staleTime: 5 * 60_000,
+    })),
+  });
 
   return (
     <div className="space-y-2">
@@ -66,26 +85,45 @@ export function AddressAutocomplete({
           Endereco selecionado
         </p>
       )}
-      {open && canSearch && (suggestionsQ.data?.length ?? 0) > 0 && (
+      {open && canSearch && visibleSuggestions.length > 0 && (
         <div className="overflow-hidden rounded-md border border-border bg-card shadow-sm">
-          {suggestionsQ.data!.slice(0, 5).map((item) => (
-            <button
-              key={item.placeId}
-              type="button"
-              className="block w-full border-b border-border px-3 py-2 text-left hover:bg-muted"
-              onClick={() => {
-                setOpen(false);
-                onSelect(item);
-              }}
-            >
-              <span className="block text-sm font-medium">{item.mainText}</span>
-              {item.secondaryText && (
-                <span className="block text-xs text-muted-foreground">
-                  {item.secondaryText}
+          {visibleSuggestions.map((item, index) => {
+            const resolved = suggestionPlaceQueries[index]?.data;
+            const distance = formatDistanceShort(
+              calculateDistanceMeters(referencePoint, resolved),
+            );
+
+            return (
+              <button
+                key={item.placeId}
+                type="button"
+                className="flex w-full items-start gap-3 border-b border-border px-3 py-2 text-left hover:bg-muted"
+                onClick={() => {
+                  setOpen(false);
+                  onSelect(item);
+                }}
+              >
+                <span className="flex w-14 shrink-0 flex-col items-center gap-0.5 pt-0.5 text-muted-foreground">
+                  <MapPin className="size-4" />
+                  {distance ? (
+                    <span className="text-[10px] font-medium leading-none">
+                      {distance}
+                    </span>
+                  ) : null}
                 </span>
-              )}
-            </button>
-          ))}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium">
+                    {item.mainText}
+                  </span>
+                  {item.secondaryText && (
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {item.secondaryText}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
       {open && canSearch && suggestionsQ.isError && (

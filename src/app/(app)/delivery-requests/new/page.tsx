@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Calculator, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
 import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
@@ -32,13 +32,11 @@ import {
   type CreateDeliveryRequestPayload,
 } from "@/lib/api/delivery-requests";
 import { sellersService } from "@/lib/api/sellers";
+import { geoService, type PlaceSuggestion } from "@/lib/api/geo";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  centsToBRL,
-  decimalStringToCents,
-  centsToDecimalString,
-} from "@/lib/formatters";
+import { centsToBRL } from "@/lib/formatters";
+import type { GeoPoint } from "@/lib/geo-distance";
 import { useTranslation } from "@/lib/i18n/language-store";
 
 export default function NewDeliveryRequestPage() {
@@ -60,11 +58,12 @@ export default function NewDeliveryRequestPage() {
   const [dropoffContactName, setDropoffContactName] = useState("");
   const [dropoffContactPhone, setDropoffContactPhone] = useState("");
   const [dropoffPlaceId, setDropoffPlaceId] = useState("");
+  const [dropoffLatitude, setDropoffLatitude] = useState("");
+  const [dropoffLongitude, setDropoffLongitude] = useState("");
   const [packageDescription, setPackageDescription] = useState("");
   const [packageSize, setPackageSize] = useState("");
   const [packageWeightGrams, setPackageWeightGrams] = useState("");
   const [notes, setNotes] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState("");
   const [quotedFeeCents, setQuotedFeeCents] = useState<number | null>(null);
   const [quotedDistanceMeters, setQuotedDistanceMeters] = useState<number | null>(
     null,
@@ -72,6 +71,7 @@ export default function NewDeliveryRequestPage() {
   const [placesSessionToken] = useState(
     () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
   );
+  const lastAutoQuoteKeyRef = useRef("");
 
   const sellersQ = useQuery({
     queryKey: queryKeys.sellers.list({ page: 1, limit: 100 }),
@@ -84,25 +84,61 @@ export default function NewDeliveryRequestPage() {
     return sellers.filter((seller) => sellerIds.includes(seller.id));
   }, [isAdmin, sellerIds, sellersQ.data?.data]);
 
-  const canQuote = Boolean(
-    (pickupPlaceId || (pickupLatitude && pickupLongitude)) && dropoffPlaceId,
+  const pickupPoint = useMemo(
+    () => ({ latitude: pickupLatitude, longitude: pickupLongitude }),
+    [pickupLatitude, pickupLongitude],
   );
+  const dropoffPoint = useMemo(
+    () => ({ latitude: dropoffLatitude, longitude: dropoffLongitude }),
+    [dropoffLatitude, dropoffLongitude],
+  );
+  const hasPickupCoordinates = Boolean(pickupLatitude && pickupLongitude);
+  const hasDropoffCoordinates = Boolean(dropoffLatitude && dropoffLongitude);
+  const canQuote = Boolean(
+    (pickupPlaceId || hasPickupCoordinates) &&
+      (dropoffPlaceId || hasDropoffCoordinates),
+  );
+  const autoQuoteKey = useMemo(() => {
+    if (!canQuote) return "";
+
+    return JSON.stringify({
+      pickupPlaceId,
+      pickupLatitude,
+      pickupLongitude,
+      dropoffPlaceId,
+      dropoffLatitude,
+      dropoffLongitude,
+    });
+  }, [
+    canQuote,
+    dropoffLatitude,
+    dropoffLongitude,
+    dropoffPlaceId,
+    pickupLatitude,
+    pickupLongitude,
+    pickupPlaceId,
+  ]);
 
   const quoteMutation = useMutation({
-    mutationFn: () =>
-      deliveryRequestsService.quote({
+    mutationFn: (variables: { key: string }) => {
+      void variables;
+      return deliveryRequestsService.quote({
         pickupPlaceId: pickupPlaceId || undefined,
         pickupLatitude: pickupPlaceId ? undefined : pickupLatitude,
         pickupLongitude: pickupPlaceId ? undefined : pickupLongitude,
-        dropoffPlaceId,
+        dropoffPlaceId: dropoffPlaceId || undefined,
+        dropoffLatitude: dropoffPlaceId ? undefined : dropoffLatitude,
+        dropoffLongitude: dropoffPlaceId ? undefined : dropoffLongitude,
         placesSessionToken,
         pickupCep: pickupCep || undefined,
         dropoffCep: dropoffCep || undefined,
-      }),
-    onSuccess: (quote) => {
+      });
+    },
+    onSuccess: (quote, variables) => {
+      if (variables.key !== lastAutoQuoteKeyRef.current) return;
+
       setQuotedFeeCents(quote.estimatedFeeCents);
       setQuotedDistanceMeters(quote.distanceMeters);
-      setDeliveryFee(centsToDecimalString(quote.estimatedFeeCents));
       toast.success(t("deliveries.quoteReady"));
     },
     onError: (err: unknown) => {
@@ -112,13 +148,25 @@ export default function NewDeliveryRequestPage() {
     },
   });
 
+  useEffect(() => {
+    if (!autoQuoteKey) {
+      lastAutoQuoteKeyRef.current = "";
+      return;
+    }
+
+    if (lastAutoQuoteKeyRef.current === autoQuoteKey) return;
+
+    lastAutoQuoteKeyRef.current = autoQuoteKey;
+    quoteMutation.mutate({ key: autoQuoteKey });
+  }, [autoQuoteKey, quoteMutation]);
+
   const createMutation = useMutation({
     mutationFn: () => {
       if (
         !pickupAddress ||
         !dropoffAddress ||
         !packageDescription ||
-        !dropoffPlaceId ||
+        (!dropoffPlaceId && (!dropoffLatitude || !dropoffLongitude)) ||
         (!pickupPlaceId && (!pickupLatitude || !pickupLongitude))
       ) {
         throw new Error(t("deliveries.requiredFields"));
@@ -138,7 +186,11 @@ export default function NewDeliveryRequestPage() {
         dropoffCep: dropoffCep || undefined,
         dropoffContactName: dropoffContactName || undefined,
         dropoffContactPhone: dropoffContactPhone || undefined,
-        dropoffPlaceId,
+        dropoffPlaceId: dropoffPlaceId || undefined,
+        dropoffLatitude: dropoffPlaceId ? undefined : dropoffLatitude || undefined,
+        dropoffLongitude: dropoffPlaceId
+          ? undefined
+          : dropoffLongitude || undefined,
         placesSessionToken,
         packageDescription,
         packageSize: packageSize || undefined,
@@ -146,9 +198,6 @@ export default function NewDeliveryRequestPage() {
           ? Number(packageWeightGrams)
           : undefined,
         notes: notes || undefined,
-        deliveryFeeCents: deliveryFee
-          ? decimalStringToCents(deliveryFee)
-          : undefined,
       };
 
       return deliveryRequestsService.create(payload);
@@ -156,7 +205,7 @@ export default function NewDeliveryRequestPage() {
     onSuccess: (deliveryRequest) => {
       qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
       toast.success(t("deliveries.created"));
-      router.push(`/delivery-requests/${deliveryRequest.id}`);
+      router.push(`/delivery-requests/${deliveryRequest.id}?pay=1`);
     },
     onError: (err: unknown) => {
       const msg =
@@ -168,6 +217,12 @@ export default function NewDeliveryRequestPage() {
       toast.error(msg);
     },
   });
+
+  function clearQuote() {
+    lastAutoQuoteKeyRef.current = "";
+    setQuotedFeeCents(null);
+    setQuotedDistanceMeters(null);
+  }
 
   return (
     <div className="space-y-6">
@@ -196,6 +251,7 @@ export default function NewDeliveryRequestPage() {
             <Select
               value={requesterSellerId}
               onValueChange={(value) => {
+                clearQuote();
                 setRequesterSellerId(value);
                 const seller = availableSellers.find(
                   (item) => String(item.id) === value,
@@ -239,7 +295,11 @@ export default function NewDeliveryRequestPage() {
             setContactName={setPickupContactName}
             contactPhone={pickupContactPhone}
             setContactPhone={setPickupContactPhone}
+            setLatitude={setPickupLatitude}
+            setLongitude={setPickupLongitude}
+            referencePoint={dropoffPoint}
             onAddressChanged={() => {
+              clearQuote();
               setPickupLatitude("");
               setPickupLongitude("");
             }}
@@ -258,6 +318,14 @@ export default function NewDeliveryRequestPage() {
             setContactName={setDropoffContactName}
             contactPhone={dropoffContactPhone}
             setContactPhone={setDropoffContactPhone}
+            setLatitude={setDropoffLatitude}
+            setLongitude={setDropoffLongitude}
+            referencePoint={pickupPoint}
+            onAddressChanged={() => {
+              clearQuote();
+              setDropoffLatitude("");
+              setDropoffLongitude("");
+            }}
           />
 
           <div className="space-y-2 lg:col-span-2">
@@ -304,37 +372,24 @@ export default function NewDeliveryRequestPage() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="deliveryFee">{t("deliveries.manualFee")}</Label>
-            <Input
-              id="deliveryFee"
-              value={deliveryFee}
-              onChange={(e) => setDeliveryFee(e.target.value)}
-              inputMode="decimal"
-              placeholder="15,00"
-            />
-          </div>
-
-          <div className="flex flex-col justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => quoteMutation.mutate()}
-              disabled={!canQuote || quoteMutation.isPending}
-            >
-              {quoteMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Calculator className="size-4" />
-              )}
-              {t("deliveries.calculateQuote")}
-            </Button>
+          <div className="flex flex-col gap-2 rounded-md border border-border bg-muted/30 p-3 lg:col-span-2">
+            {quoteMutation.isPending && (
+              <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" />
+                {t("app.loading")}
+              </p>
+            )}
             {quotedFeeCents !== null && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm font-medium">
                 {t("deliveries.quoteSummary", {
                   price: centsToBRL(quotedFeeCents),
                   distance: ((quotedDistanceMeters ?? 0) / 1000).toFixed(1),
                 })}
+              </p>
+            )}
+            {!quoteMutation.isPending && quotedFeeCents === null && (
+              <p className="text-xs text-muted-foreground">
+                {t("deliveries.quoteWaiting")}
               </p>
             )}
           </div>
@@ -375,6 +430,9 @@ function AddressFields({
   setContactName,
   contactPhone,
   setContactPhone,
+  setLatitude,
+  setLongitude,
+  referencePoint,
   onAddressChanged,
 }: {
   title: string;
@@ -389,9 +447,35 @@ function AddressFields({
   setContactName: (value: string) => void;
   contactPhone: string;
   setContactPhone: (value: string) => void;
+  setLatitude?: (value: string) => void;
+  setLongitude?: (value: string) => void;
+  referencePoint?: GeoPoint | null;
   onAddressChanged?: () => void;
 }) {
   const t = useTranslation();
+  const selectedPlaceRef = useRef("");
+
+  async function handlePlaceSelect(place: PlaceSuggestion) {
+    selectedPlaceRef.current = place.placeId;
+    setAddress(place.description);
+    setPlaceId(place.placeId);
+    setLatitude?.("");
+    setLongitude?.("");
+    onAddressChanged?.();
+
+    try {
+      const resolved = await geoService.resolve(place.placeId, sessionToken);
+      if (selectedPlaceRef.current !== place.placeId) return;
+
+      setAddress(resolved.formattedAddress || place.description);
+      setCep(cepFromResolvedPlace(resolved) ?? cep);
+      setPlaceId(resolved.placeId || place.placeId);
+      setLatitude?.(resolved.latitude);
+      setLongitude?.(resolved.longitude);
+    } catch {
+      // O backend tambem resolve o placeId na cotacao/criacao.
+    }
+  }
 
   return (
     <div className="rounded-lg border border-border p-4">
@@ -403,16 +487,16 @@ function AddressFields({
             value={address}
             sessionToken={sessionToken}
             selectedPlaceId={placeId}
+            referencePoint={referencePoint}
             onChange={(value) => {
+              selectedPlaceRef.current = "";
               setAddress(value);
               setPlaceId("");
+              setLatitude?.("");
+              setLongitude?.("");
               onAddressChanged?.();
             }}
-            onSelect={(place) => {
-              setAddress(place.description);
-              setPlaceId(place.placeId);
-              onAddressChanged?.();
-            }}
+            onSelect={(place) => void handlePlaceSelect(place)}
           />
         </div>
         <div className="space-y-2">
@@ -436,4 +520,29 @@ function AddressFields({
       </div>
     </div>
   );
+}
+
+function cepFromResolvedPlace(place: {
+  cep?: string | null;
+  postalCode?: string | null;
+  formattedAddress?: string | null;
+}) {
+  return (
+    normalizeCep(place.cep) ??
+    normalizeCep(place.postalCode) ??
+    extractCep(place.formattedAddress)
+  );
+}
+
+function normalizeCep(value: string | null | undefined) {
+  if (!value) return undefined;
+  const digits = value.replace(/\D/g, "");
+  if (digits.length !== 8) return value;
+  return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+}
+
+function extractCep(value: string | null | undefined) {
+  if (!value) return undefined;
+  const match = value.match(/\b\d{5}-?\d{3}\b/);
+  return normalizeCep(match?.[0]);
 }

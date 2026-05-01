@@ -2,7 +2,34 @@ import { getAuthSnapshot, useAuthStore } from "@/lib/auth/store";
 import { getLanguageSnapshot } from "@/lib/i18n/language-store";
 import type { ApiErrorBody } from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+const CONFIGURED_API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000";
+
+function isLocalHostUrl(value: string) {
+  try {
+    const hostname = new URL(value).hostname;
+    return ["localhost", "127.0.0.1", "0.0.0.0", "::1"].includes(hostname);
+  } catch {
+    return false;
+  }
+}
+
+function shouldUseSameOriginApi() {
+  if (typeof window === "undefined") return false;
+  if (!isLocalHostUrl(CONFIGURED_API_URL)) return false;
+
+  return !["localhost", "127.0.0.1", "0.0.0.0", "::1"].includes(
+    window.location.hostname,
+  );
+}
+
+export function getApiUrl() {
+  if (shouldUseSameOriginApi()) {
+    return window.location.origin;
+  }
+
+  return CONFIGURED_API_URL;
+}
 
 export class ApiError extends Error {
   status: number;
@@ -36,9 +63,10 @@ export interface RequestOptions {
 }
 
 function buildUrl(path: string, query?: QueryParams) {
+  const apiUrl = getApiUrl();
   const url = new URL(
     path.startsWith("/") ? path.slice(1) : path,
-    API_URL.endsWith("/") ? API_URL : API_URL + "/",
+    apiUrl.endsWith("/") ? apiUrl : apiUrl + "/",
   );
 
   if (query) {
@@ -189,4 +217,4 @@ export const api = {
     apiRequest<T>(path, { ...opts, method: "DELETE" }),
 };
 
-export { API_URL };
+export const API_URL = CONFIGURED_API_URL;

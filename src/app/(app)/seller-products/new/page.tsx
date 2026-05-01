@@ -36,6 +36,8 @@ import {
 import { MoneyInput } from "@/components/forms/money-input";
 import { Switch } from "@/components/ui/switch";
 
+const EMPTY_PRODUCTS: Product[] = [];
+
 export default function NewSellerProductPage() {
   const router = useRouter();
   const t = useTranslation();
@@ -73,6 +75,12 @@ export default function NewSellerProductPage() {
         limit: 20,
         search: debouncedSearch || undefined,
       }),
+    enabled: Boolean(sellerId),
+  });
+  const linkedProductIdsQ = useQuery({
+    queryKey: ["sellerProducts", "linkedProductIds", sellerId],
+    queryFn: () => fetchLinkedProductIds(Number(sellerId)),
+    enabled: Boolean(sellerId),
   });
 
   const availableSellers = useMemo(() => {
@@ -85,6 +93,26 @@ export default function NewSellerProductPage() {
   const canCreateForSelected = sellerId
     ? isAdmin || canManageSellerProducts(Number(sellerId))
     : false;
+  const formFieldsDisabled = !sellerId;
+  const linkedProductIds = useMemo(
+    () => new Set(linkedProductIdsQ.data ?? []),
+    [linkedProductIdsQ.data],
+  );
+  const products = productsQ.data?.data ?? EMPTY_PRODUCTS;
+  const selectableProducts = useMemo(
+    () => products.filter((product) => !linkedProductIds.has(product.id)),
+    [linkedProductIds, products],
+  );
+  const emptyProductLabel =
+    products.length > 0 && selectableProducts.length === 0
+      ? t("sellerProduct.noAvailableProducts")
+      : t("sellerProduct.noProductsFound");
+
+  function handleSellerChange(nextSellerId: string) {
+    setSellerId(nextSellerId);
+    setProductId("");
+    setProductSearch("");
+  }
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -139,7 +167,7 @@ export default function NewSellerProductPage() {
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("sellerProducts.store")}</Label>
-            <Select value={sellerId} onValueChange={setSellerId}>
+            <Select value={sellerId} onValueChange={handleSellerChange}>
               <SelectTrigger>
                 <SelectValue placeholder={t("sellerProduct.selectStore")} />
               </SelectTrigger>
@@ -164,10 +192,18 @@ export default function NewSellerProductPage() {
               value={productId}
               search={productSearch}
               open={productSearchOpen}
-              products={productsQ.data?.data ?? []}
-              isLoading={productsQ.isFetching}
-              placeholder={t("sellerProduct.searchProduct")}
-              emptyLabel={t("sellerProduct.noProductsFound")}
+              products={selectableProducts}
+              disabled={formFieldsDisabled}
+              isLoading={
+                Boolean(sellerId) &&
+                (productsQ.isFetching || linkedProductIdsQ.isFetching)
+              }
+              placeholder={
+                formFieldsDisabled
+                  ? t("sellerProduct.selectStoreFirst")
+                  : t("sellerProduct.searchProduct")
+              }
+              emptyLabel={emptyProductLabel}
               loadingLabel={t("app.loading")}
               onOpenChange={setProductSearchOpen}
               onSearchChange={(nextSearch) => {
@@ -187,6 +223,7 @@ export default function NewSellerProductPage() {
             <MoneyInput
               valueCents={priceCents}
               onChangeCents={setPriceCents}
+              disabled={formFieldsDisabled}
             />
           </div>
 
@@ -197,6 +234,7 @@ export default function NewSellerProductPage() {
               type="number"
               min={0}
               value={stock}
+              disabled={formFieldsDisabled}
               onChange={(e) => setStock(Number(e.target.value) || 0)}
             />
           </div>
@@ -214,6 +252,7 @@ export default function NewSellerProductPage() {
               <Switch
                 id="active"
                 checked={active}
+                disabled={formFieldsDisabled}
                 onCheckedChange={setActive}
                 aria-label={t("sellerProduct.availability")}
               />
@@ -228,6 +267,7 @@ export default function NewSellerProductPage() {
             <Input
               id="sku"
               value={sku}
+              disabled={formFieldsDisabled}
               onChange={(e) => setSku(e.target.value)}
               placeholder={t("sellerProduct.skuPlaceholder")}
             />
@@ -243,7 +283,8 @@ export default function NewSellerProductPage() {
                 mutation.isPending ||
                 !sellerId ||
                 !productId ||
-                !canCreateForSelected
+                !canCreateForSelected ||
+                linkedProductIdsQ.isFetching
               }
             >
               {mutation.isPending ? (
@@ -265,6 +306,7 @@ function ProductCombobox({
   search,
   open,
   products,
+  disabled = false,
   isLoading,
   placeholder,
   emptyLabel,
@@ -277,6 +319,7 @@ function ProductCombobox({
   search: string;
   open: boolean;
   products: Product[];
+  disabled?: boolean;
   isLoading: boolean;
   placeholder: string;
   emptyLabel: string;
@@ -291,17 +334,22 @@ function ProductCombobox({
     <div className="relative">
       <Input
         role="combobox"
-        aria-expanded={open}
+        aria-expanded={open && !disabled}
         aria-controls="seller-product-product-options"
         aria-autocomplete="list"
         value={search}
         placeholder={placeholder}
-        onFocus={() => onOpenChange(true)}
+        disabled={disabled}
+        onFocus={() => {
+          if (!disabled) onOpenChange(true);
+        }}
         onChange={(event) => {
+          if (disabled) return;
           onSearchChange(event.target.value);
           onOpenChange(true);
         }}
         onKeyDown={(event) => {
+          if (disabled) return;
           if (event.key === "Escape") onOpenChange(false);
           if (event.key === "Enter" && firstProduct) {
             event.preventDefault();
@@ -311,7 +359,7 @@ function ProductCombobox({
         onBlur={() => window.setTimeout(() => onOpenChange(false), 120)}
       />
 
-      {open ? (
+      {open && !disabled ? (
         <div
           id="seller-product-product-options"
           role="listbox"
@@ -368,4 +416,36 @@ function productMeta(product: Product) {
     .join(" · ");
 
   return meta || `#${product.id}`;
+}
+
+async function fetchLinkedProductIds(sellerId: number) {
+  const limit = 100;
+  const firstPage = await sellerProductsService.list({
+    sellerId,
+    page: 1,
+    limit,
+    includeInactive: true,
+  });
+
+  const remainingPages =
+    firstPage.meta.totalPages > 1
+      ? await Promise.all(
+          Array.from({ length: firstPage.meta.totalPages - 1 }, (_, index) =>
+            sellerProductsService.list({
+              sellerId,
+              page: index + 2,
+              limit,
+              includeInactive: true,
+            }),
+          ),
+        )
+      : [];
+
+  return Array.from(
+    new Set(
+      [firstPage, ...remainingPages].flatMap((page) =>
+        page.data.map((sellerProduct) => sellerProduct.productId),
+      ),
+    ),
+  );
 }

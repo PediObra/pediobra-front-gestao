@@ -13,6 +13,7 @@ export interface ResolvedPlace {
   latitude: string;
   longitude: string;
   cep?: string | null;
+  postalCode?: string | null;
   street?: string | null;
   number?: string | null;
   neighborhood?: string | null;

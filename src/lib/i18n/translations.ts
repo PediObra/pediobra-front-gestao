@@ -182,7 +182,7 @@ export const translations = {
     "deliveries.newDescription":
       "Crie uma corrida avulsa sem pedido de produto.",
     "deliveries.requestData": "Dados da entrega",
-    "deliveries.requestDataHint": "Preencha retirada, destino, pacote e valor.",
+    "deliveries.requestDataHint": "Preencha retirada, destino e pacote.",
     "deliveries.requesterStore": "Loja solicitante",
     "deliveries.noRequesterStore": "Sem loja solicitante",
     "deliveries.contactName": "Nome do contato",
@@ -195,6 +195,8 @@ export const translations = {
     "deliveries.quoteReady": "Estimativa calculada",
     "deliveries.quoteFailed": "Não foi possível calcular",
     "deliveries.quoteSummary": "{price} estimados · {distance} km",
+    "deliveries.quoteWaiting":
+      "A estimativa aparece automaticamente depois de selecionar retirada e destino.",
     "deliveries.requiredFields":
       "Informe retirada, destino e descrição do pacote.",
     "deliveries.created": "Entrega criada",
@@ -254,6 +256,25 @@ export const translations = {
     "payments.mockCreated": "Pagamento criado",
     "payments.createFailed": "Não foi possível criar o pagamento",
     "payments.createMock": "Criar pagamento mock",
+    "payments.payAndDispatch": "Pagar e liberar para motoristas",
+    "payments.payDelivery": "Pagar entrega",
+    "payments.payDeliveryTitle": "Pagar entrega avulsa",
+    "payments.payDeliveryDescription":
+      "Depois da autorização do pagamento, a corrida entra no despacho para motoristas próximos.",
+    "payments.deliveryPendingPayment": "Pagamento pendente",
+    "payments.deliveryPendingPaymentDescription":
+      "Pague a corrida para liberar a entrega aos motoristas próximos.",
+    "payments.stripeKeyMissing":
+      "Configure NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY para pagar pelo painel.",
+    "payments.stripeClientSecretMissing":
+      "O Stripe não retornou clientSecret para esta entrega.",
+    "payments.deliveryPaymentAlreadyConfirmed":
+      "Pagamento já autorizado. A entrega será liberada para motoristas.",
+    "payments.paymentFailed": "Não foi possível concluir o pagamento.",
+    "payments.deliveryPaymentSubmitted":
+      "Pagamento enviado. A entrega será liberada assim que o Stripe confirmar.",
+    "payments.paymentProcessingHint":
+      "A confirmação pode levar alguns segundos para refletir no status da entrega.",
     "payments.updateFailed": "Não foi possível atualizar",
     "payments.noPaymentSelected": "Sem pagamento selecionado",
     "payments.updateTitle": "Atualizar status do pagamento",
@@ -481,9 +502,13 @@ export const translations = {
     "sellerProduct.created": "Oferta criada",
     "sellerProduct.createFailed": "Não foi possível criar a oferta",
     "sellerProduct.selectStore": "Selecione a loja",
+    "sellerProduct.selectStoreFirst":
+      "Selecione uma loja antes de escolher produtos.",
     "sellerProduct.searchProduct": "Buscar produto…",
     "sellerProduct.selectProduct": "Selecione um produto",
     "sellerProduct.noProductsFound": "Nenhum produto encontrado.",
+    "sellerProduct.noAvailableProducts":
+      "Todos os produtos encontrados já estão ligados a esta loja.",
     "sellerProduct.managePermissionError":
       "Você não tem permissão de gerenciar ofertas nessa loja.",
     "sellerProduct.skuOptional": "SKU (opcional)",
@@ -750,7 +775,7 @@ export const translations = {
     "deliveries.newDescription":
       "Create a standalone courier run without a product order.",
     "deliveries.requestData": "Delivery data",
-    "deliveries.requestDataHint": "Fill in pickup, dropoff, package, and fee.",
+    "deliveries.requestDataHint": "Fill in pickup, dropoff, and package.",
     "deliveries.requesterStore": "Requester store",
     "deliveries.noRequesterStore": "No requester store",
     "deliveries.contactName": "Contact name",
@@ -763,6 +788,8 @@ export const translations = {
     "deliveries.quoteReady": "Estimate calculated",
     "deliveries.quoteFailed": "Could not calculate",
     "deliveries.quoteSummary": "{price} estimated · {distance} km",
+    "deliveries.quoteWaiting":
+      "The estimate appears automatically after pickup and dropoff are selected.",
     "deliveries.requiredFields":
       "Enter pickup, dropoff, and package description.",
     "deliveries.created": "Delivery created",
@@ -822,6 +849,25 @@ export const translations = {
     "payments.mockCreated": "Payment created",
     "payments.createFailed": "Could not create payment",
     "payments.createMock": "Create mock payment",
+    "payments.payAndDispatch": "Pay and release to drivers",
+    "payments.payDelivery": "Pay delivery",
+    "payments.payDeliveryTitle": "Pay standalone delivery",
+    "payments.payDeliveryDescription":
+      "After payment authorization, the run is dispatched to nearby drivers.",
+    "payments.deliveryPendingPayment": "Payment pending",
+    "payments.deliveryPendingPaymentDescription":
+      "Pay the run to release this delivery to nearby drivers.",
+    "payments.stripeKeyMissing":
+      "Configure NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY to pay from the panel.",
+    "payments.stripeClientSecretMissing":
+      "Stripe did not return a clientSecret for this delivery.",
+    "payments.deliveryPaymentAlreadyConfirmed":
+      "Payment already authorized. The delivery will be released to drivers.",
+    "payments.paymentFailed": "Could not complete payment.",
+    "payments.deliveryPaymentSubmitted":
+      "Payment submitted. The delivery will be released when Stripe confirms it.",
+    "payments.paymentProcessingHint":
+      "Confirmation can take a few seconds to appear on the delivery status.",
     "payments.updateFailed": "Could not update",
     "payments.noPaymentSelected": "No payment selected",
     "payments.updateTitle": "Update payment status",
@@ -1047,9 +1093,13 @@ export const translations = {
     "sellerProduct.created": "Offer created",
     "sellerProduct.createFailed": "Could not create offer",
     "sellerProduct.selectStore": "Select the store",
+    "sellerProduct.selectStoreFirst":
+      "Select a store before choosing products.",
     "sellerProduct.searchProduct": "Search product…",
     "sellerProduct.selectProduct": "Select a product",
     "sellerProduct.noProductsFound": "No products found.",
+    "sellerProduct.noAvailableProducts":
+      "All matching products are already linked to this store.",
     "sellerProduct.managePermissionError":
       "You do not have permission to manage offers in this store.",
     "sellerProduct.skuOptional": "SKU (optional)",
@@ -1317,8 +1367,7 @@ export const translations = {
     "deliveries.newDescription":
       "Crea una carrera avulsa sin pedido de producto.",
     "deliveries.requestData": "Datos de la entrega",
-    "deliveries.requestDataHint":
-      "Completa retirada, destino, paquete y valor.",
+    "deliveries.requestDataHint": "Completa retirada, destino y paquete.",
     "deliveries.requesterStore": "Tienda solicitante",
     "deliveries.noRequesterStore": "Sin tienda solicitante",
     "deliveries.contactName": "Nombre del contacto",
@@ -1331,6 +1380,8 @@ export const translations = {
     "deliveries.quoteReady": "Estimación calculada",
     "deliveries.quoteFailed": "No se pudo calcular",
     "deliveries.quoteSummary": "{price} estimados · {distance} km",
+    "deliveries.quoteWaiting":
+      "La estimación aparece automáticamente después de seleccionar retirada y destino.",
     "deliveries.requiredFields":
       "Informa retirada, destino y descripción del paquete.",
     "deliveries.created": "Entrega creada",
@@ -1390,6 +1441,25 @@ export const translations = {
     "payments.mockCreated": "Pago creado",
     "payments.createFailed": "No se pudo crear el pago",
     "payments.createMock": "Crear pago mock",
+    "payments.payAndDispatch": "Pagar y liberar a repartidores",
+    "payments.payDelivery": "Pagar entrega",
+    "payments.payDeliveryTitle": "Pagar entrega avulsa",
+    "payments.payDeliveryDescription":
+      "Después de autorizar el pago, la carrera entra en despacho para repartidores cercanos.",
+    "payments.deliveryPendingPayment": "Pago pendiente",
+    "payments.deliveryPendingPaymentDescription":
+      "Paga la carrera para liberar esta entrega a repartidores cercanos.",
+    "payments.stripeKeyMissing":
+      "Configura NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY para pagar desde el panel.",
+    "payments.stripeClientSecretMissing":
+      "Stripe no devolvió clientSecret para esta entrega.",
+    "payments.deliveryPaymentAlreadyConfirmed":
+      "Pago ya autorizado. La entrega se liberará a repartidores.",
+    "payments.paymentFailed": "No se pudo completar el pago.",
+    "payments.deliveryPaymentSubmitted":
+      "Pago enviado. La entrega será liberada cuando Stripe confirme.",
+    "payments.paymentProcessingHint":
+      "La confirmación puede tardar algunos segundos en reflejarse en el estado de la entrega.",
     "payments.updateFailed": "No se pudo actualizar",
     "payments.noPaymentSelected": "Sin pago seleccionado",
     "payments.updateTitle": "Actualizar estado del pago",
@@ -1619,9 +1689,13 @@ export const translations = {
     "sellerProduct.created": "Oferta creada",
     "sellerProduct.createFailed": "No se pudo crear la oferta",
     "sellerProduct.selectStore": "Selecciona la tienda",
+    "sellerProduct.selectStoreFirst":
+      "Selecciona una tienda antes de elegir productos.",
     "sellerProduct.searchProduct": "Buscar producto…",
     "sellerProduct.selectProduct": "Selecciona un producto",
     "sellerProduct.noProductsFound": "No se encontraron productos.",
+    "sellerProduct.noAvailableProducts":
+      "Todos los productos encontrados ya están vinculados a esta tienda.",
     "sellerProduct.managePermissionError":
       "No tienes permiso para gestionar ofertas en esta tienda.",
     "sellerProduct.skuOptional": "SKU (opcional)",

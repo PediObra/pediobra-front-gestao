@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, type ChangeEvent } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -203,6 +203,14 @@ export default function OrderDetailPage({
       toast.error(msg);
     },
   });
+
+  function handlePickupCodeChange(event: ChangeEvent<HTMLInputElement>) {
+    const nextCode = event.target.value.replace(/\D/g, "").slice(0, 4);
+    setPickupCode(nextCode);
+    if (nextCode.length === 4) {
+      event.currentTarget.blur();
+    }
+  }
 
   const evidenceMutation = useMutation({
     mutationFn: () => {
@@ -834,9 +842,7 @@ export default function OrderDetailPage({
                     inputMode="numeric"
                     maxLength={4}
                     value={pickupCode}
-                    onChange={(e) =>
-                      setPickupCode(e.target.value.replace(/\D/g, ""))
-                    }
+                    onChange={handlePickupCodeChange}
                     placeholder="0000"
                   />
                 </div>

@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
 import { toast } from "sonner";
-import { API_URL } from "@/lib/api/client";
+import { getApiUrl } from "@/lib/api/client";
 import { getAuthSnapshot, useAuthStore } from "@/lib/auth/store";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -38,7 +38,7 @@ export function useOperationsRealtime() {
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
 
-    const socket = io(`${API_URL}/realtime`, {
+    const socket = io(`${getApiUrl()}/realtime`, {
       auth: { token: accessToken },
       transports: ["websocket", "polling"],
     });
