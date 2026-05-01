@@ -473,6 +473,7 @@ export type OperationIssueType =
   | "READY_ORDER_WITHOUT_JOB"
   | "OFFER_ACCEPTING_STALE"
   | "ONLINE_DRIVER_STALE_LOCATION"
+  | "ASSIGNED_DRIVER_UNREACHABLE"
   | "DELIVERY_FAILED"
   | "CANCELLED_ORDER_PAID"
   | "CANCELLED_DELIVERY_PAID";
@@ -494,6 +495,7 @@ export interface OperationIssue {
   deliveryJobId?: number | null;
   offerId?: number | null;
   driverProfileId?: number | null;
+  driverAvailability?: string | null;
   paymentId?: number | null;
   createdAt?: string | null;
   lastLocationAt?: string | null;

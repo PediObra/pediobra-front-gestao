@@ -52,6 +52,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -77,6 +85,17 @@ const MOCK_PAYMENT_STATUSES: PaymentStatus[] = [
   "REFUNDED",
   "CANCELLED",
 ];
+
+type StatusUpdateInput = {
+  status: OrderStatus;
+  cancellationReason?: string;
+  cancellationDetails?: string;
+};
+
+type StatusConfirmation = {
+  status: OrderStatus;
+  type: "accept" | "reject" | "cancel";
+};
 
 export default function OrderDetailPage({
   params,
@@ -112,10 +131,9 @@ export default function OrderDetailPage({
     order ?? { sellerId: 0, status: "" },
   );
 
-  const [nextStatus, setNextStatus] = useState<OrderStatus | "">("");
+  const [statusConfirmation, setStatusConfirmation] =
+    useState<StatusConfirmation | null>(null);
   const [pickupCode, setPickupCode] = useState("");
-  const [cancelReason, setCancelReason] = useState("");
-  const [cancelDetails, setCancelDetails] = useState("");
   const [driverSel, setDriverSel] = useState<string>("");
   const [evType, setEvType] = useState<EvidenceType>("GENERAL");
   const [evFile, setEvFile] = useState<File | null>(null);
@@ -124,23 +142,13 @@ export default function OrderDetailPage({
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("PAID");
 
   const statusMutation = useMutation({
-    mutationFn: () => {
-      if (!nextStatus) throw new Error(t("order.selectStatus"));
-      return ordersService.updateStatus(orderId, {
-        status: nextStatus,
-        cancellationReason:
-          nextStatus === "CANCELLED" ? cancelReason || undefined : undefined,
-        cancellationDetails:
-          nextStatus === "CANCELLED" ? cancelDetails || undefined : undefined,
-      });
-    },
+    mutationFn: (payload: StatusUpdateInput) =>
+      ordersService.updateStatus(orderId, payload),
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.orders.byId(orderId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
       toast.success(t("order.statusUpdated"));
-      setNextStatus("");
-      setCancelReason("");
-      setCancelDetails("");
+      setStatusConfirmation(null);
     },
     onError: (err: unknown) => {
       const msg =
@@ -278,6 +286,40 @@ export default function OrderDetailPage({
   const canConfirmPickup =
     order.status === "READY_FOR_PICKUP" &&
     (isAdmin || canAccessSeller(user, order.sellerId));
+  const confirmationCopy = statusConfirmation
+    ? getStatusConfirmationCopy(statusConfirmation.type, t)
+    : null;
+
+  const requestStatusChange = (status: OrderStatus) => {
+    if (order.status === "PENDING" && status === "CONFIRMED") {
+      setStatusConfirmation({ status, type: "accept" });
+      return;
+    }
+
+    if (order.status === "PENDING" && status === "CANCELLED") {
+      setStatusConfirmation({ status, type: "reject" });
+      return;
+    }
+
+    if (status === "CANCELLED") {
+      setStatusConfirmation({ status, type: "cancel" });
+      return;
+    }
+
+    statusMutation.mutate({ status });
+  };
+
+  const confirmStatusChange = () => {
+    if (!statusConfirmation) return;
+
+    statusMutation.mutate({
+      status: statusConfirmation.status,
+      cancellationReason:
+        statusConfirmation.status === "CANCELLED"
+          ? getDefaultCancellationReason(statusConfirmation.type, t)
+          : undefined,
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -756,49 +798,22 @@ export default function OrderDetailPage({
                 <CardDescription>{t("order.allowedStatuses")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                <Select
-                  value={nextStatus}
-                  onValueChange={(v) => setNextStatus(v as OrderStatus)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={t("order.newStatus")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {transitions.map((s) => (
-                      <SelectItem key={s} value={s}>
-                        {orderStatusLabel(s as OrderStatus)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {nextStatus === "CANCELLED" && (
-                  <div className="space-y-2">
-                    <Input
-                      placeholder={t("order.reason")}
-                      value={cancelReason}
-                      onChange={(e) => setCancelReason(e.target.value)}
-                    />
-                    <Textarea
-                      placeholder={t("order.detailsOptional")}
-                      rows={2}
-                      value={cancelDetails}
-                      onChange={(e) => setCancelDetails(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => statusMutation.mutate()}
-                  disabled={!nextStatus || statusMutation.isPending}
-                >
-                  {statusMutation.isPending && (
-                    <Loader2 className="size-4 animate-spin" />
-                  )}
-                  {t("common.apply")}
-                </Button>
+                <div className="grid gap-2">
+                  {transitions.map((status) => (
+                    <Button
+                      key={status}
+                      size="sm"
+                      variant={statusButtonVariant(order.status, status)}
+                      onClick={() => requestStatusChange(status)}
+                      disabled={statusMutation.isPending}
+                    >
+                      {statusMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : null}
+                      {statusButtonLabel(order.status, status, t)}
+                    </Button>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -843,6 +858,107 @@ export default function OrderDetailPage({
           )}
         </div>
       </div>
+
+      <Dialog
+        open={!!statusConfirmation}
+        onOpenChange={(open) => {
+          if (!open) setStatusConfirmation(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmationCopy?.title}</DialogTitle>
+            <DialogDescription>
+              {confirmationCopy?.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setStatusConfirmation(null)}
+              disabled={statusMutation.isPending}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant={
+                statusConfirmation?.status === "CANCELLED"
+                  ? "destructive"
+                  : "default"
+              }
+              onClick={confirmStatusChange}
+              disabled={statusMutation.isPending}
+            >
+              {statusMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : null}
+              {confirmationCopy?.confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function statusButtonLabel(
+  currentStatus: string,
+  nextStatus: OrderStatus,
+  t: ReturnType<typeof useTranslation>,
+) {
+  if (currentStatus === "PENDING" && nextStatus === "CONFIRMED") {
+    return t("order.acceptOrder");
+  }
+
+  if (currentStatus === "PENDING" && nextStatus === "CANCELLED") {
+    return t("order.rejectOrder");
+  }
+
+  if (nextStatus === "CANCELLED") return t("order.cancelOrder");
+
+  return orderStatusLabel(nextStatus);
+}
+
+function statusButtonVariant(currentStatus: string, nextStatus: OrderStatus) {
+  if (nextStatus === "CANCELLED") return "destructive";
+  if (currentStatus === "PENDING" && nextStatus === "CONFIRMED") {
+    return "default";
+  }
+  return "outline";
+}
+
+function getStatusConfirmationCopy(
+  type: StatusConfirmation["type"],
+  t: ReturnType<typeof useTranslation>,
+) {
+  if (type === "accept") {
+    return {
+      title: t("order.acceptModalTitle"),
+      description: t("order.acceptModalDescription"),
+      confirmLabel: t("order.confirmAccept"),
+    };
+  }
+
+  if (type === "reject") {
+    return {
+      title: t("order.rejectModalTitle"),
+      description: t("order.rejectModalDescription"),
+      confirmLabel: t("order.confirmReject"),
+    };
+  }
+
+  return {
+    title: t("order.cancelModalTitle"),
+    description: t("order.cancelModalDescription"),
+    confirmLabel: t("order.confirmCancel"),
+  };
+}
+
+function getDefaultCancellationReason(
+  type: StatusConfirmation["type"],
+  t: ReturnType<typeof useTranslation>,
+) {
+  return type === "reject"
+    ? t("order.rejectDefaultReason")
+    : t("order.cancelDefaultReason");
 }

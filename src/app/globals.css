@@ -167,4 +167,18 @@
       linear-gradient(to bottom, oklch(0.9 0.002 285 / 0.5) 1px, transparent 1px);
     background-size: 24px 24px;
   }
+
+  .animate-pending-order-attention {
+    animation: pending-order-attention 1.9s ease-in-out infinite;
+  }
+}
+
+@keyframes pending-order-attention {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.025);
+  }
 }

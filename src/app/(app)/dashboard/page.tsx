@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import Link from "next/link";
 import {
+  BellRing,
   ClipboardList,
   Package,
   Store,
@@ -13,7 +14,11 @@ import {
   Route,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { ordersService, type OrderStats } from "@/lib/api/orders";
+import {
+  ordersService,
+  type ListOrdersParams,
+  type OrderStats,
+} from "@/lib/api/orders";
 import { sellersService } from "@/lib/api/sellers";
 import { productsService } from "@/lib/api/products";
 import { driversService } from "@/lib/api/drivers";
@@ -65,7 +70,16 @@ export default function DashboardPage() {
     createdTo: periodRange.to.toISOString(),
   };
 
-  const sharedOrderParams = { ...(sellerId ? { sellerId } : {}), ...periodParams };
+  const sharedOrderParams = {
+    ...(sellerId ? { sellerId } : {}),
+    ...periodParams,
+  };
+  const pendingOrderParams: ListOrdersParams = {
+    page: 1,
+    limit: 1,
+    status: "PENDING",
+    ...(sellerId ? { sellerId } : {}),
+  };
   const sharedDeliveryParams = {
     ...(sellerId ? { requesterSellerId: sellerId } : {}),
     ...periodParams,
@@ -94,6 +108,10 @@ export default function DashboardPage() {
             limit: 5,
             ...sharedOrderParams,
           }),
+      },
+      {
+        queryKey: queryKeys.orders.list(pendingOrderParams),
+        queryFn: () => ordersService.list(pendingOrderParams),
       },
       {
         queryKey: queryKeys.sellers.list({ page: 1, limit: 1 }),
@@ -132,6 +150,7 @@ export default function DashboardPage() {
   const [
     ordersStatsQ,
     ordersRecentQ,
+    pendingOrdersQ,
     sellersQ,
     productsQ,
     driversQ,
@@ -139,6 +158,7 @@ export default function DashboardPage() {
     deliveriesRecentQ,
   ] = results as [
     { data?: OrderStats; isLoading: boolean },
+    { data?: Paginated<Order>; isLoading: boolean },
     { data?: Paginated<Order>; isLoading: boolean },
     { data?: Paginated<Seller>; isLoading: boolean },
     { data?: Paginated<Product>; isLoading: boolean },
@@ -217,6 +237,8 @@ export default function DashboardPage() {
 
   const recentOrders = ordersRecentQ.data?.data ?? [];
   const recentDeliveries = deliveriesRecentQ.data?.data ?? [];
+  const pendingOrder = pendingOrdersQ.data?.data[0];
+  const pendingOrdersCount = pendingOrdersQ.data?.meta.total ?? 0;
 
   return (
     <div className="space-y-6">
@@ -228,6 +250,11 @@ export default function DashboardPage() {
           isAdmin
             ? t("dashboard.adminDescription")
             : t("dashboard.sellerDescription")
+        }
+        actions={
+          pendingOrder && pendingOrdersCount > 0 ? (
+            <PendingOrderAlert order={pendingOrder} count={pendingOrdersCount} />
+          ) : undefined
         }
       />
 
@@ -496,6 +523,38 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function PendingOrderAlert({ order, count }: { order: Order; count: number }) {
+  const t = useTranslation();
+
+  return (
+    <Link
+      href={`/orders/${order.id}`}
+      className="animate-pending-order-attention flex w-full items-center gap-3 rounded-md border border-primary/60 bg-primary/10 px-3 py-2 text-left shadow-sm transition-colors hover:border-primary hover:bg-primary/15 sm:w-auto"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/20 text-[color-mix(in_oklch,var(--primary)_75%,black)] dark:text-primary">
+        <BellRing className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">
+          {t("dashboard.pendingOrders")}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {t("dashboard.pendingOrdersDescription", {
+            code: formatOrderCode(order),
+          })}
+        </span>
+      </span>
+      <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+        {t("dashboard.pendingOrdersCount", { count })}
+      </span>
+      <span className="hidden items-center gap-1 text-sm font-medium sm:inline-flex">
+        {t("dashboard.pendingOrdersAction")}
+        <ArrowRight className="size-3.5" />
+      </span>
+    </Link>
   );
 }
 

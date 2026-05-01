@@ -98,8 +98,7 @@ export default function OperationsPage() {
   );
 
   const overviewParams = useMemo(
-    () =>
-      sellerFilter === "ALL" ? {} : { sellerId: Number(sellerFilter) },
+    () => (sellerFilter === "ALL" ? {} : { sellerId: Number(sellerFilter) }),
     [sellerFilter],
   );
 
@@ -194,10 +193,14 @@ export default function OperationsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Não foi possível carregar a operação</CardTitle>
-            <CardDescription>{errorMessage(overviewQuery.error)}</CardDescription>
+            <CardDescription>
+              {errorMessage(overviewQuery.error)}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button onClick={() => overviewQuery.refetch()}>Tentar novamente</Button>
+            <Button onClick={() => overviewQuery.refetch()}>
+              Tentar novamente
+            </Button>
           </CardContent>
         </Card>
       ) : null}
@@ -247,7 +250,9 @@ function AttentionQueue({
         <div className="flex items-center justify-between gap-3">
           <div>
             <CardTitle>Fila Atenção</CardTitle>
-            <CardDescription>Problemas que pedem ação operacional.</CardDescription>
+            <CardDescription>
+              Problemas que pedem ação operacional.
+            </CardDescription>
           </div>
           <Badge variant={issues.length ? "warning" : "success"}>
             {issues.length}
@@ -354,15 +359,16 @@ function OffersList({
           </p>
         ) : (
           offers.map((offer) => (
-            <div
-              key={offer.id}
-              className="rounded-md border border-border p-3"
-            >
+            <div key={offer.id} className="rounded-md border border-border p-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">Oferta #{offer.id}</span>
-                    <Badge variant={offer.status === "ACCEPTING" ? "warning" : "muted"}>
+                    <Badge
+                      variant={
+                        offer.status === "ACCEPTING" ? "warning" : "muted"
+                      }
+                    >
                       {offer.status}
                     </Badge>
                   </div>
@@ -420,7 +426,9 @@ function JobsList({
     <Card>
       <CardHeader>
         <CardTitle>Despachos ativos</CardTitle>
-        <CardDescription>Jobs abertos ou aceitos pela operação.</CardDescription>
+        <CardDescription>
+          Jobs abertos ou aceitos pela operação.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         {jobs.length === 0 ? (
@@ -436,7 +444,9 @@ function JobsList({
               <div className="min-w-0 space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">Job #{job.id}</span>
-                  <Badge variant={job.status === "OPEN" ? "warning" : "default"}>
+                  <Badge
+                    variant={job.status === "OPEN" ? "warning" : "default"}
+                  >
                     {job.status}
                   </Badge>
                   <TargetBadge job={job} />
@@ -493,7 +503,9 @@ function JobsList({
 
 function TargetBadge({ job }: { job: OperationJob }) {
   if (job.orderId) {
-    return <Badge variant="secondary">{formatOrderCode({ id: job.orderId })}</Badge>;
+    return (
+      <Badge variant="secondary">{formatOrderCode({ id: job.orderId })}</Badge>
+    );
   }
 
   if (job.deliveryRequestId) {
@@ -533,7 +545,10 @@ function targetLinks(
   }
 
   if (target.driverProfileId && options.includeDriver) {
-    links.push({ href: `/drivers/${target.driverProfileId}`, label: "Motorista" });
+    links.push({
+      href: `/drivers/${target.driverProfileId}`,
+      label: "Motorista",
+    });
   }
 
   if (target.paymentId && options.includePayment) {
@@ -544,6 +559,17 @@ function targetLinks(
 }
 
 function issueDescription(issue: OperationIssue) {
+  if (issue.type === "ASSIGNED_DRIVER_UNREACHABLE") {
+    const target = issue.deliveryJobId
+      ? `Job #${issue.deliveryJobId}`
+      : "Job aceito";
+    if (issue.driverAvailability === "OFFLINE") {
+      return `${target} com motorista offline. Oriente o motorista a abrir o app ou reatribua a entrega.`;
+    }
+    return issue.lastLocationAt
+      ? `${target} sem localização recente desde ${formatDateTime(issue.lastLocationAt)}. Oriente o motorista a abrir o app e reenviar localização.`
+      : `${target} sem localização registrada. Oriente o motorista a abrir o app e reenviar localização.`;
+  }
   if (issue.type === "ONLINE_DRIVER_STALE_LOCATION") {
     return issue.lastLocationAt
       ? `Última localização em ${formatDateTime(issue.lastLocationAt)}. Oriente o motorista a abrir o app e reenviar localização.`
@@ -560,7 +586,8 @@ function issueDescription(issue: OperationIssue) {
 }
 
 function formatDistance(distanceMeters?: number | null) {
-  if (distanceMeters === null || distanceMeters === undefined) return "distância —";
+  if (distanceMeters === null || distanceMeters === undefined)
+    return "distância —";
   if (distanceMeters < 1000) return `${Math.round(distanceMeters)} m`;
   return `${(distanceMeters / 1000).toFixed(1).replace(".", ",")} km`;
 }

@@ -162,7 +162,9 @@ describe("OperationsPage", () => {
       ],
       driverProfiles: [],
     };
-    jest.mocked(operationsService.overview).mockResolvedValue(overview as never);
+    jest
+      .mocked(operationsService.overview)
+      .mockResolvedValue(overview as never);
     jest.mocked(sellersService.list).mockResolvedValue({
       data: [
         {
@@ -262,6 +264,39 @@ describe("OperationsPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Motorista #30")).toBeInTheDocument();
     expect(screen.getByText(/Oriente o motorista/)).toBeInTheDocument();
+    expect(container.querySelector('a[href="/drivers/30"]')).toBeNull();
+  });
+
+  it("describes assigned drivers that are no longer reachable", async () => {
+    mockIsAdmin = false;
+    jest.mocked(operationsService.overview).mockResolvedValueOnce({
+      ...overview,
+      issues: [
+        {
+          type: "ASSIGNED_DRIVER_UNREACHABLE",
+          title: "Motorista atribuido sem acompanhamento",
+          severity: "warning",
+          orderId: 10,
+          deliveryJobId: 7,
+          driverProfileId: 30,
+          driverAvailability: "OFFLINE",
+          lastLocationAt: "2026-05-01T12:00:00.000Z",
+        },
+      ],
+      jobs: [],
+      offers: [],
+    } as never);
+
+    const { container } = renderWithQueryClient(<OperationsPage />);
+
+    expect(
+      await screen.findByText("Motorista atribuido sem acompanhamento"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Motorista #30")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Job #7 com motorista offline/),
+    ).toBeInTheDocument();
+    expect(container.querySelector('a[href="/orders/10"]')).not.toBeNull();
     expect(container.querySelector('a[href="/drivers/30"]')).toBeNull();
   });
 });
