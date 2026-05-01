@@ -8,6 +8,14 @@ export interface ListProductsParams {
   brand?: string;
   categoryId?: number;
   unit?: string;
+  barcode?: string;
+  minWeight?: number;
+  maxWeight?: number;
+  hasImage?: boolean;
+  hasBarcode?: boolean;
+  hasCategory?: boolean;
+  hasBrand?: boolean;
+  hasDescription?: boolean;
 }
 
 export interface ProductImageInput {
