@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type {
   EvidenceType,
+  FulfillmentMethod,
   Order,
   OrderEvidence,
   OrderStatus,
@@ -29,7 +30,8 @@ export interface OrderStats {
 
 export interface CreateOrderPayload {
   sellerId: number;
-  deliveryAddress: string;
+  fulfillmentMethod?: FulfillmentMethod;
+  deliveryAddress?: string;
   customerAddressId?: number;
   deliveryCep?: string;
   contactPhone?: string;
@@ -89,6 +91,9 @@ export const ordersService = {
 
   confirmDelivery: (id: number, payload: ConfirmOrderCodePayload) =>
     api.patch<Order>(`/orders/${id}/confirm-delivery`, payload),
+
+  confirmCustomerPickup: (id: number, payload: ConfirmOrderCodePayload) =>
+    api.patch<Order>(`/orders/${id}/confirm-customer-pickup`, payload),
 
   addEvidence: (id: number, payload: CreateOrderEvidencePayload) =>
     api.post<OrderEvidence>(

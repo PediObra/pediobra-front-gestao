@@ -14,14 +14,18 @@ export type DriverStatus = "PENDING" | "APPROVED" | "REJECTED" | "BLOCKED";
 
 export type DriverAvailability = "ONLINE" | "OFFLINE" | "BUSY";
 
+export type FulfillmentMethod = "DELIVERY" | "STORE_PICKUP";
+
 export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
   | "PREPARING"
   | "READY_FOR_PICKUP"
+  | "READY_FOR_CUSTOMER_PICKUP"
   | "PICKED_UP"
   | "OUT_FOR_DELIVERY"
   | "DELIVERED"
+  | "CUSTOMER_PICKED_UP"
   | "DELIVERY_FAILED"
   | "CANCELLED";
 
@@ -405,14 +409,22 @@ export interface Order {
   customerAddressId?: number | null;
   assignedDriverProfileId?: number | null;
   status: OrderStatus;
+  fulfillmentMethod?: FulfillmentMethod;
   paymentStatus?: PaymentStatus | null;
-  deliveryAddress: string;
+  deliveryAddress?: string | null;
   deliveryCep?: string | null;
+  pickupAddress?: string | null;
+  pickupCep?: string | null;
+  pickupContactName?: string | null;
+  pickupContactPhone?: string | null;
+  pickupLatitude?: string | null;
+  pickupLongitude?: string | null;
   contactPhone?: string | null;
   notes?: string | null;
   confirmationCode?: string | null;
   pickupConfirmationCode?: string | null;
   deliveryConfirmationCode?: string | null;
+  customerPickupConfirmationCode?: string | null;
   deliveryFeeCents?: number | null;
   totalAmountCents: number;
   distanceMeters?: number | null;

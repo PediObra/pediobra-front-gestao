@@ -55,6 +55,7 @@ jest.mock("@/lib/api/orders", () => ({
     updateStatus: jest.fn(),
     assignDriver: jest.fn(),
     confirmPickup: jest.fn(),
+    confirmCustomerPickup: jest.fn(),
     addEvidence: jest.fn(),
   },
 }));

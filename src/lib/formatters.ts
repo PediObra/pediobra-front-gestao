@@ -85,9 +85,11 @@ export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   CONFIRMED: "Confirmado",
   PREPARING: "Em preparo",
   READY_FOR_PICKUP: "Pronto p/ retirada",
+  READY_FOR_CUSTOMER_PICKUP: "Pronto para retirar",
   PICKED_UP: "Coletado",
   OUT_FOR_DELIVERY: "Em rota",
   DELIVERED: "Entregue",
+  CUSTOMER_PICKED_UP: "Retirado na loja",
   DELIVERY_FAILED: "Falha na entrega",
   CANCELLED: "Cancelado",
 };

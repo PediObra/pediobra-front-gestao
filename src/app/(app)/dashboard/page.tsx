@@ -401,9 +401,11 @@ export default function DashboardPage() {
                   "CONFIRMED",
                   "PREPARING",
                   "READY_FOR_PICKUP",
+                  "READY_FOR_CUSTOMER_PICKUP",
                   "PICKED_UP",
                   "OUT_FOR_DELIVERY",
                   "DELIVERED",
+                  "CUSTOMER_PICKED_UP",
                   "DELIVERY_FAILED",
                   "CANCELLED",
                 ] as OrderStatus[]

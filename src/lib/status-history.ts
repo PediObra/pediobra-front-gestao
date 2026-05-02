@@ -27,9 +27,12 @@ const ORDER_EVENT_TITLE: Record<OrderStatus, TranslationKey> = {
   CONFIRMED: "order.timelineEvent.order.CONFIRMED",
   PREPARING: "order.timelineEvent.order.PREPARING",
   READY_FOR_PICKUP: "order.timelineEvent.order.READY_FOR_PICKUP",
+  READY_FOR_CUSTOMER_PICKUP:
+    "order.timelineEvent.order.READY_FOR_CUSTOMER_PICKUP",
   PICKED_UP: "order.timelineEvent.order.PICKED_UP",
   OUT_FOR_DELIVERY: "order.timelineEvent.order.OUT_FOR_DELIVERY",
   DELIVERED: "order.timelineEvent.order.DELIVERED",
+  CUSTOMER_PICKED_UP: "order.timelineEvent.order.CUSTOMER_PICKED_UP",
   DELIVERY_FAILED: "order.timelineEvent.order.DELIVERY_FAILED",
   CANCELLED: "order.timelineEvent.order.CANCELLED",
 };

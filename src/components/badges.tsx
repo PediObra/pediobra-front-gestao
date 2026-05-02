@@ -24,9 +24,11 @@ const ORDER_STATUS_VARIANT: Record<OrderStatus, BadgeVariant> = {
   CONFIRMED: "default",
   PREPARING: "default",
   READY_FOR_PICKUP: "default",
+  READY_FOR_CUSTOMER_PICKUP: "default",
   PICKED_UP: "default",
   OUT_FOR_DELIVERY: "warning",
   DELIVERED: "success",
+  CUSTOMER_PICKED_UP: "success",
   DELIVERY_FAILED: "destructive",
   CANCELLED: "destructive",
 };

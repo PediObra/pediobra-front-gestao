@@ -15,7 +15,16 @@ const ORDER_STATUS_GRAPH = {
   DELIVERED: [],
   DELIVERY_FAILED: [],
   CANCELLED: [],
-} as const satisfies Record<OrderStatus, readonly OrderStatus[]>;
+} as const satisfies Partial<Record<OrderStatus, readonly OrderStatus[]>>;
+
+const STORE_PICKUP_ORDER_STATUS_GRAPH = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["PREPARING", "CANCELLED"],
+  PREPARING: ["READY_FOR_CUSTOMER_PICKUP", "CANCELLED"],
+  READY_FOR_CUSTOMER_PICKUP: ["CUSTOMER_PICKED_UP", "CANCELLED"],
+  CUSTOMER_PICKED_UP: [],
+  CANCELLED: [],
+} as const satisfies Partial<Record<OrderStatus, readonly OrderStatus[]>>;
 
 const DELIVERY_REQUEST_STATUS_GRAPH = {
   PENDING: ["CANCELLED"],
@@ -34,6 +43,8 @@ const SELLER_ORDER_STATUSES: readonly OrderStatus[] = [
   "CONFIRMED",
   "PREPARING",
   "READY_FOR_PICKUP",
+  "READY_FOR_CUSTOMER_PICKUP",
+  "CUSTOMER_PICKED_UP",
   "CANCELLED",
 ] as const;
 
@@ -47,6 +58,7 @@ const DRIVER_WORK_STATUSES: readonly (OrderStatus | DeliveryRequestStatus)[] = [
 const ORDER_CODE_PROTECTED_STATUSES: readonly OrderStatus[] = [
   "PICKED_UP",
   "DELIVERED",
+  "CUSTOMER_PICKED_UP",
 ] as const;
 
 export function hasRole(user: AuthUser | null, role: RoleName): boolean {
@@ -124,15 +136,24 @@ export function allowedOrderStatusTransitions(
     assignedDriverProfileId?: number | null;
     status: string;
     paymentStatus?: string | null;
+    fulfillmentMethod?: string | null;
   },
 ) {
-  const graphTransitions = orderStatusTransitions(order.status);
+  const isStorePickup = order.fulfillmentMethod === "STORE_PICKUP";
+  const graphTransitions = orderStatusTransitions(
+    order.status,
+    order.fulfillmentMethod,
+  );
   const filterPaymentLockedDispatch = (statuses: readonly OrderStatus[]) =>
     ["PAID", "AUTHORIZED"].includes(order.paymentStatus ?? "")
       ? statuses
-      : statuses.filter((status) => status !== "READY_FOR_PICKUP");
+      : statuses.filter(
+          (status) =>
+            status !== "READY_FOR_PICKUP" &&
+            status !== "READY_FOR_CUSTOMER_PICKUP",
+        );
   const filterUnassignedDriverStatuses = (statuses: readonly OrderStatus[]) =>
-    order.assignedDriverProfileId
+    order.assignedDriverProfileId && !isStorePickup
       ? statuses
       : statuses.filter((status) => !DRIVER_WORK_STATUSES.includes(status));
   const filterCodeProtectedStatuses = (statuses: readonly OrderStatus[]) =>
@@ -149,9 +170,11 @@ export function allowedOrderStatusTransitions(
   }
 
   if (canAccessSeller(user, order.sellerId)) {
-    return filterPaymentLockedDispatch(
-      graphTransitions.filter((status) =>
-        SELLER_ORDER_STATUSES.includes(status),
+    return filterCodeProtectedStatuses(
+      filterPaymentLockedDispatch(
+        graphTransitions.filter((status) =>
+          SELLER_ORDER_STATUSES.includes(status),
+        ),
       ),
     );
   }
@@ -221,8 +244,16 @@ export function allowedDeliveryRequestStatusTransitions(
   return [] as const;
 }
 
-function orderStatusTransitions(status: string): readonly OrderStatus[] {
-  return isOrderStatus(status) ? ORDER_STATUS_GRAPH[status] : [];
+function orderStatusTransitions(
+  status: string,
+  fulfillmentMethod?: string | null,
+): readonly OrderStatus[] {
+  const graph: Partial<Record<OrderStatus, readonly OrderStatus[]>> =
+    fulfillmentMethod === "STORE_PICKUP"
+      ? STORE_PICKUP_ORDER_STATUS_GRAPH
+      : ORDER_STATUS_GRAPH;
+
+  return isOrderStatus(status) ? (graph[status] ?? []) : [];
 }
 
 function deliveryRequestStatusTransitions(
@@ -234,7 +265,7 @@ function deliveryRequestStatusTransitions(
 }
 
 function isOrderStatus(status: string): status is OrderStatus {
-  return status in ORDER_STATUS_GRAPH;
+  return status in ORDER_STATUS_GRAPH || status in STORE_PICKUP_ORDER_STATUS_GRAPH;
 }
 
 function isDeliveryRequestStatus(

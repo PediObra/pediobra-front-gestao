@@ -134,6 +134,7 @@ export default function OrderDetailPage({
   const [statusConfirmation, setStatusConfirmation] =
     useState<StatusConfirmation | null>(null);
   const [pickupCode, setPickupCode] = useState("");
+  const [customerPickupCode, setCustomerPickupCode] = useState("");
   const [driverSel, setDriverSel] = useState<string>("");
   const [evType, setEvType] = useState<EvidenceType>("GENERAL");
   const [evFile, setEvFile] = useState<File | null>(null);
@@ -204,9 +205,41 @@ export default function OrderDetailPage({
     },
   });
 
+  const customerPickupMutation = useMutation({
+    mutationFn: () =>
+      ordersService.confirmCustomerPickup(orderId, {
+        code: customerPickupCode.trim(),
+      }),
+    onSuccess: (updated) => {
+      qc.setQueryData(queryKeys.orders.byId(orderId), updated);
+      qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
+      toast.success(t("order.customerPickupConfirmed"));
+      setCustomerPickupCode("");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : t("order.pickupConfirmationFailed");
+      toast.error(msg);
+    },
+  });
+
   function handlePickupCodeChange(event: ChangeEvent<HTMLInputElement>) {
     const nextCode = event.target.value.replace(/\D/g, "").slice(0, 4);
     setPickupCode(nextCode);
+    if (nextCode.length === 4) {
+      event.currentTarget.blur();
+    }
+  }
+
+  function handleCustomerPickupCodeChange(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
+    const nextCode = event.target.value.replace(/\D/g, "").slice(0, 4);
+    setCustomerPickupCode(nextCode);
     if (nextCode.length === 4) {
       event.currentTarget.blur();
     }
@@ -291,8 +324,14 @@ export default function OrderDetailPage({
   }
 
   const canChangeStatus = transitions.length > 0;
+  const isStorePickup = order.fulfillmentMethod === "STORE_PICKUP";
   const canConfirmPickup =
     order.status === "READY_FOR_PICKUP" &&
+    !isStorePickup &&
+    (isAdmin || canAccessSeller(user, order.sellerId));
+  const canConfirmCustomerPickup =
+    order.status === "READY_FOR_CUSTOMER_PICKUP" &&
+    isStorePickup &&
     (isAdmin || canAccessSeller(user, order.sellerId));
   const confirmationCopy = statusConfirmation
     ? getStatusConfirmationCopy(statusConfirmation.type, t)
@@ -405,14 +444,23 @@ export default function OrderDetailPage({
                 );
               })}
 
-              <div className="flex justify-between border-t border-border pt-3 text-sm">
-                <span className="text-muted-foreground">
-                  {t("order.deliveryFee")}
-                </span>
-                <span className="font-mono">
-                  {centsToBRL(order.deliveryFeeCents ?? 0)}
-                </span>
-              </div>
+              {!isStorePickup ? (
+                <div className="flex justify-between border-t border-border pt-3 text-sm">
+                  <span className="text-muted-foreground">
+                    {t("order.deliveryFee")}
+                  </span>
+                  <span className="font-mono">
+                    {centsToBRL(order.deliveryFeeCents ?? 0)}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex justify-between border-t border-border pt-3 text-sm">
+                  <span className="text-muted-foreground">
+                    {t("order.pickupFee")}
+                  </span>
+                  <span className="font-mono">{centsToBRL(0)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-base font-semibold">
                 <span>{t("order.total")}</span>
                 <span className="font-mono">
@@ -718,13 +766,40 @@ export default function OrderDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MapPin className="size-4" />
-                {t("order.delivery")}
+                {isStorePickup ? t("order.storePickup") : t("order.delivery")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1 text-sm">
-              <p>{order.deliveryAddress}</p>
-              {order.deliveryCep && (
-                <p className="text-muted-foreground">CEP {order.deliveryCep}</p>
+              {isStorePickup ? (
+                <>
+                  <p>
+                    {order.pickupContactName ??
+                      order.seller?.name ??
+                      `#${order.sellerId}`}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {order.pickupAddress ?? order.seller?.address ?? "—"}
+                  </p>
+                  {order.pickupCep && (
+                    <p className="text-muted-foreground">
+                      CEP {order.pickupCep}
+                    </p>
+                  )}
+                  {order.pickupContactPhone && (
+                    <p className="text-muted-foreground">
+                      {formatPhone(order.pickupContactPhone)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p>{order.deliveryAddress}</p>
+                  {order.deliveryCep && (
+                    <p className="text-muted-foreground">
+                      CEP {order.deliveryCep}
+                    </p>
+                  )}
+                </>
               )}
               {order.notes && (
                 <p className="text-xs text-muted-foreground border-l-2 border-border pl-2 mt-2">
@@ -734,6 +809,7 @@ export default function OrderDetailPage({
             </CardContent>
           </Card>
 
+          {!isStorePickup && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -798,6 +874,7 @@ export default function OrderDetailPage({
               )}
             </CardContent>
           </Card>
+          )}
 
           {canChangeStatus && (
             <Card>
@@ -858,6 +935,48 @@ export default function OrderDetailPage({
                     <CheckCircle2 className="size-4" />
                   )}
                   {t("order.confirmPickup")}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {canConfirmCustomerPickup && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("order.customerPickupConfirmation")}</CardTitle>
+                <CardDescription>
+                  {t("order.customerPickupConfirmationDescription")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="customer-pickup-code">
+                    {t("order.customerPickupCode")}
+                  </Label>
+                  <Input
+                    id="customer-pickup-code"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={customerPickupCode}
+                    onChange={handleCustomerPickupCodeChange}
+                    placeholder="0000"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => customerPickupMutation.mutate()}
+                  disabled={
+                    customerPickupCode.length !== 4 ||
+                    customerPickupMutation.isPending
+                  }
+                >
+                  {customerPickupMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="size-4" />
+                  )}
+                  {t("order.confirmCustomerPickup")}
                 </Button>
               </CardContent>
             </Card>
