@@ -6,9 +6,12 @@ export interface ListSellerProductsParams {
   limit?: number;
   sellerId?: number;
   productId?: number;
+  customerAddressId?: number;
+  search?: string;
   sku?: string;
   minPriceCents?: number;
   maxPriceCents?: number;
+  inStock?: boolean;
   active?: boolean;
   includeInactive?: boolean;
 }

@@ -3,10 +3,15 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Eye } from "lucide-react";
+import { Eye, RotateCcw, SlidersHorizontal } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
+import {
+  DateRangeFilter,
+  FilterField,
+} from "@/components/filters/list-filter-controls";
 import { PageHeader } from "@/components/layout/page-header";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -27,6 +32,10 @@ import {
   formatOrderCode,
   orderStatusLabel,
 } from "@/lib/formatters";
+import {
+  dateInputToNextDayIso,
+  dateInputToStartIso,
+} from "@/lib/date-filters";
 import type { Order, OrderStatus } from "@/lib/api/types";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useTranslation } from "@/lib/i18n/language-store";
@@ -47,13 +56,13 @@ const ORDER_STATUSES: OrderStatus[] = [
 
 export default function OrdersListPage() {
   const t = useTranslation();
-  const { isAdmin, sellerIds } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [sellerFilter, setSellerFilter] = useState<string>(
-    isAdmin ? "ALL" : sellerIds[0] ? String(sellerIds[0]) : "ALL",
-  );
+  const [sellerFilter, setSellerFilter] = useState<string>("ALL");
   const [clientUserIdInput, setClientUserIdInput] = useState("");
+  const [createdFromInput, setCreatedFromInput] = useState("");
+  const [createdToInput, setCreatedToInput] = useState("");
   const debouncedClientId = useDebouncedValue(clientUserIdInput, 400);
 
   const sellersQ = useQuery({
@@ -61,6 +70,14 @@ export default function OrdersListPage() {
     queryFn: () => sellersService.list({ page: 1, limit: 100 }),
     enabled: isAdmin,
   });
+
+  const sellerOptions = useMemo(
+    () =>
+      isAdmin
+        ? (sellersQ.data?.data ?? [])
+        : (user?.sellers.map((membership) => membership.seller) ?? []),
+    [isAdmin, sellersQ.data?.data, user?.sellers],
+  );
 
   const params: ListOrdersParams = useMemo(() => {
     const base: ListOrdersParams = {
@@ -73,8 +90,17 @@ export default function OrdersListPage() {
     if (debouncedClientId && Number.isFinite(clientId) && clientId > 0) {
       base.clientUserId = clientId;
     }
+    base.createdFrom = dateInputToStartIso(createdFromInput);
+    base.createdTo = dateInputToNextDayIso(createdToInput);
     return base;
-  }, [page, statusFilter, sellerFilter, debouncedClientId]);
+  }, [
+    page,
+    statusFilter,
+    sellerFilter,
+    debouncedClientId,
+    createdFromInput,
+    createdToInput,
+  ]);
 
   const query = useQuery({
     queryKey: queryKeys.orders.list(params),
@@ -162,6 +188,23 @@ export default function OrdersListPage() {
     [t],
   );
 
+  const activeFilterCount = [
+    statusFilter !== "ALL",
+    sellerFilter !== "ALL",
+    clientUserIdInput.trim(),
+    createdFromInput,
+    createdToInput,
+  ].filter(Boolean).length;
+
+  function resetFilters() {
+    setPage(1);
+    setStatusFilter("ALL");
+    setSellerFilter("ALL");
+    setClientUserIdInput("");
+    setCreatedFromInput("");
+    setCreatedToInput("");
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -171,61 +214,107 @@ export default function OrdersListPage() {
         }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <Select
-          value={statusFilter}
-          onValueChange={(v) => {
-            setPage(1);
-            setStatusFilter(v);
-          }}
-        >
-          <SelectTrigger className="sm:w-52">
-            <SelectValue placeholder={t("common.status")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">{t("orders.allStatuses")}</SelectItem>
-            {ORDER_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                {orderStatusLabel(s)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {isAdmin && (
-          <Select
-            value={sellerFilter}
-            onValueChange={(v) => {
-              setPage(1);
-              setSellerFilter(v);
-            }}
+      <div className="space-y-3 rounded-md border border-border bg-background p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <SlidersHorizontal className="size-4" />
+            {t("products.filters")}
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary">
+                {t("products.activeFilters", { count: activeFilterCount })}
+              </Badge>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={resetFilters}
+            disabled={activeFilterCount === 0}
           >
-            <SelectTrigger className="sm:w-60">
-              <SelectValue placeholder={t("orders.allStores")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">{t("orders.allStores")}</SelectItem>
-              {(sellersQ.data?.data ?? []).map((s) => (
-                <SelectItem key={s.id} value={String(s.id)}>
-                  {s.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+            <RotateCcw className="size-4" />
+            {t("products.clearFilters")}
+          </Button>
+        </div>
 
-        {isAdmin && (
-          <Input
-            placeholder={t("orders.clientId")}
-            className="sm:w-48"
-            value={clientUserIdInput}
-            onChange={(e) => {
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <FilterField label={t("common.status")} htmlFor="orders-status-filter">
+            <Select
+              value={statusFilter}
+              onValueChange={(v) => {
+                setPage(1);
+                setStatusFilter(v);
+              }}
+            >
+              <SelectTrigger id="orders-status-filter">
+                <SelectValue placeholder={t("common.status")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("orders.allStatuses")}</SelectItem>
+                {ORDER_STATUSES.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {orderStatusLabel(s)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+          <FilterField label={t("orders.store")} htmlFor="orders-store-filter">
+            <Select
+              value={sellerFilter}
+              onValueChange={(v) => {
+                setPage(1);
+                setSellerFilter(v);
+              }}
+            >
+              <SelectTrigger id="orders-store-filter">
+                <SelectValue placeholder={t("orders.allStores")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("orders.allStores")}</SelectItem>
+                {sellerOptions.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+          <DateRangeFilter
+            id="orders-created-range"
+            label={t("orders.createdRange")}
+            fromLabel={t("filters.from")}
+            toLabel={t("filters.to")}
+            fromValue={createdFromInput}
+            toValue={createdToInput}
+            onFromChange={(value) => {
               setPage(1);
-              setClientUserIdInput(e.target.value);
+              setCreatedFromInput(value);
             }}
-            inputMode="numeric"
+            onToChange={(value) => {
+              setPage(1);
+              setCreatedToInput(value);
+            }}
+            className="md:col-span-2 xl:col-span-2"
           />
-        )}
+          {isAdmin && (
+            <FilterField
+              label={t("orders.clientId")}
+              htmlFor="orders-client-filter"
+            >
+              <Input
+                id="orders-client-filter"
+                placeholder={t("orders.clientId")}
+                value={clientUserIdInput}
+                onChange={(e) => {
+                  setPage(1);
+                  setClientUserIdInput(e.target.value);
+                }}
+                inputMode="numeric"
+              />
+            </FilterField>
+          )}
+        </div>
       </div>
 
       <DataTable

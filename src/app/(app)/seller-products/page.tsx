@@ -3,11 +3,14 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { FilterField } from "@/components/filters/list-filter-controls";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,6 +28,7 @@ import { sellersService } from "@/lib/api/sellers";
 import { queryKeys } from "@/lib/query-keys";
 import { centsToBRL } from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useTranslation } from "@/lib/i18n/language-store";
 import type { Paginated, SellerProduct } from "@/lib/api/types";
 
@@ -52,15 +56,19 @@ function updateSellerProductActive(
 
 export default function SellerProductsListPage() {
   const t = useTranslation();
-  const { isAdmin, sellerIds, canManageSellerProducts } = useAuth();
+  const { isAdmin, user, sellerIds, canManageSellerProducts } = useAuth();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
-  const [sellerId, setSellerId] = useState<string>(
-    isAdmin ? "ALL" : sellerIds[0] ? String(sellerIds[0]) : "ALL",
-  );
+  const [sellerId, setSellerId] = useState<string>("ALL");
   const [activeFilter, setActiveFilter] = useState<
     "ALL" | "ACTIVE" | "INACTIVE"
   >("ACTIVE");
+  const [search, setSearch] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
+  const debouncedMinPrice = useDebouncedValue(minPrice, 350);
+  const debouncedMaxPrice = useDebouncedValue(maxPrice, 350);
 
   const sellersQ = useQuery({
     queryKey: queryKeys.sellers.list({ page: 1, limit: 100 }),
@@ -68,16 +76,34 @@ export default function SellerProductsListPage() {
     enabled: isAdmin,
   });
 
+  const sellerOptions = useMemo(
+    () =>
+      isAdmin
+        ? (sellersQ.data?.data ?? [])
+        : (user?.sellers.map((membership) => membership.seller) ?? []),
+    [isAdmin, sellersQ.data?.data, user?.sellers],
+  );
+
   const params: ListSellerProductsParams = useMemo(
     () => ({
       page,
       limit: 10,
       sellerId: sellerId === "ALL" ? undefined : Number(sellerId),
+      search: normalizedText(debouncedSearch),
+      minPriceCents: parsePriceCents(debouncedMinPrice),
+      maxPriceCents: parsePriceCents(debouncedMaxPrice),
       active:
         activeFilter === "ALL" ? undefined : activeFilter === "ACTIVE",
       includeInactive: activeFilter === "ALL" ? true : undefined,
     }),
-    [page, sellerId, activeFilter],
+    [
+      page,
+      sellerId,
+      debouncedSearch,
+      debouncedMinPrice,
+      debouncedMaxPrice,
+      activeFilter,
+    ],
   );
 
   const query = useQuery({
@@ -224,6 +250,22 @@ export default function SellerProductsListPage() {
   );
 
   const canCreate = isAdmin || sellerIds.length > 0;
+  const activeFilterCount = [
+    sellerId !== "ALL",
+    activeFilter !== "ACTIVE",
+    search.trim(),
+    minPrice.trim(),
+    maxPrice.trim(),
+  ].filter(Boolean).length;
+
+  function resetFilters() {
+    setPage(1);
+    setSellerId("ALL");
+    setActiveFilter("ACTIVE");
+    setSearch("");
+    setMinPrice("");
+    setMaxPrice("");
+  }
 
   return (
     <div className="space-y-6">
@@ -242,48 +284,129 @@ export default function SellerProductsListPage() {
         }
       />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        {isAdmin && (
-          <Select
-            value={sellerId}
-            onValueChange={(v) => {
-              setPage(1);
-              setSellerId(v);
-            }}
+      <div className="space-y-3 rounded-md border border-border bg-background p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <SlidersHorizontal className="size-4" />
+            {t("products.filters")}
+            {activeFilterCount > 0 && (
+              <Badge variant="secondary">
+                {t("products.activeFilters", { count: activeFilterCount })}
+              </Badge>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={resetFilters}
+            disabled={activeFilterCount === 0}
           >
-            <SelectTrigger className="sm:w-64">
-              <SelectValue placeholder={t("orders.allStores")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">{t("orders.allStores")}</SelectItem>
-              {(sellersQ.data?.data ?? []).map((s) => (
-                <SelectItem key={s.id} value={String(s.id)}>
-                  {s.name}
+            <RotateCcw className="size-4" />
+            {t("products.clearFilters")}
+          </Button>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <FilterField
+            label={t("sellerProducts.searchLabel")}
+            htmlFor="seller-products-search"
+            className="md:col-span-2"
+          >
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="seller-products-search"
+                placeholder={t("sellerProducts.search")}
+                className="pl-8"
+                value={search}
+                onChange={(e) => {
+                  setPage(1);
+                  setSearch(e.target.value);
+                }}
+              />
+            </div>
+          </FilterField>
+          <FilterField
+            label={t("sellerProducts.store")}
+            htmlFor="seller-products-store-filter"
+          >
+            <Select
+              value={sellerId}
+              onValueChange={(v) => {
+                setPage(1);
+                setSellerId(v);
+              }}
+            >
+              <SelectTrigger id="seller-products-store-filter">
+                <SelectValue placeholder={t("orders.allStores")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("orders.allStores")}</SelectItem>
+                {sellerOptions.map((s) => (
+                  <SelectItem key={s.id} value={String(s.id)}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterField>
+          <FilterField
+            label={t("sellerProducts.status")}
+            htmlFor="seller-products-active-filter"
+          >
+            <Select
+              value={activeFilter}
+              onValueChange={(v) => {
+                setPage(1);
+                setActiveFilter(v as typeof activeFilter);
+              }}
+            >
+              <SelectTrigger id="seller-products-active-filter">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">{t("sellerProducts.all")}</SelectItem>
+                <SelectItem value="ACTIVE">
+                  {t("sellerProducts.active")}
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        <Select
-          value={activeFilter}
-          onValueChange={(v) => {
-            setPage(1);
-            setActiveFilter(v as typeof activeFilter);
-          }}
-        >
-          <SelectTrigger className="sm:w-48">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">{t("sellerProducts.all")}</SelectItem>
-            <SelectItem value="ACTIVE">
-              {t("sellerProducts.active")}
-            </SelectItem>
-            <SelectItem value="INACTIVE">
-              {t("sellerProducts.inactive")}
-            </SelectItem>
-          </SelectContent>
-        </Select>
+                <SelectItem value="INACTIVE">
+                  {t("sellerProducts.inactive")}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FilterField>
+          <FilterField
+            label={t("sellerProducts.minPriceLabel")}
+            htmlFor="seller-products-min-price"
+          >
+            <Input
+              id="seller-products-min-price"
+              placeholder={t("sellerProducts.minPrice")}
+              inputMode="decimal"
+              value={minPrice}
+              onChange={(e) => {
+                setPage(1);
+                setMinPrice(e.target.value);
+              }}
+            />
+          </FilterField>
+          <FilterField
+            label={t("sellerProducts.maxPriceLabel")}
+            htmlFor="seller-products-max-price"
+          >
+            <Input
+              id="seller-products-max-price"
+              placeholder={t("sellerProducts.maxPrice")}
+              inputMode="decimal"
+              value={maxPrice}
+              onChange={(e) => {
+                setPage(1);
+                setMaxPrice(e.target.value);
+              }}
+            />
+          </FilterField>
+        </div>
       </div>
 
       <DataTable
@@ -297,4 +420,20 @@ export default function SellerProductsListPage() {
       />
     </div>
   );
+}
+
+function normalizedText(value: string) {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function parsePriceCents(value: string) {
+  const trimmed = value.trim();
+  const normalized = trimmed.includes(",")
+    ? trimmed.replace(/\./g, "").replace(",", ".")
+    : trimmed;
+  if (!normalized) return undefined;
+  const parsed = Number(normalized);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  return Math.round(parsed * 100);
 }
