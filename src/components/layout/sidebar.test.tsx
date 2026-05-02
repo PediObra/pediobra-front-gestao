@@ -34,7 +34,7 @@ describe("MobileSidebar", () => {
       name: "Navegação principal",
     });
 
-    expect(within(nav).getByRole("link", { name: /Dashboard/ })).toHaveAttribute(
+    expect(within(nav).getByRole("link", { name: /Operação/ })).toHaveAttribute(
       "href",
       "/dashboard",
     );
@@ -42,10 +42,7 @@ describe("MobileSidebar", () => {
       "aria-current",
       "page",
     );
-    expect(within(nav).getByRole("link", { name: /Operação/ })).toHaveAttribute(
-      "href",
-      "/operations",
-    );
+    expect(within(nav).queryByRole("link", { name: /Dashboard/ })).toBeNull();
   });
 
   it("closes the drawer after choosing a navigation link", () => {
@@ -64,7 +61,7 @@ describe("MobileSidebar", () => {
       isAdmin: false,
       isSeller: true,
     });
-    mockUsePathname.mockReturnValue("/operations");
+    mockUsePathname.mockReturnValue("/dashboard");
 
     render(<Sidebar />);
 
@@ -76,7 +73,12 @@ describe("MobileSidebar", () => {
       "aria-current",
       "page",
     );
+    expect(within(nav).getByRole("link", { name: /Operação/ })).toHaveAttribute(
+      "href",
+      "/dashboard",
+    );
     expect(within(nav).getByRole("link", { name: /Pedidos/ })).toBeInTheDocument();
+    expect(nav.querySelector('a[href="/operations"]')).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Motoristas/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Usuários/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Pagamentos/ })).toBeNull();

@@ -4,7 +4,6 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
   PanelLeftClose,
   Users,
   Store,
@@ -38,7 +37,6 @@ import {
 
 type NavItem = {
   labelKey:
-    | "nav.dashboard"
     | "nav.orders"
     | "nav.deliveryRequests"
     | "nav.products"
@@ -49,15 +47,15 @@ type NavItem = {
     | "nav.payments"
     | "nav.operations";
   href: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof RadioTower;
   show: (ctx: { isAdmin: boolean; isSeller: boolean }) => boolean;
 };
 
 const NAV_ITEMS: NavItem[] = [
   {
-    labelKey: "nav.dashboard",
+    labelKey: "nav.operations",
     href: "/dashboard",
-    icon: LayoutDashboard,
+    icon: RadioTower,
     show: () => true,
   },
   {
@@ -107,12 +105,6 @@ const NAV_ITEMS: NavItem[] = [
     href: "/payments",
     icon: Receipt,
     show: ({ isAdmin }) => isAdmin,
-  },
-  {
-    labelKey: "nav.operations",
-    href: "/operations",
-    icon: RadioTower,
-    show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
 ];
 
