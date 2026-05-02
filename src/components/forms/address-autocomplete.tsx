@@ -15,6 +15,7 @@ import {
 const AUTOCOMPLETE_DEBOUNCE_MS = 500;
 
 type AddressAutocompleteProps = {
+  id?: string;
   value: string;
   placeholder?: string;
   sessionToken: string;
@@ -26,6 +27,7 @@ type AddressAutocompleteProps = {
 };
 
 export function AddressAutocomplete({
+  id,
   value,
   placeholder,
   sessionToken,
@@ -70,6 +72,7 @@ export function AddressAutocomplete({
   return (
     <div className="space-y-2">
       <Input
+        id={id}
         value={value}
         placeholder={placeholder}
         disabled={disabled}
