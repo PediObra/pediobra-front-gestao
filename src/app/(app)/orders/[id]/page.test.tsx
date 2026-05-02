@@ -39,14 +39,24 @@ const mockUser: AuthUser = {
   ],
   driverProfiles: [],
 };
+const mockAdminUser: AuthUser = {
+  ...mockUser,
+  id: 99,
+  name: "Master",
+  email: "master@pediobra.local",
+  roles: ["ADMIN"],
+  sellers: [],
+};
+
+let mockAuth = {
+  user: mockUser,
+  isAdmin: false,
+};
 
 let mockOrder = makeOrder();
 
 jest.mock("@/hooks/use-auth", () => ({
-  useAuth: () => ({
-    user: mockUser,
-    isAdmin: false,
-  }),
+  useAuth: () => mockAuth,
 }));
 
 jest.mock("@/lib/api/orders", () => ({
@@ -81,6 +91,10 @@ jest.mock("sonner", () => ({
 
 describe("OrderDetailPage status actions", () => {
   beforeEach(() => {
+    mockAuth = {
+      user: mockUser,
+      isAdmin: false,
+    };
     mockOrder = makeOrder();
     jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
     jest.mocked(ordersService.updateStatus).mockImplementation((_id, payload) =>
@@ -177,6 +191,42 @@ describe("OrderDetailPage status actions", () => {
         cancellationReason: "Pedido cancelado pela loja",
       });
     });
+  });
+
+  it("does not show driver-managed delivery statuses to seller users", async () => {
+    mockOrder = makeOrder({
+      status: "PICKED_UP",
+      assignedDriverProfileId: 30,
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    await screen.findByText("Motorista");
+
+    expect(screen.queryByRole("button", { name: "Em rota" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "Falha na entrega" }),
+    ).toBeNull();
+  });
+
+  it("does not expose manual driver assignment or driver-managed statuses to admin users", async () => {
+    mockAuth = {
+      user: mockAdminUser,
+      isAdmin: true,
+    };
+    mockOrder = makeOrder({
+      status: "PICKED_UP",
+      assignedDriverProfileId: 30,
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    await screen.findByText("Motorista");
+
+    expect(screen.queryByText("Atribuir motorista")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Em rota" })).toBeNull();
   });
 });
 

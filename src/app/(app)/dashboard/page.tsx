@@ -70,6 +70,7 @@ import { cn } from "@/lib/utils";
 type DashboardPeriod = "today" | "yesterday" | "last7Days";
 
 const ALL_SELLERS = "ALL";
+const PENDING_ORDERS_FALLBACK_REFRESH_MS = 30_000;
 
 export default function DashboardPage() {
   const t = useTranslation();
@@ -146,6 +147,8 @@ export default function DashboardPage() {
   const pendingOrdersQ = useQuery({
     queryKey: queryKeys.orders.list(pendingOrderParams),
     queryFn: () => ordersService.list(pendingOrderParams),
+    refetchInterval: PENDING_ORDERS_FALLBACK_REFRESH_MS,
+    refetchIntervalInBackground: false,
   });
   const overviewQuery = useQuery({
     queryKey: queryKeys.operations.overview(overviewParams),

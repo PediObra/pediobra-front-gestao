@@ -17,7 +17,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { ordersService } from "@/lib/api/orders";
-import { driversService } from "@/lib/api/drivers";
 import { paymentsService } from "@/lib/api/payments";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
@@ -114,17 +113,6 @@ export default function OrderDetailPage({
     enabled: Number.isFinite(orderId),
   });
 
-  const driversQ = useQuery({
-    queryKey: queryKeys.drivers.list({
-      page: 1,
-      limit: 50,
-      status: "APPROVED",
-    }),
-    queryFn: () =>
-      driversService.list({ page: 1, limit: 50, status: "APPROVED" }),
-    enabled: isAdmin,
-  });
-
   const order = query.data;
   const transitions = allowedOrderStatusTransitions(
     user,
@@ -135,7 +123,6 @@ export default function OrderDetailPage({
     useState<StatusConfirmation | null>(null);
   const [pickupCode, setPickupCode] = useState("");
   const [customerPickupCode, setCustomerPickupCode] = useState("");
-  const [driverSel, setDriverSel] = useState<string>("");
   const [evType, setEvType] = useState<EvidenceType>("GENERAL");
   const [evFile, setEvFile] = useState<File | null>(null);
   const [evNote, setEvNote] = useState("");
@@ -158,29 +145,6 @@ export default function OrderDetailPage({
           : err instanceof Error
             ? err.message
             : t("order.statusUpdateFailed");
-      toast.error(msg);
-    },
-  });
-
-  const assignMutation = useMutation({
-    mutationFn: () => {
-      if (!driverSel) throw new Error(t("order.selectDriver"));
-      return ordersService.assignDriver(orderId, {
-        driverProfileId: Number(driverSel),
-      });
-    },
-    onSuccess: (updated) => {
-      qc.setQueryData(queryKeys.orders.byId(orderId), updated);
-      toast.success(t("order.driverAssigned"));
-      setDriverSel("");
-    },
-    onError: (err: unknown) => {
-      const msg =
-        err instanceof ApiError
-          ? err.displayMessage
-          : err instanceof Error
-            ? err.message
-            : t("order.assignFailed");
       toast.error(msg);
     },
   });
@@ -842,36 +806,6 @@ export default function OrderDetailPage({
                 </p>
               )}
 
-              {isAdmin && (
-                <div className="border-t border-border pt-3 space-y-2">
-                  <Label>{t("order.assignDriver")}</Label>
-                  <Select value={driverSel} onValueChange={setDriverSel}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t("order.select")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(driversQ.data?.data ?? []).map((d) => (
-                        <SelectItem key={d.id} value={String(d.id)}>
-                          {d.user?.name ?? `#${d.id}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    size="sm"
-                    className="w-full"
-                    onClick={() => assignMutation.mutate()}
-                    disabled={!driverSel || assignMutation.isPending}
-                  >
-                    {assignMutation.isPending ? (
-                      <Loader2 className="size-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="size-4" />
-                    )}
-                    {t("common.assign")}
-                  </Button>
-                </div>
-              )}
             </CardContent>
           </Card>
           )}

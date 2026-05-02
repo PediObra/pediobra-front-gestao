@@ -139,7 +139,6 @@ export function allowedOrderStatusTransitions(
     fulfillmentMethod?: string | null;
   },
 ) {
-  const isStorePickup = order.fulfillmentMethod === "STORE_PICKUP";
   const graphTransitions = orderStatusTransitions(
     order.status,
     order.fulfillmentMethod,
@@ -152,20 +151,16 @@ export function allowedOrderStatusTransitions(
             status !== "READY_FOR_PICKUP" &&
             status !== "READY_FOR_CUSTOMER_PICKUP",
         );
-  const filterUnassignedDriverStatuses = (statuses: readonly OrderStatus[]) =>
-    order.assignedDriverProfileId && !isStorePickup
-      ? statuses
-      : statuses.filter((status) => !DRIVER_WORK_STATUSES.includes(status));
   const filterCodeProtectedStatuses = (statuses: readonly OrderStatus[]) =>
     statuses.filter(
       (status) => !ORDER_CODE_PROTECTED_STATUSES.includes(status),
     );
+  const filterDriverManagedStatuses = (statuses: readonly OrderStatus[]) =>
+    statuses.filter((status) => !DRIVER_WORK_STATUSES.includes(status));
 
   if (isAdmin(user)) {
     return filterCodeProtectedStatuses(
-      filterUnassignedDriverStatuses(
-        filterPaymentLockedDispatch(graphTransitions),
-      ),
+      filterPaymentLockedDispatch(filterDriverManagedStatuses(graphTransitions)),
     );
   }
 
