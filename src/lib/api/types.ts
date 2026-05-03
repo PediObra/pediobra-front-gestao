@@ -276,6 +276,104 @@ export interface Product {
   barcodes?: ProductBarcode[];
 }
 
+export type CatalogStatus = "VERIFIED" | "IMPORTED_CANDIDATE";
+
+export type SellerProductImportStatus =
+  | "UPLOADED"
+  | "QUEUED"
+  | "PROCESSING"
+  | "READY_FOR_REVIEW"
+  | "APPLYING"
+  | "APPLIED"
+  | "FAILED"
+  | "APPLY_FAILED";
+
+export type SellerProductImportRowStatus =
+  | "VALID"
+  | "WARNING"
+  | "INVALID"
+  | "APPLIED"
+  | "SKIPPED";
+
+export type CatalogImportCanonicalField =
+  | "product.name"
+  | "product.brand"
+  | "product.unit"
+  | "product.description"
+  | "product.size"
+  | "product.weight"
+  | "product.barcode"
+  | "sellerProduct.sku"
+  | "sellerProduct.unitPriceCents"
+  | "sellerProduct.stockAmount"
+  | "sellerProduct.active";
+
+export interface CatalogImportMappingEntry {
+  canonicalField: CatalogImportCanonicalField;
+  sourceColumn: string | null;
+}
+
+export interface SellerProductImportRow {
+  id: number;
+  jobId: number;
+  rowNumber: number;
+  rawRow?: unknown;
+  normalizedPayload?: {
+    product?: {
+      name?: string | null;
+      brand?: string | null;
+      unit?: string | null;
+      description?: string | null;
+      size?: string | null;
+      weight?: number | null;
+      barcodes?: string[];
+    };
+    sellerProduct?: {
+      sku?: string | null;
+      unitPriceCents?: number | null;
+      stockAmount?: number | null;
+      active?: boolean | null;
+    };
+  } | null;
+  status: SellerProductImportRowStatus;
+  matchStrategy?: string | null;
+  matchConfidenceBps?: number | null;
+  existingProductId?: number | null;
+  createdProductId?: number | null;
+  sellerProductId?: number | null;
+  errors?: string[] | null;
+  warnings?: string[] | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface SellerProductImportJob {
+  id: number;
+  sellerId: number;
+  createdByUserId: number;
+  status: SellerProductImportStatus;
+  mode: string;
+  sourceFileBucket?: string | null;
+  sourceFileKey?: string | null;
+  sourceOriginalFilename?: string | null;
+  sourceFileSizeBytes?: number | null;
+  sourceFileChecksum?: string | null;
+  mappingSnapshot?: CatalogImportMappingEntry[] | null;
+  stats?: Record<string, unknown> | null;
+  errors?: string[] | null;
+  etlNotifiedAt?: string | null;
+  etlNotificationError?: string | null;
+  processedAt?: string | null;
+  appliedAt?: string | null;
+  attemptCount?: number;
+  active?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  seller?: Pick<Seller, "id" | "name"> | null;
+  createdByUser?: Pick<User, "id" | "name" | "email"> | null;
+  rows?: SellerProductImportRow[];
+}
+
 // ---- Seller Products ----
 
 export interface SellerProduct {

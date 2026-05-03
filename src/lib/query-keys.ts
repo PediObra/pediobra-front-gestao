@@ -5,6 +5,7 @@ import type {
   ListOrdersParams,
   ListPaymentsParams,
   ListProductsParams,
+  ListSellerProductImportsParams,
   ListSellerProductsParams,
   ListSellersParams,
   ListUsersParams,
@@ -38,6 +39,14 @@ export const queryKeys = {
     list: (params: ListSellerProductsParams) =>
       ["sellerProducts", "list", params] as const,
     byId: (id: number) => ["sellerProducts", "byId", id] as const,
+  },
+  sellerProductImports: {
+    all: () => ["sellerProductImports"] as const,
+    list: (params: ListSellerProductImportsParams) =>
+      ["sellerProductImports", "list", params] as const,
+    byId: (id: number) => ["sellerProductImports", "byId", id] as const,
+    mapping: (sellerId: number) =>
+      ["sellerProductImports", "mapping", sellerId] as const,
   },
   usedListings: {
     all: () => ["usedListings"] as const,

@@ -4,7 +4,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import {
+  FileClock,
+  Plus,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { FilterField } from "@/components/filters/list-filter-controls";
 import { toast } from "sonner";
@@ -21,10 +27,12 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { DataTable } from "@/components/data-table/data-table";
+import { ImportSellerProductsDialog } from "@/components/seller-products/import-seller-products-dialog";
 import {
   sellerProductsService,
   type ListSellerProductsParams,
 } from "@/lib/api/seller-products";
+import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
 import { sellersService } from "@/lib/api/sellers";
 import { queryKeys } from "@/lib/query-keys";
 import { centsToBRL } from "@/lib/formatters";
@@ -94,8 +102,7 @@ export default function SellerProductsListPage() {
       search: normalizedText(debouncedSearch),
       minPriceCents: parsePriceCents(debouncedMinPrice),
       maxPriceCents: parsePriceCents(debouncedMaxPrice),
-      active:
-        activeFilter === "ALL" ? undefined : activeFilter === "ACTIVE",
+      active: activeFilter === "ALL" ? undefined : activeFilter === "ACTIVE",
       includeInactive: activeFilter === "ALL" ? true : undefined,
     }),
     [
@@ -112,6 +119,20 @@ export default function SellerProductsListPage() {
     queryKey: queryKeys.sellerProducts.list(params),
     queryFn: () => sellerProductsService.list(params),
   });
+  const canCreate = isAdmin || sellerIds.length > 0;
+  const importsParams = useMemo(
+    () => ({
+      page: 1,
+      limit: 5,
+      sellerId: sellerId === "ALL" ? undefined : Number(sellerId),
+    }),
+    [sellerId],
+  );
+  const importsQ = useQuery({
+    queryKey: queryKeys.sellerProductImports.list(importsParams),
+    queryFn: () => sellerProductImportsService.list(importsParams),
+    enabled: canCreate,
+  });
 
   const toggleMutation = useMutation({
     mutationFn: ({ sellerProduct, active }: ToggleSellerProductVariables) =>
@@ -121,10 +142,9 @@ export default function SellerProductsListPage() {
     onMutate: async ({ sellerProduct, active }) => {
       await qc.cancelQueries({ queryKey: queryKeys.sellerProducts.all() });
 
-      const previousLists =
-        qc.getQueriesData<Paginated<SellerProduct>>({
-          queryKey: SELLER_PRODUCTS_LIST_QUERY_KEY,
-        });
+      const previousLists = qc.getQueriesData<Paginated<SellerProduct>>({
+        queryKey: SELLER_PRODUCTS_LIST_QUERY_KEY,
+      });
       const previousDetail = qc.getQueryData<SellerProduct>(
         queryKeys.sellerProducts.byId(sellerProduct.id),
       );
@@ -237,7 +257,6 @@ export default function SellerProductsListPage() {
     [canManageSellerProducts, t, toggleMutation],
   );
 
-  const canCreate = isAdmin || sellerIds.length > 0;
   const activeFilterCount = [
     sellerId !== "ALL",
     activeFilter !== "ACTIVE",
@@ -262,12 +281,21 @@ export default function SellerProductsListPage() {
         description={t("sellerProducts.description")}
         actions={
           canCreate && (
-            <Button asChild>
-              <Link href="/seller-products/new">
-                <Plus className="size-4" />
-                {t("sellerProducts.new")}
-              </Link>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <ImportSellerProductsDialog
+                sellers={sellerOptions}
+                initialSellerId={
+                  sellerId === "ALL" ? undefined : Number(sellerId)
+                }
+                disabled={sellerOptions.length === 0}
+              />
+              <Button asChild>
+                <Link href="/seller-products/new">
+                  <Plus className="size-4" />
+                  {t("sellerProducts.new")}
+                </Link>
+              </Button>
+            </div>
           )
         }
       />
@@ -396,6 +424,43 @@ export default function SellerProductsListPage() {
           </FilterField>
         </div>
       </div>
+
+      {canCreate && (
+        <div className="rounded-md border border-border bg-background p-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+            <FileClock className="size-4" />
+            Importacoes recentes
+          </div>
+          {importsQ.isLoading ? (
+            <p className="text-sm text-muted-foreground">Carregando…</p>
+          ) : (importsQ.data?.data.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Nenhuma importacao recente.
+            </p>
+          ) : (
+            <div className="grid gap-2">
+              {importsQ.data?.data.map((job) => (
+                <button
+                  key={job.id}
+                  type="button"
+                  className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-left text-sm hover:bg-muted/40"
+                  onClick={() =>
+                    router.push(`/seller-product-imports/${job.id}`)
+                  }
+                >
+                  <span>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      #{job.id}
+                    </span>{" "}
+                    {job.seller?.name ?? `Loja #${job.sellerId}`}
+                  </span>
+                  <Badge variant="secondary">{job.status}</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <DataTable
         data={query.data?.data ?? []}
