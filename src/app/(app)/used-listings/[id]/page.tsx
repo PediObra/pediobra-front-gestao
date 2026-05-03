@@ -11,6 +11,8 @@ import {
   Save,
   Trash2,
   Upload,
+  UserCheck,
+  XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { MessageThreadCard } from "@/components/messages/message-thread-card";
@@ -210,6 +212,24 @@ export default function UsedListingDetailPage({
         error instanceof ApiError
           ? error.displayMessage
           : t("usedListings.saveFailed"),
+      );
+    },
+  });
+
+  const assignBuyerMutation = useMutation({
+    mutationFn: (inquiryId: number | null) =>
+      usedListingsService.assignBuyer(listingId, inquiryId),
+    onSuccess: () => {
+      qc.invalidateQueries({
+        queryKey: queryKeys.usedListings.inquiries(inquiriesParams),
+      });
+      toast.success("Comprador do anúncio atualizado.");
+    },
+    onError: (error: unknown) => {
+      toast.error(
+        error instanceof ApiError
+          ? error.displayMessage
+          : "Não foi possível atualizar o comprador do anúncio.",
       );
     },
   });
@@ -502,7 +522,20 @@ export default function UsedListingDetailPage({
                     <div className="min-w-0 space-y-3">
                       {selectedInquiry ? (
                         <>
-                          <InquirySummary inquiry={selectedInquiry} />
+                          <InquirySummary
+                            inquiry={selectedInquiry}
+                            canManage={canManage}
+                            assigning={
+                              assignBuyerMutation.isPending &&
+                              (assignBuyerMutation.variables ===
+                                selectedInquiry.id ||
+                                (selectedInquiry.selectedBuyer &&
+                                  assignBuyerMutation.variables === null))
+                            }
+                            onAssign={(inquiryId) =>
+                              assignBuyerMutation.mutate(inquiryId)
+                            }
+                          />
                           <MessageThreadCard
                             targetType="USED_LISTING_INQUIRY"
                             targetId={selectedInquiry.id}
@@ -521,7 +554,8 @@ export default function UsedListingDetailPage({
               <CardHeader>
                 <CardTitle>{t("usedListings.privatePickup")}</CardTitle>
                 <CardDescription>
-                  Visível apenas para gestão autorizada e participantes.
+                  Visível apenas para gestão autorizada e usado pelo PeDiObra na
+                  entrega.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -759,10 +793,17 @@ function InquiryButton({
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="font-medium">
+        <span className="min-w-0 truncate font-medium">
           {inquiry.buyerUser?.name ?? `Comprador #${inquiry.buyerUserId}`}
         </span>
-        <MessageSquare className="size-4 text-muted-foreground" />
+        <div className="flex shrink-0 items-center gap-2">
+          {inquiry.selectedBuyer ? (
+            <Badge variant="success" className="px-1.5 py-0 text-[10px]">
+              Atribuído
+            </Badge>
+          ) : null}
+          <MessageSquare className="size-4 text-muted-foreground" />
+        </div>
       </div>
       <div className="mt-1 text-xs text-muted-foreground">
         #{inquiry.id} · {formatDateTime(inquiry.updatedAt ?? inquiry.createdAt)}
@@ -771,7 +812,17 @@ function InquiryButton({
   );
 }
 
-function InquirySummary({ inquiry }: { inquiry: UsedListingInquiry }) {
+function InquirySummary({
+  inquiry,
+  canManage,
+  assigning,
+  onAssign,
+}: {
+  inquiry: UsedListingInquiry;
+  canManage: boolean;
+  assigning: boolean;
+  onAssign: (inquiryId: number | null) => void;
+}) {
   const deliveryRequests = inquiry.deliveryRequests ?? [];
 
   return (
@@ -787,11 +838,39 @@ function InquirySummary({ inquiry }: { inquiry: UsedListingInquiry }) {
             </p>
           ) : null}
         </div>
-        <Badge variant="muted">{inquiry.status}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {inquiry.selectedBuyer ? (
+            <Badge variant="success">
+              <UserCheck className="mr-1 size-3" />
+              Comprador atribuído
+            </Badge>
+          ) : null}
+          <Badge variant="muted">{inquiry.status}</Badge>
+        </div>
       </div>
 
       <div className="mt-3 space-y-1 text-xs text-muted-foreground">
-        <p>Entrega vinculada nasce apenas quando alguém pedir o frete.</p>
+        <p>
+          A entrega só fica liberada para o comprador que você atribuir neste
+          anúncio.
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant={inquiry.selectedBuyer ? "outline" : "default"}
+          className="mt-2"
+          disabled={!canManage || assigning}
+          onClick={() => onAssign(inquiry.selectedBuyer ? null : inquiry.id)}
+        >
+          {assigning ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : inquiry.selectedBuyer ? (
+            <XCircle className="size-4" />
+          ) : (
+            <UserCheck className="size-4" />
+          )}
+          {inquiry.selectedBuyer ? "Remover atribuição" : "Atribuir comprador"}
+        </Button>
         {deliveryRequests.length ? (
           <div className="space-y-1">
             {deliveryRequests.map((deliveryRequest) => (

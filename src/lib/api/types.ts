@@ -464,6 +464,9 @@ export interface UsedListingInquiry {
   ownerUserId: number;
   ownerSellerId?: number | null;
   status: UsedListingInquiryStatus;
+  selectedBuyer: boolean;
+  selectedAt?: string | null;
+  selectedByUserId?: number | null;
   createdAt: string;
   updatedAt?: string;
   buyerUser?: Pick<User, "id" | "name" | "email"> | null;

@@ -82,6 +82,11 @@ export const usedListingsService = {
   updateStatus: (id: number, payload: UpdateUsedListingStatusPayload) =>
     api.patch<UsedListing>(`/used-listings/${id}/status`, payload),
 
+  assignBuyer: (id: number, inquiryId: number | null) =>
+    api.patch<
+      UsedListingInquiry | { listingId: number; selectedBuyerInquiryId: null }
+    >(`/used-listings/${id}/buyer`, { inquiryId }),
+
   uploadImages: (id: number, files: File[]) =>
     api.post<UsedListing>(
       `/used-listings/${id}/images`,
