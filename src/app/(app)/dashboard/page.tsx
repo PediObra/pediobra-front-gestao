@@ -131,9 +131,8 @@ export default function DashboardPage() {
       page: 1,
       limit: 1,
       status: "PENDING",
-      ...(selectedSellerId ? { sellerId: selectedSellerId } : {}),
     }),
-    [selectedSellerId],
+    [],
   );
 
   const ordersStatsQ = useQuery({
@@ -212,7 +211,7 @@ export default function DashboardPage() {
               <PendingOrderAlert
                 order={pendingOrder}
                 count={pendingOrdersCount}
-                showSellerName={!selectedSellerId}
+                showSellerName={sellerOptions.length > 1}
               />
             </div>
           ) : null}

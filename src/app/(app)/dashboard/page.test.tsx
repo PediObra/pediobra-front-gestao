@@ -223,7 +223,7 @@ describe("DashboardPage", () => {
     expect(overviewParams).toEqual({});
   });
 
-  it("filters pedidos, entregas, operation, and pending alert by selected company", async () => {
+  it("keeps the pending-order alert global when a company is selected", async () => {
     renderWithQueryClient(<DashboardPage />);
 
     await screen.findByText("Pedidos aguardando aceite");
@@ -247,9 +247,9 @@ describe("DashboardPage", () => {
         page: 1,
         limit: 1,
         status: "PENDING",
-        sellerId: 21,
       });
     });
+    expect(screen.getByText(/Loja Centro/)).toBeInTheDocument();
   });
 
   it("shows the first pending order seller when all companies are selected", async () => {
