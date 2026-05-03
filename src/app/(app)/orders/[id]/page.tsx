@@ -37,6 +37,7 @@ import {
 import { formatOrderHistoryEntry } from "@/lib/status-history";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
+import { MessageThreadCard } from "@/components/messages/message-thread-card";
 import {
   Card,
   CardContent,
@@ -435,6 +436,8 @@ export default function OrderDetailPage({
               </div>
             </CardContent>
           </Card>
+
+          <MessageThreadCard targetType="ORDER" targetId={order.id} />
 
           <Card>
             <CardHeader>

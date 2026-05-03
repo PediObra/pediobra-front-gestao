@@ -16,6 +16,8 @@ export type DriverAvailability = "ONLINE" | "OFFLINE" | "BUSY";
 
 export type FulfillmentMethod = "DELIVERY" | "STORE_PICKUP";
 
+export type MessageTargetType = "ORDER" | "DELIVERY_REQUEST";
+
 export type OrderStatus =
   | "PENDING"
   | "CONFIRMED"
@@ -75,6 +77,35 @@ export interface PaginationMeta {
 export interface Paginated<T> {
   data: T[];
   meta: PaginationMeta;
+}
+
+// ---- Messages ----
+
+export interface MessageThread {
+  id: number;
+  targetType: MessageTargetType;
+  targetId: number;
+  orderId?: number | null;
+  deliveryRequestId?: number | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface InternalMessage {
+  id: number;
+  threadId: number;
+  authorUserId: number;
+  body: string;
+  createdAt: string;
+  updatedAt?: string;
+  authorUser?: Pick<User, "id" | "name" | "email"> | null;
+}
+
+export interface MessageThreadResponse {
+  thread: MessageThread;
+  messages: Paginated<InternalMessage>;
+  lastReadAt?: string | null;
+  unreadCount: number;
 }
 
 // ---- Auth ----

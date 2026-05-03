@@ -9,6 +9,7 @@ import type {
   ListSellersParams,
   ListUsersParams,
   ListAddressesParams,
+  ListMessagesParams,
 } from "@/lib/api";
 
 export const queryKeys = {
@@ -67,6 +68,11 @@ export const queryKeys = {
     all: () => ["operations"] as const,
     overview: (params: ListOperationsOverviewParams = {}) =>
       ["operations", "overview", params] as const,
+  },
+  messages: {
+    all: () => ["messages"] as const,
+    thread: (params: ListMessagesParams) =>
+      ["messages", "thread", params] as const,
   },
   addresses: {
     all: () => ["addresses"] as const,

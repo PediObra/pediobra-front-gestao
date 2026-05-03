@@ -48,6 +48,40 @@ export function formatDateTime(date: string | Date | null | undefined) {
   }
 }
 
+export function formatMessageTimestamp(
+  date: string | Date | null | undefined,
+) {
+  if (!date) return "";
+  try {
+    const parsed = new Date(date);
+    if (Number.isNaN(parsed.getTime())) return "";
+
+    const now = new Date();
+    const sameDay =
+      parsed.getFullYear() === now.getFullYear() &&
+      parsed.getMonth() === now.getMonth() &&
+      parsed.getDate() === now.getDate();
+
+    if (sameDay) {
+      return new Intl.DateTimeFormat(intlLocale(), {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(parsed);
+    }
+
+    const sameYear = parsed.getFullYear() === now.getFullYear();
+    return new Intl.DateTimeFormat(intlLocale(), {
+      day: "2-digit",
+      month: "2-digit",
+      year: sameYear ? undefined : "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(parsed);
+  } catch {
+    return "";
+  }
+}
+
 export function formatDate(date: string | Date | null | undefined) {
   if (!date) return "—";
   try {

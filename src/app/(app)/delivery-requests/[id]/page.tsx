@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
+import { MessageThreadCard } from "@/components/messages/message-thread-card";
 import {
   Card,
   CardContent,
@@ -413,6 +414,11 @@ export default function DeliveryRequestDetailPage() {
               />
             </CardContent>
           </Card>
+
+          <MessageThreadCard
+            targetType="DELIVERY_REQUEST"
+            targetId={deliveryRequest.id}
+          />
 
           <Card>
             <CardHeader>

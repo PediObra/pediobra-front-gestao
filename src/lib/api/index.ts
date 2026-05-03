@@ -10,4 +10,5 @@ export * from "./payments";
 export * from "./operations";
 export * from "./addresses";
 export * from "./geo";
+export * from "./messages";
 export * from "./client";

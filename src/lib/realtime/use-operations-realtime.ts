@@ -16,6 +16,7 @@ const OPERATION_EVENTS = [
   "operations.deliveryRequest.status.updated",
   "operations.job.offer.created",
   "operations.job.offer.expired",
+  "messages.updated",
 ] as const;
 
 const EVENT_LABELS: Record<(typeof OPERATION_EVENTS)[number], string> = {
@@ -26,6 +27,7 @@ const EVENT_LABELS: Record<(typeof OPERATION_EVENTS)[number], string> = {
   "operations.deliveryRequest.status.updated": "Entrega atualizada",
   "operations.job.offer.created": "Oferta enviada ao motorista",
   "operations.job.offer.expired": "Oferta expirada",
+  "messages.updated": "Nova mensagem",
 };
 
 export function useOperationsRealtime() {
@@ -49,6 +51,7 @@ export function useOperationsRealtime() {
       qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
       qc.invalidateQueries({ queryKey: queryKeys.drivers.all() });
       qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+      qc.invalidateQueries({ queryKey: queryKeys.messages.all() });
 
       toast.message(EVENT_LABELS[eventName], {
         description: "Painel operacional atualizado em tempo real.",
