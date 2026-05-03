@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { RotateCcw, SlidersHorizontal } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   DateRangeFilter,
@@ -56,6 +56,7 @@ const ORDER_STATUSES: OrderStatus[] = [
 
 export default function OrdersListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const { isAdmin, user } = useAuth();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -168,20 +169,6 @@ export default function OrdersListPage() {
                 (row.original.deliveryFeeCents ?? 0),
             )}
           </span>
-        ),
-      },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/orders/${row.original.id}`}>
-                <Eye className="size-4" />
-                {t("actions.open")}
-              </Link>
-            </Button>
-          </div>
         ),
       },
     ],
@@ -326,6 +313,7 @@ export default function OrdersListPage() {
         isLoading={query.isLoading}
         isFetching={query.isFetching}
         emptyMessage={t("orders.empty")}
+        onRowClick={(order) => router.push(`/orders/${order.id}`)}
       />
     </div>
   );

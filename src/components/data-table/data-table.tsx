@@ -58,6 +58,23 @@ export function DataTable<TData>({
 
   const hasPrev = page > 1;
   const hasNext = meta ? page < meta.totalPages : false;
+  const handleRowAction = React.useCallback(
+    (row: TData) => {
+      onRowClick?.(row);
+    },
+    [onRowClick],
+  );
+
+  const handleRowKeyDown = React.useCallback(
+    (event: React.KeyboardEvent<HTMLTableRowElement>, row: TData) => {
+      if (!onRowClick || shouldIgnoreRowAction(event.target)) return;
+      if (event.key !== "Enter" && event.key !== " ") return;
+
+      event.preventDefault();
+      handleRowAction(row);
+    },
+    [handleRowAction, onRowClick],
+  );
 
   return (
     <div className="space-y-3">
@@ -106,10 +123,18 @@ export function DataTable<TData>({
                 <TableRow
                   key={row.id}
                   className={cn(
-                    onRowClick && "cursor-pointer",
+                    onRowClick &&
+                      "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                     rowClassName?.(row.original),
                   )}
-                  onClick={() => onRowClick?.(row.original)}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  onClick={(event) => {
+                    if (shouldIgnoreRowAction(event.target)) return;
+                    handleRowAction(row.original);
+                  }}
+                  onKeyDown={(event) =>
+                    handleRowKeyDown(event, row.original)
+                  }
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
@@ -169,5 +194,15 @@ export function DataTable<TData>({
         </div>
       )}
     </div>
+  );
+}
+
+function shouldIgnoreRowAction(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) return false;
+
+  return Boolean(
+    target.closest(
+      'a,button,input,select,textarea,[data-row-click-ignore="true"]',
+    ),
   );
 }

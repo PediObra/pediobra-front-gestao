@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, Loader2, Pencil, Undo2 } from "lucide-react";
+import { Loader2, Pencil, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
@@ -49,6 +50,7 @@ const PAYMENT_STATUSES: PaymentStatus[] = [
 
 export default function PaymentsListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<string>("ALL");
@@ -225,18 +227,6 @@ export default function PaymentsListPage() {
               <Undo2 className="size-4" />
               Refund
             </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link
-                href={
-                  row.original.deliveryRequestId
-                    ? `/delivery-requests/${row.original.deliveryRequestId}`
-                    : `/orders/${row.original.orderId}`
-                }
-              >
-                <Eye className="size-4" />
-                {t("actions.open")}
-              </Link>
-            </Button>
           </div>
         ),
       },
@@ -282,6 +272,7 @@ export default function PaymentsListPage() {
         isLoading={query.isLoading}
         isFetching={query.isFetching}
         emptyMessage={t("payments.empty")}
+        onRowClick={(payment) => router.push(paymentTargetPath(payment))}
       />
 
       <Dialog
@@ -408,7 +399,7 @@ function PaymentTarget({ payment }: { payment: Payment }) {
   if (payment.deliveryRequestId) {
     return (
       <Link
-        href={`/delivery-requests/${payment.deliveryRequestId}`}
+        href={paymentTargetPath(payment)}
         className="font-mono text-xs font-medium hover:underline"
       >
         {t("payments.delivery")} #{payment.deliveryRequestId}
@@ -418,10 +409,16 @@ function PaymentTarget({ payment }: { payment: Payment }) {
 
   return (
     <Link
-      href={`/orders/${payment.orderId}`}
+      href={paymentTargetPath(payment)}
       className="font-mono text-xs font-medium hover:underline"
     >
       {t("payments.order")} #{payment.orderId}
     </Link>
   );
+}
+
+function paymentTargetPath(payment: Payment) {
+  return payment.deliveryRequestId
+    ? `/delivery-requests/${payment.deliveryRequestId}`
+    : `/orders/${payment.orderId}`;
 }

@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Eye, Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { Plus, RotateCcw, SlidersHorizontal } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   DateRangeFilter,
@@ -58,6 +59,7 @@ const DELIVERY_REQUEST_STATUSES: DeliveryRequestStatus[] = [
 
 export default function DeliveryRequestsListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const { isAdmin, user } = useAuth();
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
@@ -197,23 +199,6 @@ export default function DeliveryRequestsListPage() {
                   })
                 : "—")}
           </span>
-        ),
-      },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link
-                href={`/delivery-requests/${row.original.id}`}
-                prefetch={false}
-              >
-                <Eye className="size-4" />
-                {t("actions.open")}
-              </Link>
-            </Button>
-          </div>
         ),
       },
     ],
@@ -373,6 +358,9 @@ export default function DeliveryRequestsListPage() {
         isLoading={query.isLoading}
         isFetching={query.isFetching}
         emptyMessage={t("deliveries.empty")}
+        onRowClick={(deliveryRequest) =>
+          router.push(`/delivery-requests/${deliveryRequest.id}`)
+        }
       />
     </div>
   );

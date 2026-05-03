@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Eye, Plus, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
+import { Plus, RotateCcw, Search, SlidersHorizontal } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { FilterField } from "@/components/filters/list-filter-controls";
 import { toast } from "sonner";
@@ -56,6 +57,7 @@ function updateSellerProductActive(
 
 export default function SellerProductsListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const { isAdmin, user, sellerIds, canManageSellerProducts } = useAuth();
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
@@ -231,20 +233,6 @@ export default function SellerProductsListPage() {
           );
         },
       },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/seller-products/${row.original.id}`}>
-                <Eye className="size-4" />
-                {t("actions.view")}
-              </Link>
-            </Button>
-          </div>
-        ),
-      },
     ],
     [canManageSellerProducts, t, toggleMutation],
   );
@@ -417,6 +405,9 @@ export default function SellerProductsListPage() {
         onPageChange={setPage}
         isLoading={query.isLoading}
         isFetching={query.isFetching}
+        onRowClick={(sellerProduct) =>
+          router.push(`/seller-products/${sellerProduct.id}`)
+        }
       />
     </div>
   );

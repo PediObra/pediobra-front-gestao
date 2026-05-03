@@ -1,12 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Eye } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -32,6 +30,7 @@ const STATUS_OPTIONS: Array<DriverStatus | "ALL"> = [
 
 export default function DriversListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<DriverStatus | "ALL">("ALL");
 
@@ -101,20 +100,6 @@ export default function DriversListPage() {
         header: t("common.status"),
         cell: ({ row }) => <DriverStatusBadge status={row.original.status} />,
       },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/drivers/${row.original.id}`}>
-                <Eye className="size-4" />
-                {t("actions.details")}
-              </Link>
-            </Button>
-          </div>
-        ),
-      },
     ],
     [t],
   );
@@ -155,6 +140,7 @@ export default function DriversListPage() {
         onPageChange={setPage}
         isLoading={query.isLoading}
         isFetching={query.isFetching}
+        onRowClick={(driver) => router.push(`/drivers/${driver.id}`)}
       />
     </div>
   );

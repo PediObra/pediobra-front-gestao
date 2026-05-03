@@ -2,11 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   Barcode,
-  Eye,
   Image as ImageIcon,
   Plus,
   RotateCcw,
@@ -47,6 +47,7 @@ const optionalNumber = (value: string) => {
 
 export default function ProductsListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const { isAdmin } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -223,20 +224,6 @@ export default function ProductsListPage() {
           </span>
         ),
       },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/products/${row.original.id}`}>
-                <Eye className="size-4" />
-                {t("actions.view")}
-              </Link>
-            </Button>
-          </div>
-        ),
-      },
     ],
     [t],
   );
@@ -400,6 +387,7 @@ export default function ProductsListPage() {
         onPageChange={setPage}
         isLoading={query.isLoading}
         isFetching={query.isFetching}
+        onRowClick={(product) => router.push(`/products/${product.id}`)}
       />
     </div>
   );

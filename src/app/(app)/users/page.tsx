@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Eye } from "lucide-react";
+import { Search } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/data-table/data-table";
 import { usersService, type ListUsersParams } from "@/lib/api/users";
 import { queryKeys } from "@/lib/query-keys";
@@ -33,6 +32,7 @@ const ROLE_OPTIONS: Array<RoleName | "ALL"> = [
 
 export default function UsersListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<RoleName | "ALL">("ALL");
@@ -89,20 +89,6 @@ export default function UsersListPage() {
           </span>
         ),
       },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/users/${row.original.id}`}>
-                <Eye className="size-4" />
-                {t("actions.view")}
-              </Link>
-            </Button>
-          </div>
-        ),
-      },
     ],
     [t],
   );
@@ -155,6 +141,7 @@ export default function UsersListPage() {
         onPageChange={setPage}
         isLoading={query.isLoading}
         isFetching={query.isFetching}
+        onRowClick={(user) => router.push(`/users/${user.id}`)}
       />
     </div>
   );

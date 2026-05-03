@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Plus, Eye } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ import type { Seller } from "@/lib/api/types";
 
 export default function SellersListPage() {
   const t = useTranslation();
+  const router = useRouter();
   const { isAdmin } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
@@ -88,20 +90,6 @@ export default function SellersListPage() {
           <span className="text-sm">{formatPhone(row.original.phone)}</span>
         ),
       },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/sellers/${row.original.id}`}>
-                <Eye className="size-4" />
-                {t("actions.details")}
-              </Link>
-            </Button>
-          </div>
-        ),
-      },
     ],
     [t],
   );
@@ -146,6 +134,7 @@ export default function SellersListPage() {
         onPageChange={setPage}
         isLoading={query.isLoading}
         isFetching={query.isFetching}
+        onRowClick={(seller) => router.push(`/sellers/${seller.id}`)}
       />
     </div>
   );

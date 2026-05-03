@@ -2,8 +2,9 @@
 
 import { use, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Eye, Users } from "lucide-react";
+import { ArrowLeft, Users } from "lucide-react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { sellersService } from "@/lib/api/sellers";
 import { usersService } from "@/lib/api/users";
@@ -35,6 +36,7 @@ export default function SellerTeamPage({
 }) {
   const { id } = use(params);
   const t = useTranslation();
+  const router = useRouter();
   const sellerId = Number(id);
   const { canManageSellerStaff } = useAuth();
   const canEditTeam = canManageSellerStaff(sellerId);
@@ -115,20 +117,6 @@ export default function SellerTeamPage({
           );
         },
       },
-      {
-        id: "actions",
-        header: "",
-        cell: ({ row }) => (
-          <div className="flex justify-end">
-            <Button asChild variant="ghost" size="sm">
-              <Link href={`/users/${row.original.userId}`}>
-                <Eye className="size-4" />
-                {t("team.editInUser")}
-              </Link>
-            </Button>
-          </div>
-        ),
-      },
     ],
     [t],
   );
@@ -169,6 +157,7 @@ export default function SellerTeamPage({
         onPageChange={() => {}}
         isLoading={usersQ.isLoading || sellerQ.isLoading}
         emptyMessage={t("team.empty")}
+        onRowClick={(member) => router.push(`/users/${member.userId}`)}
       />
     </div>
   );
