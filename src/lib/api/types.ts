@@ -16,7 +16,10 @@ export type DriverAvailability = "ONLINE" | "OFFLINE" | "BUSY";
 
 export type FulfillmentMethod = "DELIVERY" | "STORE_PICKUP";
 
-export type MessageTargetType = "ORDER" | "DELIVERY_REQUEST";
+export type MessageTargetType =
+  | "ORDER"
+  | "DELIVERY_REQUEST"
+  | "USED_LISTING_INQUIRY";
 
 export type OrderStatus =
   | "PENDING"
@@ -51,6 +54,26 @@ export type DeliveryJobOfferStatus =
   | "CANCELLED";
 
 export type PricingSource = "MANUAL" | "ESTIMATED";
+
+export type UsedListingCondition =
+  | "USED"
+  | "SURPLUS"
+  | "OPEN_BOX"
+  | "PARTIAL"
+  | "EXCESS_LOT"
+  | "USED_TOOL"
+  | "OTHER";
+
+export type UsedListingStatus =
+  | "DRAFT"
+  | "ACTIVE"
+  | "RESERVED"
+  | "SOLD"
+  | "CANCELLED"
+  | "EXPIRED"
+  | "REJECTED";
+
+export type UsedListingInquiryStatus = "OPEN" | "ARCHIVED" | "BLOCKED";
 
 export type PaymentStatus =
   | "PENDING"
@@ -87,6 +110,7 @@ export interface MessageThread {
   targetId: number;
   orderId?: number | null;
   deliveryRequestId?: number | null;
+  usedListingInquiryId?: number | null;
   createdAt: string;
   updatedAt?: string;
 }
@@ -391,10 +415,70 @@ export interface DeliveryJob {
   acceptedByDriverProfile?: DriverProfile | null;
 }
 
+export interface UsedListingImage {
+  id: number;
+  listingId: number;
+  url: string;
+  position: number;
+  createdAt?: string;
+}
+
+export interface UsedListing {
+  id: number;
+  ownerUserId: number;
+  ownerSellerId?: number | null;
+  baseProductId?: number | null;
+  title: string;
+  description: string;
+  condition: UsedListingCondition;
+  quantity?: number | null;
+  unit?: string | null;
+  remainingAmountDescription?: string | null;
+  priceCents?: number | null;
+  negotiable?: boolean;
+  status: UsedListingStatus;
+  publicNeighborhood?: string | null;
+  publicCity?: string | null;
+  publicState?: string | null;
+  pickupAddress?: string | null;
+  pickupCep?: string | null;
+  pickupContactName?: string | null;
+  pickupContactPhone?: string | null;
+  pickupLatitude?: string | null;
+  pickupLongitude?: string | null;
+  moderationReason?: string | null;
+  moderatedAt?: string | null;
+  active?: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  ownerUser?: Pick<User, "id" | "name" | "email"> | null;
+  ownerSeller?: Seller | Pick<Seller, "id" | "name" | "logo"> | null;
+  baseProduct?: Product | null;
+  images?: UsedListingImage[];
+}
+
+export interface UsedListingInquiry {
+  id: number;
+  listingId: number;
+  buyerUserId: number;
+  ownerUserId: number;
+  ownerSellerId?: number | null;
+  status: UsedListingInquiryStatus;
+  createdAt: string;
+  updatedAt?: string;
+  buyerUser?: Pick<User, "id" | "name" | "email"> | null;
+  ownerUser?: Pick<User, "id" | "name" | "email"> | null;
+  ownerSeller?: Seller | null;
+  listing?: UsedListing | null;
+  deliveryRequests?: DeliveryRequest[];
+}
+
 export interface DeliveryRequest {
   id: number;
   requesterUserId: number;
   requesterSellerId?: number | null;
+  usedListingId?: number | null;
+  usedListingInquiryId?: number | null;
   assignedDriverProfileId?: number | null;
   status: DeliveryRequestStatus;
   paymentStatus?: PaymentStatus | null;
@@ -425,6 +509,8 @@ export interface DeliveryRequest {
   updatedAt?: string;
   requesterUser?: User;
   requesterSeller?: Seller | null;
+  usedListing?: UsedListing | null;
+  usedListingInquiry?: UsedListingInquiry | null;
   assignedDriverProfile?: DriverProfile | null;
   evidences?: DeliveryRequestEvidence[];
   statusHistory?: DeliveryRequestStatusHistoryEntry[];

@@ -52,6 +52,8 @@ export interface DeliveryRequestQuote {
 
 export interface CreateDeliveryRequestPayload {
   requesterSellerId?: number;
+  usedListingId?: number;
+  usedListingInquiryId?: number;
   pickupAddress: string;
   pickupCep?: string;
   pickupContactName?: string;

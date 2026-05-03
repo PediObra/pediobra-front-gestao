@@ -13,6 +13,7 @@ import {
   Receipt,
   ClipboardList,
   Menu,
+  Recycle,
   Route,
   RadioTower,
 } from "lucide-react";
@@ -41,6 +42,7 @@ type NavItem = {
     | "nav.deliveryRequests"
     | "nav.products"
     | "nav.sellerProducts"
+    | "nav.usedListings"
     | "nav.sellers"
     | "nav.drivers"
     | "nav.users"
@@ -80,6 +82,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.sellerProducts",
     href: "/seller-products",
     icon: PackageCheck,
+    show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
+  },
+  {
+    labelKey: "nav.usedListings",
+    href: "/used-listings",
+    icon: Recycle,
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {

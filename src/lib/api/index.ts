@@ -3,6 +3,7 @@ export * from "./users";
 export * from "./sellers";
 export * from "./products";
 export * from "./seller-products";
+export * from "./used-listings";
 export * from "./drivers";
 export * from "./orders";
 export * from "./delivery-requests";

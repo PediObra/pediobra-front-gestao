@@ -95,7 +95,7 @@ export function MessageThreadCard({
       <CardHeader>
         <CardTitle>Mensagens</CardTitle>
         <CardDescription>
-          Conversa interna ligada a este pedido ou entrega.
+          Conversa interna ligada a este pedido, entrega ou anúncio.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

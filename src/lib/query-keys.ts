@@ -10,6 +10,8 @@ import type {
   ListUsersParams,
   ListAddressesParams,
   ListMessagesParams,
+  ListUsedListingInquiriesParams,
+  ListUsedListingsParams,
 } from "@/lib/api";
 
 export const queryKeys = {
@@ -36,6 +38,15 @@ export const queryKeys = {
     list: (params: ListSellerProductsParams) =>
       ["sellerProducts", "list", params] as const,
     byId: (id: number) => ["sellerProducts", "byId", id] as const,
+  },
+  usedListings: {
+    all: () => ["usedListings"] as const,
+    list: (params: ListUsedListingsParams) =>
+      ["usedListings", "list", params] as const,
+    byId: (id: number) => ["usedListings", "byId", id] as const,
+    inquiries: (params: ListUsedListingInquiriesParams) =>
+      ["usedListings", "inquiries", params] as const,
+    inquiryById: (id: number) => ["usedListings", "inquiryById", id] as const,
   },
   orders: {
     all: () => ["orders"] as const,
