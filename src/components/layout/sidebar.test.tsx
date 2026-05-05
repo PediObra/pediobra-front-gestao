@@ -79,6 +79,7 @@ describe("MobileSidebar", () => {
     );
     expect(within(nav).getByRole("link", { name: /Pedidos/ })).toBeInTheDocument();
     expect(nav.querySelector('a[href="/operations"]')).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /Produtos/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Motoristas/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Usuários/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Pagamentos/ })).toBeNull();

@@ -76,7 +76,7 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.products",
     href: "/products",
     icon: Package,
-    show: () => true,
+    show: ({ isAdmin }) => isAdmin,
   },
   {
     labelKey: "nav.sellerProducts",

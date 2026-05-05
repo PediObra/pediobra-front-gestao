@@ -81,19 +81,19 @@ export function Topbar() {
       </DropdownMenu>
 
       <DropdownMenu>
-        <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-md border border-orange-500/35 bg-orange-500/20 px-2 py-1.5 text-orange-50 hover:bg-orange-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500/70">
+        <DropdownMenuTrigger className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-2 py-1.5 text-foreground hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <Avatar className="size-8">
-            <AvatarFallback className="bg-orange-500 text-[oklch(0.2_0.04_45)] font-semibold">
+            <AvatarFallback className="bg-primary text-primary-foreground font-semibold">
               {user ? initials(user.name) : "?"}
             </AvatarFallback>
           </Avatar>
           <div className="hidden sm:flex flex-col items-start leading-tight">
             <span className="text-sm font-medium">{user?.name}</span>
-            <span className="text-[11px] text-orange-100/75">
+            <span className="text-[11px] text-muted-foreground">
               {rolesLabel}
             </span>
           </div>
-          <ChevronDown className="size-4 text-orange-100/75" />
+          <ChevronDown className="size-4 text-muted-foreground" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>
