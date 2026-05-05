@@ -83,6 +83,26 @@ export type PaymentStatus =
   | "REFUNDED"
   | "CANCELLED";
 
+export type StripeConnectOnboardingStatus =
+  | "NOT_STARTED"
+  | "PENDING_ONBOARDING"
+  | "PENDING_REVIEW"
+  | "REQUIREMENTS_DUE"
+  | "READY"
+  | "RESTRICTED";
+
+export type PaymentPayoutStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "PAID"
+  | "CANCELLED";
+
+export type StripeTransferStatus =
+  | "PENDING_RECIPIENT"
+  | "TRANSFERRED"
+  | "REVERSED"
+  | "FAILED";
+
 export type EvidenceType =
   | "SELLER_CONFIRMATION"
   | "DRIVER_CONFIRMATION"
@@ -217,9 +237,41 @@ export interface Seller {
   secondaryColor?: string | null;
   latitude?: string | null;
   longitude?: string | null;
+  stripeAccountId?: string | null;
+  stripeAccountType?: string | null;
+  stripeOnboardingStatus?: StripeConnectOnboardingStatus;
+  stripeChargesEnabled?: boolean;
+  stripePayoutsEnabled?: boolean;
+  stripeDetailsSubmitted?: boolean;
+  stripeRequirementsCurrentlyDue?: string[] | null;
+  stripeRequirementsEventuallyDue?: string[] | null;
+  stripeDisabledReason?: string | null;
+  stripeAccountUpdatedAt?: string | null;
   active?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface StripeConnectStatus {
+  connectEnabled: boolean;
+  ownerType: "SELLER" | "DRIVER";
+  ownerId: number;
+  stripeAccountId?: string | null;
+  stripeAccountType?: string | null;
+  stripeOnboardingStatus: StripeConnectOnboardingStatus;
+  stripeChargesEnabled: boolean;
+  stripePayoutsEnabled: boolean;
+  stripeDetailsSubmitted: boolean;
+  stripeRequirementsCurrentlyDue: string[];
+  stripeRequirementsEventuallyDue: string[];
+  stripeDisabledReason?: string | null;
+  stripeAccountUpdatedAt?: string | null;
+}
+
+export interface StripeConnectOnboardingLinkResponse
+  extends StripeConnectStatus {
+  onboardingUrl: string;
+  expiresAt: number;
 }
 
 export interface SellerMembership {
@@ -435,6 +487,16 @@ export interface DriverProfile {
   address: string;
   status: DriverStatus;
   availability?: DriverAvailability;
+  stripeAccountId?: string | null;
+  stripeAccountType?: string | null;
+  stripeOnboardingStatus?: StripeConnectOnboardingStatus;
+  stripeChargesEnabled?: boolean;
+  stripePayoutsEnabled?: boolean;
+  stripeDetailsSubmitted?: boolean;
+  stripeRequirementsCurrentlyDue?: string[] | null;
+  stripeRequirementsEventuallyDue?: string[] | null;
+  stripeDisabledReason?: string | null;
+  stripeAccountUpdatedAt?: string | null;
   active?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -674,13 +736,44 @@ export interface Payment {
   provider?: string | null;
   method?: string | null;
   transactionId?: string | null;
+  stripeTransferGroup?: string | null;
   amountCents: number;
   status: PaymentStatus;
   createdAt: string;
   updatedAt?: string;
   order?: Order | null;
   deliveryRequest?: DeliveryRequest | null;
+  payouts?: PaymentPayout[];
   refunds?: PaymentRefund[];
+}
+
+export interface PaymentPayout {
+  id: number;
+  paymentId: number;
+  recipientType: "SELLER" | "DRIVER";
+  sellerId?: number | null;
+  driverProfileId?: number | null;
+  grossAmountCents: number;
+  platformFeeCents: number;
+  amountCents: number;
+  status: PaymentPayoutStatus | string;
+  paidAt?: string | null;
+  stripeTransferId?: string | null;
+  stripeTransferGroup?: string | null;
+  stripeTransferStatus?: StripeTransferStatus | string | null;
+  stripeTransferFailureReason?: string | null;
+  stripeTransferAttempts?: number;
+  stripeTransferredAt?: string | null;
+  stripeTransferReversalId?: string | null;
+  stripeTransferReversalStatus?: string | null;
+  stripeTransferReversalFailureReason?: string | null;
+  stripeTransferReversedAmountCents?: number;
+  stripeTransferReversedAt?: string | null;
+  createdAt: string;
+  updatedAt?: string;
+  payment?: Payment;
+  seller?: Seller | null;
+  driverProfile?: DriverProfile | null;
 }
 
 export interface PaymentRefund {

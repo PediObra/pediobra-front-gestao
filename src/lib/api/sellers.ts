@@ -1,5 +1,12 @@
 import { api } from "./client";
-import type { MembershipRole, Paginated, Seller, UserWithRelations } from "./types";
+import type {
+  MembershipRole,
+  Paginated,
+  Seller,
+  StripeConnectOnboardingLinkResponse,
+  StripeConnectStatus,
+  UserWithRelations,
+} from "./types";
 
 export interface ListSellersParams {
   page?: number;
@@ -70,6 +77,11 @@ export interface UpdateSellerUserAccessPayload {
   canManageSellerStaff: boolean;
 }
 
+export interface StripeConnectOnboardingLinkPayload {
+  returnUrl?: string;
+  refreshUrl?: string;
+}
+
 export const sellersService = {
   list: (params: ListSellersParams = {}) =>
     api.get<Paginated<Seller>>("/sellers", { query: params }),
@@ -83,6 +95,18 @@ export const sellersService = {
     api.patch<Seller>(`/sellers/${id}`, buildSellerFormData(payload)),
 
   remove: (id: number) => api.delete<Seller>(`/sellers/${id}`),
+
+  getStripeConnectStatus: (id: number) =>
+    api.get<StripeConnectStatus>(`/sellers/${id}/stripe-connect/status`),
+
+  createStripeConnectOnboardingLink: (
+    id: number,
+    payload: StripeConnectOnboardingLinkPayload,
+  ) =>
+    api.post<StripeConnectOnboardingLinkResponse>(
+      `/sellers/${id}/stripe-connect/onboarding-link`,
+      payload,
+    ),
 
   updateUserAccess: (
     sellerId: number,

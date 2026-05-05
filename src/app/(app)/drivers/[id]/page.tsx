@@ -22,6 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DriverStatusBadge } from "@/components/badges";
+import { StripeConnectStatusCard } from "@/components/payments/stripe-connect-status-card";
 
 const STATUS_ACTIONS: Array<{
   target: DriverStatus;
@@ -63,6 +64,11 @@ export default function DriverDetailPage({
     queryKey: queryKeys.drivers.byId(driverId),
     queryFn: () => driversService.getById(driverId),
     enabled: Number.isFinite(driverId),
+  });
+  const stripeConnectQuery = useQuery({
+    queryKey: queryKeys.drivers.stripeConnect(driverId),
+    queryFn: () => driversService.getStripeConnectStatus(driverId),
+    enabled: Number.isFinite(driverId) && Boolean(query.data),
   });
 
   const mutation = useMutation({
@@ -223,6 +229,14 @@ export default function DriverDetailPage({
               })}
             </CardContent>
           </Card>
+
+          <div className="lg:col-span-3">
+            <StripeConnectStatusCard
+              title="Recebimento Stripe"
+              description="Dados de repasse do motorista"
+              status={stripeConnectQuery.data}
+            />
+          </div>
         </div>
       )}
     </div>

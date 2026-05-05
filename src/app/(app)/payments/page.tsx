@@ -4,11 +4,19 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Pencil, Undo2 } from "lucide-react";
+import { Loader2, Pencil, RefreshCw, RotateCcw, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import type { ColumnDef } from "@tanstack/react-table";
 import { PageHeader } from "@/components/layout/page-header";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -28,6 +36,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { DataTable } from "@/components/data-table/data-table";
 import { PaymentStatusBadge } from "@/components/badges";
+import { Skeleton } from "@/components/ui/skeleton";
 import { paymentsService, type ListPaymentsParams } from "@/lib/api/payments";
 import { queryKeys } from "@/lib/query-keys";
 import { ApiError } from "@/lib/api/client";
@@ -37,7 +46,7 @@ import {
   paymentStatusLabel,
 } from "@/lib/formatters";
 import { useTranslation } from "@/lib/i18n/language-store";
-import type { Payment, PaymentStatus } from "@/lib/api/types";
+import type { Payment, PaymentPayout, PaymentStatus } from "@/lib/api/types";
 
 const PAYMENT_STATUSES: PaymentStatus[] = [
   "PENDING",
@@ -72,6 +81,11 @@ export default function PaymentsListPage() {
   const query = useQuery({
     queryKey: queryKeys.payments.list(params),
     queryFn: () => paymentsService.list(params),
+  });
+  const payoutParams = useMemo(() => ({ page: 1, limit: 10 }), []);
+  const payoutsQuery = useQuery({
+    queryKey: queryKeys.payments.payouts(payoutParams),
+    queryFn: () => paymentsService.listPayouts(payoutParams),
   });
 
   const updateMutation = useMutation({
@@ -127,6 +141,43 @@ export default function PaymentsListPage() {
           : err instanceof Error
             ? err.message
             : "Nao foi possivel criar refund";
+      toast.error(msg);
+    },
+  });
+  const processPayoutsMutation = useMutation({
+    mutationFn: paymentsService.processPayouts,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+      toast.success("Repasses processados");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : "Nao foi possivel processar repasses";
+      toast.error(msg);
+    },
+  });
+  const payoutActionMutation = useMutation({
+    mutationFn: ({
+      payoutId,
+      action,
+    }: {
+      payoutId: number;
+      action: "retry" | "reverse";
+    }) =>
+      action === "reverse"
+        ? paymentsService.reversePayoutTransfer(payoutId)
+        : paymentsService.retryPayoutTransfer(payoutId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+      toast.success("Repasse atualizado");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : "Nao foi possivel atualizar o repasse";
       toast.error(msg);
     },
   });
@@ -275,6 +326,20 @@ export default function PaymentsListPage() {
         onRowClick={(payment) => router.push(paymentTargetPath(payment))}
       />
 
+      <PayoutsPanel
+        payouts={payoutsQuery.data?.data ?? []}
+        loading={payoutsQuery.isLoading}
+        processing={processPayoutsMutation.isPending}
+        actionLoading={payoutActionMutation.isPending}
+        onProcess={() => processPayoutsMutation.mutate()}
+        onRetry={(payoutId) =>
+          payoutActionMutation.mutate({ payoutId, action: "retry" })
+        }
+        onReverse={(payoutId) =>
+          payoutActionMutation.mutate({ payoutId, action: "reverse" })
+        }
+      />
+
       <Dialog
         open={!!editing}
         onOpenChange={(o) => {
@@ -383,6 +448,149 @@ export default function PaymentsListPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function PayoutsPanel({
+  payouts,
+  loading,
+  processing,
+  actionLoading,
+  onProcess,
+  onRetry,
+  onReverse,
+}: {
+  payouts: PaymentPayout[];
+  loading: boolean;
+  processing: boolean;
+  actionLoading: boolean;
+  onProcess: () => void;
+  onRetry: (payoutId: number) => void;
+  onReverse: (payoutId: number) => void;
+}) {
+  return (
+    <Card>
+      <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <CardTitle>Repasses Connect</CardTitle>
+          <CardDescription>Transfers e reversals dos payouts aprovados</CardDescription>
+        </div>
+        <Button onClick={onProcess} disabled={processing}>
+          {processing ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <RefreshCw className="size-4" />
+          )}
+          Processar aprovados
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-32 w-full" />
+        ) : payouts.length === 0 ? (
+          <div className="py-8 text-center text-sm text-muted-foreground">
+            Nenhum repasse encontrado
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-sm">
+              <thead className="border-b border-border text-left text-xs text-muted-foreground">
+                <tr>
+                  <th className="py-2 pr-3 font-medium">Payout</th>
+                  <th className="py-2 pr-3 font-medium">Destino</th>
+                  <th className="py-2 pr-3 font-medium">Valor</th>
+                  <th className="py-2 pr-3 font-medium">Status</th>
+                  <th className="py-2 pr-3 font-medium">Transfer</th>
+                  <th className="py-2 pr-3 font-medium text-right">Acoes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {payouts.map((payout) => (
+                  <PayoutRow
+                    key={payout.id}
+                    payout={payout}
+                    actionLoading={actionLoading}
+                    onRetry={onRetry}
+                    onReverse={onReverse}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PayoutRow({
+  payout,
+  actionLoading,
+  onRetry,
+  onReverse,
+}: {
+  payout: PaymentPayout;
+  actionLoading: boolean;
+  onRetry: (payoutId: number) => void;
+  onReverse: (payoutId: number) => void;
+}) {
+  const canRetry =
+    payout.status === "APPROVED" &&
+    payout.stripeTransferStatus !== "TRANSFERRED";
+  const canReverse =
+    Boolean(payout.stripeTransferId) &&
+    (payout.stripeTransferReversedAmountCents ?? 0) < payout.amountCents;
+
+  return (
+    <tr>
+      <td className="py-3 pr-3 font-mono text-xs">#{payout.id}</td>
+      <td className="py-3 pr-3">
+        {payout.recipientType === "SELLER"
+          ? payout.seller?.name ?? `Loja #${payout.sellerId ?? "—"}`
+          : payout.driverProfile?.user?.name ??
+            `Motorista #${payout.driverProfileId ?? "—"}`}
+      </td>
+      <td className="py-3 pr-3 font-mono font-semibold">
+        {centsToBRL(payout.amountCents)}
+      </td>
+      <td className="py-3 pr-3">
+        <Badge variant={payout.status === "PAID" ? "success" : "muted"}>
+          {payout.status}
+        </Badge>
+      </td>
+      <td className="py-3 pr-3">
+        <div className="max-w-[220px] truncate font-mono text-xs">
+          {payout.stripeTransferId ?? "—"}
+        </div>
+        {payout.stripeTransferStatus ? (
+          <div className="text-xs text-muted-foreground">
+            {payout.stripeTransferStatus}
+          </div>
+        ) : null}
+      </td>
+      <td className="py-3 pr-0">
+        <div className="flex justify-end gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={!canRetry || actionLoading}
+            onClick={() => onRetry(payout.id)}
+          >
+            <RefreshCw className="size-4" />
+            Retry
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={!canReverse || actionLoading}
+            onClick={() => onReverse(payout.id)}
+          >
+            <RotateCcw className="size-4" />
+            Reversal
+          </Button>
+        </div>
+      </td>
+    </tr>
   );
 }
 

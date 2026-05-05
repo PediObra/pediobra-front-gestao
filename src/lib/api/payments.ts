@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { Paginated, Payment, PaymentStatus } from "./types";
+import type { Paginated, Payment, PaymentPayout, PaymentStatus } from "./types";
 
 export interface ListPaymentsParams {
   page?: number;
@@ -7,6 +7,13 @@ export interface ListPaymentsParams {
   orderId?: number;
   deliveryRequestId?: number;
   status?: PaymentStatus;
+}
+
+export interface ListPaymentPayoutsParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  transferStatus?: string;
 }
 
 export interface CreateMockPaymentPayload {
@@ -31,6 +38,9 @@ export interface StripePaymentResponse {
 export const paymentsService = {
   list: (params: ListPaymentsParams = {}) =>
     api.get<Paginated<Payment>>("/payments", { query: params }),
+
+  listPayouts: (params: ListPaymentPayoutsParams = {}) =>
+    api.get<Paginated<PaymentPayout>>("/payments/payouts", { query: params }),
 
   getById: (id: number) => api.get<Payment>(`/payments/${id}`),
 
@@ -62,4 +72,15 @@ export const paymentsService = {
 
   refund: (id: number, payload: CreateRefundPayload) =>
     api.post<Payment>(`/payments/${id}/refund`, payload),
+
+  processPayouts: () => api.post<unknown>("/payments/payouts/process"),
+
+  transferPayout: (id: number) =>
+    api.post<unknown>(`/payments/payouts/${id}/transfer`),
+
+  retryPayoutTransfer: (id: number) =>
+    api.post<unknown>(`/payments/payouts/${id}/retry-transfer`),
+
+  reversePayoutTransfer: (id: number) =>
+    api.post<unknown>(`/payments/payouts/${id}/reverse-transfer`),
 };

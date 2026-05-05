@@ -4,6 +4,7 @@ import type {
   ListOperationsOverviewParams,
   ListOrdersParams,
   ListPaymentsParams,
+  ListPaymentPayoutsParams,
   ListProductsParams,
   ListSellerProductImportsParams,
   ListSellerProductsParams,
@@ -28,6 +29,7 @@ export const queryKeys = {
     all: () => ["sellers"] as const,
     list: (params: ListSellersParams) => ["sellers", "list", params] as const,
     byId: (id: number) => ["sellers", "byId", id] as const,
+    stripeConnect: (id: number) => ["sellers", "stripeConnect", id] as const,
   },
   products: {
     all: () => ["products"] as const,
@@ -79,10 +81,13 @@ export const queryKeys = {
     all: () => ["drivers"] as const,
     list: (params: ListDriversParams) => ["drivers", "list", params] as const,
     byId: (id: number) => ["drivers", "byId", id] as const,
+    stripeConnect: (id: number) => ["drivers", "stripeConnect", id] as const,
   },
   payments: {
     all: () => ["payments"] as const,
     list: (params: ListPaymentsParams) => ["payments", "list", params] as const,
+    payouts: (params: ListPaymentPayoutsParams) =>
+      ["payments", "payouts", params] as const,
     byId: (id: number) => ["payments", "byId", id] as const,
     byOrder: (orderId: number) => ["payments", "byOrder", orderId] as const,
     byDeliveryRequest: (deliveryRequestId: number) =>
