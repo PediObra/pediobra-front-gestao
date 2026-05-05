@@ -53,3 +53,107 @@ export function usedListingQuantity(listing: Pick<
 
   return "Quantidade a combinar";
 }
+
+export function inferPublicRegionFromAddress(
+  address: string | null | undefined,
+) {
+  const parts = (address ?? "")
+    .split(" - ")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  const lastPart = parts.at(-1) ?? "";
+  const cityState = parseCityState(lastPart);
+  if (cityState) {
+    return {
+      neighborhood: parts.at(-2) ?? "",
+      city: cityState.city,
+      state: cityState.state,
+    };
+  }
+
+  const state = parseState(lastPart);
+  if (state) {
+    const locality = splitNeighborhoodCity(parts.at(-2) ?? "");
+
+    return {
+      neighborhood: locality.neighborhood || parts.at(-3) || "",
+      city: locality.city || parts.at(-2) || "",
+      state,
+    };
+  }
+
+  return emptyPublicRegion();
+}
+
+function parseCityState(value: string) {
+  const match = value.trim().match(/^(.+?)[,/]\s*([A-Z]{2})(?:\b|$)/i);
+  if (!match) return null;
+  const state = normalizeBrazilianState(match[2]);
+  if (!state) return null;
+
+  return {
+    city: match[1].trim(),
+    state,
+  };
+}
+
+function parseState(value: string) {
+  const match = value.trim().match(/^([A-Z]{2})(?:\b|$)/i);
+  return normalizeBrazilianState(match?.[1]);
+}
+
+function splitNeighborhoodCity(value: string) {
+  const parts = value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length < 2) {
+    return { neighborhood: "", city: "" };
+  }
+
+  return {
+    neighborhood: parts.slice(0, -1).join(", "),
+    city: parts.at(-1) ?? "",
+  };
+}
+
+function normalizeBrazilianState(value: string | undefined) {
+  const state = value?.trim().toUpperCase() ?? "";
+  return BRAZILIAN_STATES.has(state) ? state : "";
+}
+
+function emptyPublicRegion() {
+  return { neighborhood: "", city: "", state: "" };
+}
+
+const BRAZILIAN_STATES = new Set([
+  "AC",
+  "AL",
+  "AP",
+  "AM",
+  "BA",
+  "CE",
+  "DF",
+  "ES",
+  "GO",
+  "MA",
+  "MT",
+  "MS",
+  "MG",
+  "PA",
+  "PB",
+  "PR",
+  "PE",
+  "PI",
+  "RJ",
+  "RN",
+  "RS",
+  "RO",
+  "RR",
+  "SC",
+  "SP",
+  "SE",
+  "TO",
+]);

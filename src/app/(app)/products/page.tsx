@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { DataTable } from "@/components/data-table/data-table";
 import { PageHeader } from "@/components/layout/page-header";
+import { ProductAreaTabs } from "@/components/products/product-area-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +49,7 @@ const optionalNumber = (value: string) => {
 export default function ProductsListPage() {
   const t = useTranslation();
   const router = useRouter();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isLoading } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [brand, setBrand] = useState("");
@@ -108,7 +109,14 @@ export default function ProductsListPage() {
   const query = useQuery({
     queryKey: queryKeys.products.list(params),
     queryFn: () => productsService.list(params),
+    enabled: isAdmin,
   });
+
+  useEffect(() => {
+    if (!isLoading && !isAdmin) {
+      router.replace("/seller-products");
+    }
+  }, [isAdmin, isLoading, router]);
 
   const activeFilterCount = [
     search,
@@ -228,8 +236,14 @@ export default function ProductsListPage() {
     [t],
   );
 
+  if (isLoading || !isAdmin) {
+    return null;
+  }
+
   return (
     <div className="space-y-6">
+      <ProductAreaTabs active="system" />
+
       <PageHeader
         title={t("products.title")}
         description={t("products.description")}

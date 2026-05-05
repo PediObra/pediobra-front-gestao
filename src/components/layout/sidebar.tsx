@@ -8,7 +8,6 @@ import {
   Users,
   Store,
   Package,
-  PackageCheck,
   Truck,
   Receipt,
   ClipboardList,
@@ -41,17 +40,19 @@ type NavItem = {
     | "nav.orders"
     | "nav.deliveryRequests"
     | "nav.products"
-    | "nav.sellerProducts"
     | "nav.usedListings"
     | "nav.sellers"
     | "nav.drivers"
     | "nav.users"
     | "nav.payments"
     | "nav.operations";
-  href: string;
+  href: string | ((ctx: NavContext) => string);
+  activePrefixes?: string[];
   icon: typeof RadioTower;
-  show: (ctx: { isAdmin: boolean; isSeller: boolean }) => boolean;
+  show: (ctx: NavContext) => boolean;
 };
+
+type NavContext = { isAdmin: boolean; isSeller: boolean };
 
 const NAV_ITEMS: NavItem[] = [
   {
@@ -59,6 +60,17 @@ const NAV_ITEMS: NavItem[] = [
     href: "/dashboard",
     icon: RadioTower,
     show: () => true,
+  },
+  {
+    labelKey: "nav.products",
+    href: ({ isAdmin }) => (isAdmin ? "/products" : "/seller-products"),
+    activePrefixes: [
+      "/products",
+      "/seller-products",
+      "/seller-product-imports",
+    ],
+    icon: Package,
+    show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {
     labelKey: "nav.orders",
@@ -70,18 +82,6 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.deliveryRequests",
     href: "/delivery-requests",
     icon: Route,
-    show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
-  },
-  {
-    labelKey: "nav.products",
-    href: "/products",
-    icon: Package,
-    show: ({ isAdmin }) => isAdmin,
-  },
-  {
-    labelKey: "nav.sellerProducts",
-    href: "/seller-products",
-    icon: PackageCheck,
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {
@@ -210,20 +210,25 @@ function SidebarNav({
   const pathname = usePathname();
   const { isAdmin, isSeller } = useAuth();
   const t = useTranslation();
+  const navContext = { isAdmin, isSeller };
 
-  const items = NAV_ITEMS.filter((item) => item.show({ isAdmin, isSeller }));
+  const items = NAV_ITEMS.filter((item) => item.show(navContext));
 
   return (
     <nav aria-label={t("sidebar.nav")} className={className}>
       {items.map((item) => {
-        const active =
-          pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const href =
+          typeof item.href === "function" ? item.href(navContext) : item.href;
+        const activePrefixes = item.activePrefixes ?? [href];
+        const active = activePrefixes.some(
+          (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+        );
         const Icon = item.icon;
         const label = t(item.labelKey);
         const link = (
           <Link
-            key={item.href}
-            href={item.href}
+            key={href}
+            href={href}
             aria-current={active ? "page" : undefined}
             onClick={onNavigate}
             className={cn(
@@ -247,7 +252,7 @@ function SidebarNav({
         }
 
         return (
-          <Tooltip key={item.href}>
+          <Tooltip key={href}>
             <TooltipTrigger asChild>{link}</TooltipTrigger>
             <TooltipContent
               side="right"

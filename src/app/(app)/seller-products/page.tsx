@@ -15,6 +15,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { FilterField } from "@/components/filters/list-filter-controls";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
+import { ProductAreaTabs } from "@/components/products/product-area-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,6 +277,8 @@ export default function SellerProductsListPage() {
 
   return (
     <div className="space-y-6">
+      {isAdmin && <ProductAreaTabs active="store" />}
+
       <PageHeader
         title={t("sellerProducts.title")}
         description={t("sellerProducts.description")}

@@ -39,7 +39,10 @@ import {
 import type { UsedListingCondition, UsedListingStatus } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { queryKeys } from "@/lib/query-keys";
-import { USED_LISTING_CONDITION_LABEL } from "@/lib/used-listings";
+import {
+  inferPublicRegionFromAddress,
+  USED_LISTING_CONDITION_LABEL,
+} from "@/lib/used-listings";
 
 const CONDITIONS: UsedListingCondition[] = [
   "USED",
@@ -128,21 +131,38 @@ export default function NewUsedListingPage() {
     setPickupPlaceId("");
 
     const region = inferPublicRegionFromAddress(seller.address);
-    setPublicNeighborhood((current) => region.neighborhood || current);
-    setPublicCity((current) => region.city || current);
-    setPublicState((current) => region.state || current);
+    setPublicNeighborhood(region.neighborhood);
+    setPublicCity(region.city);
+    setPublicState(region.state);
+  }
+
+  function handlePickupAddressChange(value: string) {
+    setPickupAddress(value);
+    setPickupPlaceId("");
+    setPickupLatitude("");
+    setPickupLongitude("");
+    setPickupCep("");
+
+    const region = inferPublicRegionFromAddress(value);
+    setPublicNeighborhood(region.neighborhood);
+    setPublicCity(region.city);
+    setPublicState(region.state);
   }
 
   async function handlePickupSelect(place: PlaceSuggestion) {
     const resolved = await geoService.resolve(place.placeId, placesSessionToken);
+    const region = inferPublicRegionFromAddress(resolved.formattedAddress);
+
     setPickupPlaceId(place.placeId);
     setPickupAddress(resolved.formattedAddress);
     setPickupLatitude(resolved.latitude);
     setPickupLongitude(resolved.longitude);
     setPickupCep(resolved.cep ?? resolved.postalCode ?? "");
-    setPublicNeighborhood((current) => current || resolved.neighborhood || "");
-    setPublicCity((current) => current || resolved.city || "");
-    setPublicState((current) => current || resolved.state || "");
+    setPublicNeighborhood(
+      normalizedAddressPart(resolved.neighborhood) || region.neighborhood,
+    );
+    setPublicCity(normalizedAddressPart(resolved.city) || region.city);
+    setPublicState(normalizedAddressPart(resolved.state) || region.state);
   }
 
   const createMutation = useMutation({
@@ -356,37 +376,6 @@ export default function NewUsedListingPage() {
                 onCheckedChange={setNegotiable}
               />
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="publicNeighborhood">Bairro público</Label>
-              <Input
-                id="publicNeighborhood"
-                value={publicNeighborhood}
-                disabled={disabled}
-                onChange={(event) => setPublicNeighborhood(event.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="publicCity">Cidade pública</Label>
-              <Input
-                id="publicCity"
-                value={publicCity}
-                disabled={disabled}
-                onChange={(event) => setPublicCity(event.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="publicState">UF pública</Label>
-              <Input
-                id="publicState"
-                value={publicState}
-                disabled={disabled}
-                maxLength={60}
-                onChange={(event) => setPublicState(event.target.value)}
-              />
-            </div>
           </CardContent>
         </Card>
 
@@ -421,10 +410,7 @@ export default function NewUsedListingPage() {
                 disabled={disabled}
                 selectedPlaceId={pickupPlaceId}
                 sessionToken={placesSessionToken}
-                onChange={(value) => {
-                  setPickupAddress(value);
-                  setPickupPlaceId("");
-                }}
+                onChange={handlePickupAddressChange}
                 onSelect={handlePickupSelect}
               />
             </div>
@@ -437,6 +423,44 @@ export default function NewUsedListingPage() {
                 disabled={disabled}
                 onChange={(event) => setPickupCep(event.target.value)}
               />
+            </div>
+
+            <div className="space-y-3 border-t border-border pt-4">
+              <p className="text-sm font-medium">Localização pública</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label htmlFor="publicNeighborhood">Bairro público</Label>
+                  <Input
+                    id="publicNeighborhood"
+                    value={publicNeighborhood}
+                    disabled={disabled}
+                    onChange={(event) =>
+                      setPublicNeighborhood(event.target.value)
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="publicCity">Cidade pública</Label>
+                  <Input
+                    id="publicCity"
+                    value={publicCity}
+                    disabled={disabled}
+                    onChange={(event) => setPublicCity(event.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="publicState">UF pública</Label>
+                  <Input
+                    id="publicState"
+                    value={publicState}
+                    disabled={disabled}
+                    maxLength={60}
+                    onChange={(event) => setPublicState(event.target.value)}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -484,20 +508,12 @@ function normalizedText(value: string) {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function normalizedAddressPart(value: string | null | undefined) {
+  return value?.trim() ?? "";
+}
+
 function parseOptionalInt(value: string) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 1) return undefined;
   return Math.floor(parsed);
-}
-
-function inferPublicRegionFromAddress(address: string | null | undefined) {
-  const parts = (address ?? "")
-    .split(" - ")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const state = parts.at(-1) ?? "";
-  const city = parts.at(-2) ?? "";
-  const neighborhood = parts.at(-3) ?? "";
-
-  return { neighborhood, city, state };
 }

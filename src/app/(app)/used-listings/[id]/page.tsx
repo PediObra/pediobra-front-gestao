@@ -52,6 +52,7 @@ import { useTranslation } from "@/lib/i18n/language-store";
 import { resolveMediaUrl } from "@/lib/media-url";
 import { queryKeys } from "@/lib/query-keys";
 import {
+  inferPublicRegionFromAddress,
   USED_LISTING_CONDITION_LABEL,
   USED_LISTING_STATUS_LABEL,
   usedListingQuantity,
@@ -285,9 +286,9 @@ export default function UsedListingDetailPage({
     setPickupLongitude(sellerPickup.longitude);
 
     const region = inferPublicRegionFromAddress(sellerPickup.address);
-    setPublicNeighborhood((current) => region.neighborhood || current);
-    setPublicCity((current) => region.city || current);
-    setPublicState((current) => region.state || current);
+    setPublicNeighborhood(region.neighborhood);
+    setPublicCity(region.city);
+    setPublicState(region.state);
   }
 
   return (
@@ -944,16 +945,4 @@ function getSellerPickupData(seller: unknown) {
     latitude: typeof record.latitude === "string" ? record.latitude : "",
     longitude: typeof record.longitude === "string" ? record.longitude : "",
   };
-}
-
-function inferPublicRegionFromAddress(address: string | null | undefined) {
-  const parts = (address ?? "")
-    .split(" - ")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  const state = parts.at(-1) ?? "";
-  const city = parts.at(-2) ?? "";
-  const neighborhood = parts.at(-3) ?? "";
-
-  return { neighborhood, city, state };
 }
