@@ -15,6 +15,12 @@ import {
 } from "lucide-react";
 import { DataTable } from "@/components/data-table/data-table";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  CATEGORY_FILTER_ALL,
+  ProductCategoryFilterSelect,
+  categoryFilterParams,
+  formatProductCategory,
+} from "@/components/products/product-category-select";
 import { ProductAreaTabs } from "@/components/products/product-area-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from "@/hooks/use-auth";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { productCategoriesService } from "@/lib/api/product-categories";
 import { productsService, type ListProductsParams } from "@/lib/api/products";
 import type { Product } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/language-store";
@@ -55,7 +62,8 @@ export default function ProductsListPage() {
   const [brand, setBrand] = useState("");
   const [barcode, setBarcode] = useState("");
   const [unit, setUnit] = useState("");
-  const [categoryId, setCategoryId] = useState("");
+  const [categorySelection, setCategorySelection] =
+    useState(CATEGORY_FILTER_ALL);
   const [minWeight, setMinWeight] = useState("");
   const [maxWeight, setMaxWeight] = useState("");
   const [imageFilter, setImageFilter] = useState<PresenceFilter>("all");
@@ -68,7 +76,6 @@ export default function ProductsListPage() {
   const debouncedBrand = useDebouncedValue(brand, 300);
   const debouncedBarcode = useDebouncedValue(barcode, 300);
   const debouncedUnit = useDebouncedValue(unit, 300);
-  const debouncedCategoryId = useDebouncedValue(categoryId, 300);
   const debouncedMinWeight = useDebouncedValue(minWeight, 300);
   const debouncedMaxWeight = useDebouncedValue(maxWeight, 300);
 
@@ -80,7 +87,7 @@ export default function ProductsListPage() {
       brand: debouncedBrand || undefined,
       barcode: debouncedBarcode || undefined,
       unit: debouncedUnit || undefined,
-      categoryId: optionalNumber(debouncedCategoryId),
+      ...categoryFilterParams(categorySelection),
       minWeight: optionalNumber(debouncedMinWeight),
       maxWeight: optionalNumber(debouncedMaxWeight),
       hasImage: presenceToBoolean(imageFilter),
@@ -95,7 +102,7 @@ export default function ProductsListPage() {
       debouncedBrand,
       debouncedBarcode,
       debouncedUnit,
-      debouncedCategoryId,
+      categorySelection,
       debouncedMinWeight,
       debouncedMaxWeight,
       imageFilter,
@@ -112,6 +119,12 @@ export default function ProductsListPage() {
     enabled: isAdmin,
   });
 
+  const categoriesQ = useQuery({
+    queryKey: queryKeys.productCategories.tree(),
+    queryFn: () => productCategoriesService.tree(),
+    enabled: isAdmin,
+  });
+
   useEffect(() => {
     if (!isLoading && !isAdmin) {
       router.replace("/seller-products");
@@ -123,7 +136,7 @@ export default function ProductsListPage() {
     brand,
     barcode,
     unit,
-    categoryId,
+    categorySelection !== CATEGORY_FILTER_ALL,
     minWeight,
     maxWeight,
     imageFilter !== "all",
@@ -139,7 +152,7 @@ export default function ProductsListPage() {
     setBrand("");
     setBarcode("");
     setUnit("");
-    setCategoryId("");
+    setCategorySelection(CATEGORY_FILTER_ALL);
     setMinWeight("");
     setMaxWeight("");
     setImageFilter("all");
@@ -228,7 +241,7 @@ export default function ProductsListPage() {
         header: t("products.category"),
         cell: ({ row }) => (
           <span className="text-sm text-muted-foreground">
-            {row.original.category?.name ?? "—"}
+            {formatProductCategory(row.original.category) || "—"}
           </span>
         ),
       },
@@ -323,14 +336,18 @@ export default function ProductsListPage() {
               setUnit(e.target.value);
             }}
           />
-          <Input
-            placeholder={t("products.filterCategoryId")}
-            inputMode="numeric"
-            value={categoryId}
-            onChange={(e) => {
+          <ProductCategoryFilterSelect
+            categories={categoriesQ.data ?? []}
+            value={categorySelection}
+            onValueChange={(value) => {
               setPage(1);
-              setCategoryId(e.target.value);
+              setCategorySelection(value);
             }}
+            placeholder={t("products.categoryFilter")}
+            allLabel={t("products.anyCategory")}
+            parentLabel={(category) =>
+              t("products.allInCategory", { category: category.name })
+            }
           />
           <Input
             placeholder={t("products.minWeight")}

@@ -238,9 +238,13 @@ export interface SellerMembership {
 
 export interface ProductCategory {
   id: number;
+  parentId?: number | null;
   name: string;
   slug: string;
   description?: string | null;
+  sortOrder?: number;
+  parent?: ProductCategory | null;
+  children?: ProductCategory[];
 }
 
 export interface ProductImage {

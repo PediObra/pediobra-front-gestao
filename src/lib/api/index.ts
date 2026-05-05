@@ -2,6 +2,7 @@ export * from "./auth";
 export * from "./users";
 export * from "./sellers";
 export * from "./products";
+export * from "./product-categories";
 export * from "./seller-products";
 export * from "./seller-product-imports";
 export * from "./used-listings";

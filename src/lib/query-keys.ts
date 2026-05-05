@@ -34,6 +34,10 @@ export const queryKeys = {
     list: (params: ListProductsParams) => ["products", "list", params] as const,
     byId: (id: number) => ["products", "byId", id] as const,
   },
+  productCategories: {
+    all: () => ["productCategories"] as const,
+    tree: () => ["productCategories", "tree"] as const,
+  },
   sellerProducts: {
     all: () => ["sellerProducts"] as const,
     list: (params: ListSellerProductsParams) =>

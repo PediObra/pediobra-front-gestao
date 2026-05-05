@@ -6,6 +6,8 @@ export interface ListSellerProductsParams {
   limit?: number;
   sellerId?: number;
   productId?: number;
+  categoryId?: number;
+  parentCategoryId?: number;
   customerAddressId?: number;
   search?: string;
   sku?: string;

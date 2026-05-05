@@ -15,6 +15,12 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { FilterField } from "@/components/filters/list-filter-controls";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/page-header";
+import {
+  CATEGORY_FILTER_ALL,
+  ProductCategoryFilterSelect,
+  categoryFilterParams,
+  formatProductCategory,
+} from "@/components/products/product-category-select";
 import { ProductAreaTabs } from "@/components/products/product-area-tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,6 +40,7 @@ import {
   type ListSellerProductsParams,
 } from "@/lib/api/seller-products";
 import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
+import { productCategoriesService } from "@/lib/api/product-categories";
 import { sellersService } from "@/lib/api/sellers";
 import { queryKeys } from "@/lib/query-keys";
 import { centsToBRL } from "@/lib/formatters";
@@ -75,6 +82,8 @@ export default function SellerProductsListPage() {
     "ALL" | "ACTIVE" | "INACTIVE"
   >("ACTIVE");
   const [search, setSearch] = useState("");
+  const [categorySelection, setCategorySelection] =
+    useState(CATEGORY_FILTER_ALL);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const debouncedSearch = useDebouncedValue(search, 350);
@@ -101,6 +110,7 @@ export default function SellerProductsListPage() {
       limit: 10,
       sellerId: sellerId === "ALL" ? undefined : Number(sellerId),
       search: normalizedText(debouncedSearch),
+      ...categoryFilterParams(categorySelection),
       minPriceCents: parsePriceCents(debouncedMinPrice),
       maxPriceCents: parsePriceCents(debouncedMaxPrice),
       active: activeFilter === "ALL" ? undefined : activeFilter === "ACTIVE",
@@ -110,6 +120,7 @@ export default function SellerProductsListPage() {
       page,
       sellerId,
       debouncedSearch,
+      categorySelection,
       debouncedMinPrice,
       debouncedMaxPrice,
       activeFilter,
@@ -119,6 +130,10 @@ export default function SellerProductsListPage() {
   const query = useQuery({
     queryKey: queryKeys.sellerProducts.list(params),
     queryFn: () => sellerProductsService.list(params),
+  });
+  const categoriesQ = useQuery({
+    queryKey: queryKeys.productCategories.tree(),
+    queryFn: () => productCategoriesService.tree(),
   });
   const canCreate = isAdmin || sellerIds.length > 0;
   const importsParams = useMemo(
@@ -203,6 +218,11 @@ export default function SellerProductsListPage() {
               {row.original.product?.brand ?? "—"}
               {row.original.sku && ` · SKU ${row.original.sku}`}
             </div>
+            {row.original.product?.category ? (
+              <div className="text-xs text-muted-foreground">
+                {formatProductCategory(row.original.product.category)}
+              </div>
+            ) : null}
           </div>
         ),
       },
@@ -262,6 +282,7 @@ export default function SellerProductsListPage() {
     sellerId !== "ALL",
     activeFilter !== "ACTIVE",
     search.trim(),
+    categorySelection !== CATEGORY_FILTER_ALL,
     minPrice.trim(),
     maxPrice.trim(),
   ].filter(Boolean).length;
@@ -271,6 +292,7 @@ export default function SellerProductsListPage() {
     setSellerId("ALL");
     setActiveFilter("ACTIVE");
     setSearch("");
+    setCategorySelection(CATEGORY_FILTER_ALL);
     setMinPrice("");
     setMaxPrice("");
   }
@@ -394,6 +416,25 @@ export default function SellerProductsListPage() {
                 </SelectItem>
               </SelectContent>
             </Select>
+          </FilterField>
+          <FilterField
+            label={t("products.categoryFilter")}
+            htmlFor="seller-products-category-filter"
+          >
+            <ProductCategoryFilterSelect
+              categories={categoriesQ.data ?? []}
+              value={categorySelection}
+              triggerId="seller-products-category-filter"
+              onValueChange={(value) => {
+                setPage(1);
+                setCategorySelection(value);
+              }}
+              placeholder={t("products.categoryFilter")}
+              allLabel={t("products.anyCategory")}
+              parentLabel={(category) =>
+                t("products.allInCategory", { category: category.name })
+              }
+            />
           </FilterField>
           <FilterField
             label={t("sellerProducts.minPriceLabel")}

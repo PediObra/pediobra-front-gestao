@@ -5,10 +5,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import {
+  CATEGORY_ASSIGN_NONE,
+  ProductCategoryAssignSelect,
+} from "@/components/products/product-category-select";
+import { productCategoriesService } from "@/lib/api/product-categories";
 import { productsService, type CreateProductPayload } from "@/lib/api/products";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
@@ -84,6 +89,12 @@ export default function NewProductPage() {
   const barcodesFA = useFieldArray({
     control: form.control,
     name: "barcodes",
+  });
+  const categoryId = useWatch({ control: form.control, name: "categoryId" });
+
+  const categoriesQ = useQuery({
+    queryKey: queryKeys.productCategories.tree(),
+    queryFn: () => productCategoriesService.tree(),
   });
 
   const mutation = useMutation({
@@ -197,13 +208,19 @@ export default function NewProductPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="categoryId">{t("product.categoryId")}</Label>
-              <Input
-                id="categoryId"
-                type="number"
-                min={1}
+              <Label>{t("product.category")}</Label>
+              <ProductCategoryAssignSelect
+                categories={categoriesQ.data ?? []}
+                value={categoryId || CATEGORY_ASSIGN_NONE}
+                onValueChange={(value) =>
+                  form.setValue(
+                    "categoryId",
+                    value === CATEGORY_ASSIGN_NONE ? "" : value,
+                    { shouldDirty: true, shouldValidate: true },
+                  )
+                }
                 placeholder={t("product.categoryPlaceholder")}
-                {...form.register("categoryId")}
+                noneLabel={t("product.noCategory")}
               />
             </div>
           </CardContent>

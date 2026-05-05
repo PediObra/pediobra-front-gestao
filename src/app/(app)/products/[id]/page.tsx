@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { productsService } from "@/lib/api/products";
+import { productCategoriesService } from "@/lib/api/product-categories";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
@@ -40,6 +41,11 @@ import {
 } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
+import {
+  CATEGORY_ASSIGN_NONE,
+  ProductCategoryAssignSelect,
+  formatProductCategory,
+} from "@/components/products/product-category-select";
 import { useTranslation } from "@/lib/i18n/language-store";
 
 export default function ProductDetailPage({
@@ -59,6 +65,11 @@ export default function ProductDetailPage({
     queryFn: () => productsService.getById(productId),
     enabled: Number.isFinite(productId),
   });
+  const categoriesQ = useQuery({
+    queryKey: queryKeys.productCategories.tree(),
+    queryFn: () => productCategoriesService.tree(),
+    enabled: isAdmin,
+  });
 
   const product = query.data;
 
@@ -67,6 +78,7 @@ export default function ProductDetailPage({
   const [brand, setBrand] = useState("");
   const [unit, setUnit] = useState("");
   const [size, setSize] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [clearImages, setClearImages] = useState(false);
   const [imageInputKey, setImageInputKey] = useState(0);
@@ -79,6 +91,7 @@ export default function ProductDetailPage({
       setBrand(product.brand ?? "");
       setUnit(product.unit ?? "");
       setSize(product.size ?? "");
+      setCategoryId(product.categoryId ? String(product.categoryId) : "");
     }
   }, [product?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -90,6 +103,7 @@ export default function ProductDetailPage({
         brand,
         unit,
         size,
+        categoryId: categoryId ? Number(categoryId) : null,
         clearImages: clearImages || undefined,
         images: imageFiles.length
           ? imageFiles.map((file, index) => ({
@@ -151,7 +165,11 @@ export default function ProductDetailPage({
 
       <PageHeader
         title={product?.name ?? t("app.loading")}
-        description={product?.category?.name ?? product?.brand ?? undefined}
+        description={
+          formatProductCategory(product?.category) ||
+          product?.brand ||
+          undefined
+        }
         actions={
           product && isAdmin && (
             <Dialog>
@@ -331,6 +349,19 @@ export default function ProductDetailPage({
                   disabled={!isAdmin}
                   value={size}
                   onChange={(e) => setSize(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t("product.category")}</Label>
+                <ProductCategoryAssignSelect
+                  categories={categoriesQ.data ?? []}
+                  value={categoryId || CATEGORY_ASSIGN_NONE}
+                  disabled={!isAdmin}
+                  onValueChange={(value) =>
+                    setCategoryId(value === CATEGORY_ASSIGN_NONE ? "" : value)
+                  }
+                  placeholder={t("product.categoryPlaceholder")}
+                  noneLabel={t("product.noCategory")}
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">

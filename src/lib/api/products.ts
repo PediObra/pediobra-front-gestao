@@ -7,6 +7,7 @@ export interface ListProductsParams {
   search?: string;
   brand?: string;
   categoryId?: number;
+  parentCategoryId?: number;
   unit?: string;
   barcode?: string;
   minWeight?: number;
@@ -31,7 +32,7 @@ export interface ProductBarcodeInput {
 }
 
 export interface CreateProductPayload {
-  categoryId?: number;
+  categoryId?: number | null;
   name: string;
   description?: string;
   size?: string;
@@ -56,7 +57,11 @@ function buildProductFormData(
 ) {
   const formData = new FormData();
 
-  appendOptional(formData, "categoryId", payload.categoryId);
+  if ("categoryId" in payload && payload.categoryId === null) {
+    formData.append("categoryId", "null");
+  } else {
+    appendOptional(formData, "categoryId", payload.categoryId);
+  }
   appendOptional(formData, "name", payload.name);
   appendOptional(formData, "description", payload.description);
   appendOptional(formData, "size", payload.size);
