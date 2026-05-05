@@ -85,11 +85,14 @@ Outros papéis disponíveis no seed (verificar `backend/src/database/seed.ts` pa
 - Gestão de produtos base e ofertas de loja.
 - Ofertas de loja têm preço e status ativa/inativa; estoque fica como dado operacional legado e não controla compra no MVP.
 - Lista de ofertas filtra por ativa/inativa/todas e permite alternar disponibilidade quando o usuário tem permissão.
+- Importação CSV de ofertas de loja: modal de upload/de-para, jobs, preview e aplicação quando o ETL devolve resultado.
+- Used-listings/sobras: listagem, detalhe, moderação/status e inquiries.
 - Pedidos e pagamentos já refletem o fluxo real com endereço do cliente e Stripe/PaymentSheet no app cliente.
 - Painel acompanha pedidos, evidências, entregadores, pagamentos, usuários, lojas e permissões por seller.
 - Tela `/operations` mostra resumo operacional, fila de atenção, jobs/ofertas e ações rápidas de despacho.
 - Eventos `operations.*` via Socket.IO invalidam queries e mostram toast quando pedido, pagamento, motorista, entrega ou oferta muda.
 - Detalhes de pedido e entrega avulsa expõem atalho para pagamento/refund; admin também pode criar pagamento mock de pedido/entrega em dev.
+- Mensagens internas aparecem nos detalhes de pedido, entrega avulsa e inquiries de usados.
 
 ## Estrutura do projeto
 
@@ -101,9 +104,11 @@ src/
 │   │   ├── orders/
 │   │   ├── products/
 │   │   ├── seller-products/
+│   │   ├── seller-product-imports/
 │   │   ├── sellers/
 │   │   ├── drivers/              (admin)
 │   │   ├── operations/           (admin + seller)
+│   │   ├── used-listings/
 │   │   ├── users/                (admin)
 │   │   ├── payments/             (admin)
 │   │   └── profile/
@@ -144,9 +149,11 @@ src/
 | `/sellers/[id]/team` | Admins e OWNER — edições feitas em `/users/[id]` |
 | `/products` | Todos leem; criar/editar só ADMIN |
 | `/seller-products` | Filtrado por `sellerIds` do usuário; criar/editar com `canManageSellerProducts` |
+| `/seller-product-imports`, `/seller-product-imports/[id]` | ADMIN ou seller com permissão de ofertas da loja; processamento real depende do ETL externo |
 | `/orders` | ADMIN vê tudo; SELLER filtra pelos próprios sellers |
 | `/orders/[id]` | FSM respeita o backend (seller: CONFIRMED/PREPARING/READY_FOR_PICKUP/CANCELLED; admin: tudo). Atribuir motorista é ADMIN-only. Evidências ficam liberadas para quem tem acesso ao pedido. Admin pode criar pagamento mock em dev |
 | `/operations` | ADMIN vê tudo e pode reprocessar despacho/expirar oferta; SELLER vê operações das lojas vinculadas |
+| `/used-listings`, `/used-listings/[id]` | ADMIN modera tudo; donos/sellers vinculados veem os próprios anúncios/inquiries quando autorizados pelo backend |
 | `/drivers`, `/drivers/[id]` | ADMIN (aprovar/rejeitar/bloquear) |
 | `/payments` | ADMIN (listagem, atualização de status e refund) |
 
@@ -169,3 +176,5 @@ Na raiz do monorepo:
 - Registro público pelo painel
 - Central completa de suporte/SLA/auditoria
 - Dashboard financeiro de repasses/Stripe Connect
+- ETL externo validado e rotina comercial completa de qualidade da base importada
+- Produção cloud/native smoke; o painel ainda precisa rodar com build/runtime de produção no ambiente real
