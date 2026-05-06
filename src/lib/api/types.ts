@@ -252,6 +252,14 @@ export interface Seller {
   updatedAt?: string;
 }
 
+export interface SellerDeliverySettings {
+  sellerId: number;
+  ruleId?: number | null;
+  maxDeliveryRadiusMeters: number;
+  source: "SELLER_RULE" | "SYSTEM_DEFAULT";
+  updatedAt?: string | null;
+}
+
 export interface StripeConnectStatus {
   connectEnabled: boolean;
   ownerType: "SELLER" | "DRIVER";

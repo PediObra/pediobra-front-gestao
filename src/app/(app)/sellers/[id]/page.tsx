@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, Save, Users } from "lucide-react";
+import { ArrowLeft, Loader2, MapPinned, Save, Users } from "lucide-react";
 import { toast } from "sonner";
 import { sellersService, type UpdateSellerPayload } from "@/lib/api/sellers";
 import { ApiError } from "@/lib/api/client";
@@ -38,17 +38,29 @@ export default function SellerDetailPage({
   const t = useTranslation();
   const sellerId = Number(id);
   const qc = useQueryClient();
-  const { isAdmin, canEditSeller, canManageSellerStaff } = useAuth();
+  const {
+    isAdmin,
+    isAuthenticated,
+    isLoading: authLoading,
+    canEditSeller,
+    canManageSellerStaff,
+  } = useAuth();
+  const authReady = !authLoading && isAuthenticated;
 
   const query = useQuery({
     queryKey: queryKeys.sellers.byId(sellerId),
     queryFn: () => sellersService.getById(sellerId),
-    enabled: Number.isFinite(sellerId),
+    enabled: Number.isFinite(sellerId) && authReady,
   });
   const stripeConnectQuery = useQuery({
     queryKey: queryKeys.sellers.stripeConnect(sellerId),
     queryFn: () => sellersService.getStripeConnectStatus(sellerId),
-    enabled: Number.isFinite(sellerId) && Boolean(query.data),
+    enabled: Number.isFinite(sellerId) && authReady && Boolean(query.data),
+  });
+  const deliverySettingsQuery = useQuery({
+    queryKey: queryKeys.sellers.deliverySettings(sellerId),
+    queryFn: () => sellersService.getDeliverySettings(sellerId),
+    enabled: Number.isFinite(sellerId) && authReady && Boolean(query.data),
   });
 
   const seller = query.data;
@@ -68,6 +80,7 @@ export default function SellerDetailPage({
   const [logoFile, setLogoFile] = useState<File | undefined>();
   const [clearLogo, setClearLogo] = useState(false);
   const [logoInputKey, setLogoInputKey] = useState(0);
+  const [deliveryRadiusKm, setDeliveryRadiusKm] = useState("");
 
   useEffect(() => {
     if (seller) {
@@ -80,6 +93,17 @@ export default function SellerDetailPage({
       setPhone(seller.phone);
     }
   }, [seller?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const radiusMeters = deliverySettingsQuery.data?.maxDeliveryRadiusMeters;
+    if (radiusMeters !== undefined) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep form state in sync with API settings.
+      setDeliveryRadiusKm(formatRadiusInput(radiusMeters));
+    }
+  }, [
+    deliverySettingsQuery.data?.sellerId,
+    deliverySettingsQuery.data?.maxDeliveryRadiusMeters,
+  ]);
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -134,6 +158,32 @@ export default function SellerDetailPage({
         err instanceof ApiError
           ? err.displayMessage
           : "Nao foi possivel abrir o cadastro Stripe.";
+      toast.error(msg);
+    },
+  });
+  const deliverySettingsMutation = useMutation({
+    mutationFn: () => {
+      const parsedRadiusKm = Number(deliveryRadiusKm.replace(",", "."));
+      if (!Number.isFinite(parsedRadiusKm) || parsedRadiusKm <= 0) {
+        throw new Error("Informe um raio de entrega valido.");
+      }
+
+      return sellersService.updateDeliverySettings(sellerId, {
+        maxDeliveryRadiusMeters: Math.round(parsedRadiusKm * 1000),
+      });
+    },
+    onSuccess: (settings) => {
+      qc.setQueryData(queryKeys.sellers.deliverySettings(sellerId), settings);
+      qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
+      toast.success("Raio de entrega atualizado.");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : "Nao foi possivel salvar o raio de entrega.";
       toast.error(msg);
     },
   });
@@ -314,6 +364,60 @@ export default function SellerDetailPage({
             )}
           </Card>
 
+          <Card className="w-full max-w-6xl">
+            <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+              <div className="space-y-1.5">
+                <CardTitle>Área de entrega</CardTitle>
+                <CardDescription>
+                  {canEdit
+                    ? "Defina ate quantos km esta loja atende pedidos de entrega."
+                    : "Voce nao tem permissao para alterar o raio de entrega."}
+                </CardDescription>
+              </div>
+              <MapPinned className="size-5 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="grid gap-4 p-6 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+              <div className="space-y-2">
+                <Label htmlFor="delivery-radius-km">
+                  Raio máximo de entrega (km)
+                </Label>
+                <Input
+                  id="delivery-radius-km"
+                  type="number"
+                  inputMode="decimal"
+                  min="0.1"
+                  max="100"
+                  step="0.1"
+                  disabled={!canEdit || deliverySettingsQuery.isLoading}
+                  value={deliveryRadiusKm}
+                  onChange={(e) => setDeliveryRadiusKm(e.target.value)}
+                />
+              </div>
+              <div className="self-end text-sm text-muted-foreground">
+                Produtos desta loja aparecem para clientes em entrega somente
+                quando o endereço selecionado fica dentro desse raio.
+              </div>
+            </CardContent>
+            {canEdit && (
+              <CardFooter className="justify-end border-t border-border">
+                <Button
+                  onClick={() => deliverySettingsMutation.mutate()}
+                  disabled={
+                    deliverySettingsMutation.isPending ||
+                    deliverySettingsQuery.isLoading
+                  }
+                >
+                  {deliverySettingsMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Save className="size-4" />
+                  )}
+                  Salvar raio
+                </Button>
+              </CardFooter>
+            )}
+          </Card>
+
           <div className="w-full max-w-6xl">
             <StripeConnectStatusCard
               title="Recebimento Stripe"
@@ -333,4 +437,11 @@ export default function SellerDetailPage({
       )}
     </div>
   );
+}
+
+function formatRadiusInput(radiusMeters: number) {
+  const radiusKm = radiusMeters / 1000;
+  return Number.isInteger(radiusKm)
+    ? String(radiusKm)
+    : String(Number(radiusKm.toFixed(2)));
 }

@@ -3,6 +3,7 @@ import type {
   MembershipRole,
   Paginated,
   Seller,
+  SellerDeliverySettings,
   StripeConnectOnboardingLinkResponse,
   StripeConnectStatus,
   UserWithRelations,
@@ -82,6 +83,10 @@ export interface StripeConnectOnboardingLinkPayload {
   refreshUrl?: string;
 }
 
+export interface UpdateSellerDeliverySettingsPayload {
+  maxDeliveryRadiusMeters: number;
+}
+
 export const sellersService = {
   list: (params: ListSellersParams = {}) =>
     api.get<Paginated<Seller>>("/sellers", { query: params }),
@@ -98,6 +103,18 @@ export const sellersService = {
 
   getStripeConnectStatus: (id: number) =>
     api.get<StripeConnectStatus>(`/sellers/${id}/stripe-connect/status`),
+
+  getDeliverySettings: (id: number) =>
+    api.get<SellerDeliverySettings>(`/sellers/${id}/delivery-settings`),
+
+  updateDeliverySettings: (
+    id: number,
+    payload: UpdateSellerDeliverySettingsPayload,
+  ) =>
+    api.patch<SellerDeliverySettings>(
+      `/sellers/${id}/delivery-settings`,
+      payload,
+    ),
 
   createStripeConnectOnboardingLink: (
     id: number,

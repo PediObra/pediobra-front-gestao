@@ -30,6 +30,8 @@ export const queryKeys = {
     list: (params: ListSellersParams) => ["sellers", "list", params] as const,
     byId: (id: number) => ["sellers", "byId", id] as const,
     stripeConnect: (id: number) => ["sellers", "stripeConnect", id] as const,
+    deliverySettings: (id: number) =>
+      ["sellers", "deliverySettings", id] as const,
   },
   products: {
     all: () => ["products"] as const,
