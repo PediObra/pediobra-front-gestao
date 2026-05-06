@@ -3,7 +3,14 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Loader2, MapPinned, Save, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  FileUp,
+  Loader2,
+  MapPinned,
+  Save,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import { sellersService, type UpdateSellerPayload } from "@/lib/api/sellers";
 import { ApiError } from "@/lib/api/client";
@@ -28,6 +35,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
 import { StripeConnectStatusCard } from "@/components/payments/stripe-connect-status-card";
 import { useTranslation } from "@/lib/i18n/language-store";
+import { cn } from "@/lib/utils";
+
+type SellerDetailSection = "operations" | "receiving";
 
 export default function SellerDetailPage({
   params,
@@ -67,6 +77,8 @@ export default function SellerDetailPage({
   const canEdit = canEditSeller(sellerId);
   const canEditMasterData = canEdit && isAdmin;
   const canEditTeam = canManageSellerStaff(sellerId);
+  const [activeSection, setActiveSection] =
+    useState<SellerDetailSection>("operations");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -107,7 +119,12 @@ export default function SellerDetailPage({
 
   const mutation = useMutation({
     mutationFn: () => {
-      if (canEditMasterData && seller && address !== seller.address && !placeId) {
+      if (
+        canEditMasterData &&
+        seller &&
+        address !== seller.address &&
+        !placeId
+      ) {
         throw new Error("Selecione o novo endereco nas sugestões.");
       }
 
@@ -137,9 +154,7 @@ export default function SellerDetailPage({
     },
     onError: (err: unknown) => {
       const msg =
-        err instanceof ApiError
-          ? err.displayMessage
-          : t("product.saveFailed");
+        err instanceof ApiError ? err.displayMessage : t("product.saveFailed");
       toast.error(msg);
     },
   });
@@ -187,6 +202,13 @@ export default function SellerDetailPage({
       toast.error(msg);
     },
   });
+  const sellerSections: Array<{
+    value: SellerDetailSection;
+    label: string;
+  }> = [
+    { value: "operations", label: t("seller.operationalData") },
+    { value: "receiving", label: t("seller.receiving") },
+  ];
 
   return (
     <div className="space-y-6">
@@ -214,225 +236,281 @@ export default function SellerDetailPage({
         </Card>
       ) : (
         <>
-          <Card className="w-full max-w-6xl">
-            <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1.5">
-                <CardTitle>{t("seller.operationalData")}</CardTitle>
-                <CardDescription>
-                  {canEdit
-                    ? t("seller.updateInfo")
-                    : t("seller.noEditPermission")}
-                </CardDescription>
-              </div>
-              {canEditTeam && (
-                <Button asChild variant="outline">
-                  <Link href={`/sellers/${sellerId}/team`}>
-                    <Users className="size-4" />
-                    {t("seller.manageTeam")}
-                  </Link>
-                </Button>
-              )}
-            </CardHeader>
-            <CardContent className="grid gap-8 p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="name">{t("common.name")}</Label>
-                  <Input
-                    id="name"
-                    disabled={!canEdit}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">{t("common.email")}</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    disabled={!canEditMasterData}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">{t("common.phone")}</Label>
-                  <Input
-                    id="phone"
-                    disabled={!canEdit}
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {formatPhone(seller.phone)}
-                  </p>
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="address">{t("common.address")}</Label>
-                  <AddressAutocomplete
-                    id="address"
-                    disabled={!canEditMasterData}
-                    value={address}
-                    sessionToken={placesSessionToken}
-                    selectedPlaceId={placeId}
-                    onChange={(value) => {
-                      setAddress(value);
-                      setPlaceId("");
-                    }}
-                    onSelect={(place) => {
-                      setAddress(place.description);
-                      setPlaceId(place.placeId);
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="cep">CEP</Label>
-                  <Input
-                    id="cep"
-                    disabled={!canEditMasterData}
-                    value={cep}
-                    onChange={(e) => setCep(e.target.value)}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {formatCep(seller.cep)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="logo">{t("seller.logo")}</Label>
-                  <ImageFilePreview
-                    file={logoFile}
-                    src={clearLogo ? null : seller.logo}
-                    alt={
-                      logoFile
-                        ? t("seller.newLogoAlt", { seller: seller.name })
-                        : t("seller.logoAlt", { seller: seller.name })
-                    }
-                    className="size-20"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Input
-                    key={logoInputKey}
-                    id="logo"
-                    type="file"
-                    accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
-                    disabled={!canEdit || clearLogo}
-                    onChange={(event) =>
-                      setLogoFile(event.target.files?.[0] ?? undefined)
-                    }
-                  />
-                  {logoFile && (
-                    <p className="text-xs text-muted-foreground">
-                      {logoFile.name}
-                    </p>
+          <div className="w-full max-w-6xl overflow-x-auto">
+            <div
+              className="inline-flex min-w-full rounded-md border border-border bg-muted/40 p-1 sm:min-w-0"
+              role="tablist"
+              aria-label={t("seller.sectionsLabel")}
+            >
+              {sellerSections.map((section) => (
+                <button
+                  key={section.value}
+                  type="button"
+                  id={`seller-section-tab-${section.value}`}
+                  role="tab"
+                  aria-selected={activeSection === section.value}
+                  aria-controls={`seller-section-panel-${section.value}`}
+                  className={cn(
+                    "inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-sm px-3 text-sm font-medium text-muted-foreground transition-colors sm:flex-none",
+                    "hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    activeSection === section.value &&
+                      "bg-background text-foreground shadow-sm",
                   )}
-                </div>
-                {seller.logo && (
-                  <label className="flex items-center gap-2 text-sm">
-                    <Checkbox
-                      checked={clearLogo}
-                      disabled={!canEdit}
-                      onCheckedChange={(checked) => {
-                        setClearLogo(checked === true);
-                        if (checked === true) {
-                          setLogoFile(undefined);
-                          setLogoInputKey((key) => key + 1);
-                        }
-                      }}
-                    />
-                    {t("seller.removeCurrentLogo")}
-                  </label>
-                )}
-              </div>
-            </CardContent>
-            {canEdit && (
-              <CardFooter className="justify-end border-t border-border">
-                <Button
-                  onClick={() => mutation.mutate()}
-                  disabled={mutation.isPending}
+                  onClick={() => setActiveSection(section.value)}
                 >
-                  {mutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Save className="size-4" />
-                  )}
-                  {t("common.saveChanges")}
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
-
-          <Card className="w-full max-w-6xl">
-            <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
-              <div className="space-y-1.5">
-                <CardTitle>Área de entrega</CardTitle>
-                <CardDescription>
-                  {canEdit
-                    ? "Defina ate quantos km esta loja atende pedidos de entrega."
-                    : "Voce nao tem permissao para alterar o raio de entrega."}
-                </CardDescription>
-              </div>
-              <MapPinned className="size-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="grid gap-4 p-6 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
-              <div className="space-y-2">
-                <Label htmlFor="delivery-radius-km">
-                  Raio máximo de entrega (km)
-                </Label>
-                <Input
-                  id="delivery-radius-km"
-                  type="number"
-                  inputMode="decimal"
-                  min="0.1"
-                  max="100"
-                  step="0.1"
-                  disabled={!canEdit || deliverySettingsQuery.isLoading}
-                  value={deliveryRadiusKm}
-                  onChange={(e) => setDeliveryRadiusKm(e.target.value)}
-                />
-              </div>
-              <div className="self-end text-sm text-muted-foreground">
-                Produtos desta loja aparecem para clientes em entrega somente
-                quando o endereço selecionado fica dentro desse raio.
-              </div>
-            </CardContent>
-            {canEdit && (
-              <CardFooter className="justify-end border-t border-border">
-                <Button
-                  onClick={() => deliverySettingsMutation.mutate()}
-                  disabled={
-                    deliverySettingsMutation.isPending ||
-                    deliverySettingsQuery.isLoading
-                  }
-                >
-                  {deliverySettingsMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Save className="size-4" />
-                  )}
-                  Salvar raio
-                </Button>
-              </CardFooter>
-            )}
-          </Card>
-
-          <div className="w-full max-w-6xl">
-            <StripeConnectStatusCard
-              title="Recebimento Stripe"
-              description="Dados de repasse da loja"
-              status={stripeConnectQuery.data}
-              blockedNotice="Esta loja nao aparece no catalogo dos clientes e nao aceita novos pedidos ate o recebimento Stripe ficar pronto."
-              actionLabel={canEdit ? "Configurar recebimento" : undefined}
-              actionLoading={stripeConnectMutation.isPending}
-              onAction={
-                canEdit
-                  ? () => stripeConnectMutation.mutate()
-                  : undefined
-              }
-            />
+                  {section.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {activeSection === "operations" && (
+            <>
+              <Card
+                id="seller-section-panel-operations"
+                role="tabpanel"
+                aria-labelledby="seller-section-tab-operations"
+                className="w-full max-w-6xl"
+              >
+                <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle>{t("seller.operationalData")}</CardTitle>
+                    <CardDescription>
+                      {canEdit
+                        ? t("seller.updateInfo")
+                        : t("seller.noEditPermission")}
+                    </CardDescription>
+                  </div>
+                  {(canEdit || canEditTeam) && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canEdit && (
+                        <Button asChild variant="outline">
+                          <Link
+                            href={`/seller-product-imports/new?sellerId=${sellerId}`}
+                          >
+                            <FileUp className="size-4" />
+                            {t("sellerProductImports.importCsv")}
+                          </Link>
+                        </Button>
+                      )}
+                      {canEditTeam && (
+                        <Button asChild variant="outline">
+                          <Link href={`/sellers/${sellerId}/team`}>
+                            <Users className="size-4" />
+                            {t("seller.manageTeam")}
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </CardHeader>
+                <CardContent className="grid gap-8 p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="name">{t("common.name")}</Label>
+                      <Input
+                        id="name"
+                        disabled={!canEdit}
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">{t("common.email")}</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        disabled={!canEditMasterData}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">{t("common.phone")}</Label>
+                      <Input
+                        id="phone"
+                        disabled={!canEdit}
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {formatPhone(seller.phone)}
+                      </p>
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label htmlFor="address">{t("common.address")}</Label>
+                      <AddressAutocomplete
+                        id="address"
+                        disabled={!canEditMasterData}
+                        value={address}
+                        sessionToken={placesSessionToken}
+                        selectedPlaceId={placeId}
+                        onChange={(value) => {
+                          setAddress(value);
+                          setPlaceId("");
+                        }}
+                        onSelect={(place) => {
+                          setAddress(place.description);
+                          setPlaceId(place.placeId);
+                        }}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cep">CEP</Label>
+                      <Input
+                        id="cep"
+                        disabled={!canEditMasterData}
+                        value={cep}
+                        onChange={(e) => setCep(e.target.value)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {formatCep(seller.cep)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="logo">{t("seller.logo")}</Label>
+                      <ImageFilePreview
+                        file={logoFile}
+                        src={clearLogo ? null : seller.logo}
+                        alt={
+                          logoFile
+                            ? t("seller.newLogoAlt", { seller: seller.name })
+                            : t("seller.logoAlt", { seller: seller.name })
+                        }
+                        className="size-20"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Input
+                        key={logoInputKey}
+                        id="logo"
+                        type="file"
+                        accept="image/avif,image/gif,image/jpeg,image/png,image/webp"
+                        disabled={!canEdit || clearLogo}
+                        onChange={(event) =>
+                          setLogoFile(event.target.files?.[0] ?? undefined)
+                        }
+                      />
+                      {logoFile && (
+                        <p className="text-xs text-muted-foreground">
+                          {logoFile.name}
+                        </p>
+                      )}
+                    </div>
+                    {seller.logo && (
+                      <label className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={clearLogo}
+                          disabled={!canEdit}
+                          onCheckedChange={(checked) => {
+                            setClearLogo(checked === true);
+                            if (checked === true) {
+                              setLogoFile(undefined);
+                              setLogoInputKey((key) => key + 1);
+                            }
+                          }}
+                        />
+                        {t("seller.removeCurrentLogo")}
+                      </label>
+                    )}
+                  </div>
+                </CardContent>
+                {canEdit && (
+                  <CardFooter className="justify-end">
+                    <Button
+                      onClick={() => mutation.mutate()}
+                      disabled={mutation.isPending}
+                    >
+                      {mutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Save className="size-4" />
+                      )}
+                      {t("common.saveChanges")}
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+
+              <div className="w-full max-w-6xl">
+                <Card>
+                  <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-1.5">
+                      <CardTitle>{t("seller.maxDeliveryRadius")}</CardTitle>
+                      <CardDescription>
+                        {canEdit
+                          ? "Defina ate quantos km esta loja atende pedidos de entrega."
+                          : "Voce nao tem permissao para alterar o raio de entrega."}
+                      </CardDescription>
+                    </div>
+                    <MapPinned className="size-5 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent className="grid gap-4 p-6 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+                    <div className="space-y-2">
+                      <Label htmlFor="delivery-radius-km">
+                        Raio máximo de entrega (km)
+                      </Label>
+                      <Input
+                        id="delivery-radius-km"
+                        type="text"
+                        inputMode="decimal"
+                        disabled={!canEdit || deliverySettingsQuery.isLoading}
+                        value={deliveryRadiusKm}
+                        onChange={(e) => setDeliveryRadiusKm(e.target.value)}
+                      />
+                    </div>
+                    <div className="self-end text-sm text-muted-foreground">
+                      Produtos desta loja aparecem para clientes em entrega
+                      somente quando o endereço selecionado fica dentro desse
+                      raio.
+                    </div>
+                  </CardContent>
+                  {canEdit && (
+                    <CardFooter className="justify-end">
+                      <Button
+                        onClick={() => deliverySettingsMutation.mutate()}
+                        disabled={
+                          deliverySettingsMutation.isPending ||
+                          deliverySettingsQuery.isLoading
+                        }
+                      >
+                        {deliverySettingsMutation.isPending ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          <Save className="size-4" />
+                        )}
+                        Salvar raio
+                      </Button>
+                    </CardFooter>
+                  )}
+                </Card>
+              </div>
+            </>
+          )}
+
+          {activeSection === "receiving" && (
+            <div
+              id="seller-section-panel-receiving"
+              role="tabpanel"
+              aria-labelledby="seller-section-tab-receiving"
+              className="w-full max-w-6xl"
+            >
+              <StripeConnectStatusCard
+                title={t("seller.receiving")}
+                description="Status de recebimento e repasses da loja."
+                status={stripeConnectQuery.data}
+                blockedNotice="Esta loja nao aparece no catalogo dos clientes e nao aceita novos pedidos ate o recebimento ficar pronto."
+                actionLabel={canEdit ? "Configurar recebimento" : undefined}
+                actionLoading={stripeConnectMutation.isPending}
+                onAction={
+                  canEdit ? () => stripeConnectMutation.mutate() : undefined
+                }
+              />
+            </div>
+          )}
         </>
       )}
     </div>

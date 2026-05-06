@@ -1,20 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileUp, Loader2 } from "lucide-react";
+import { ArrowLeft, FileUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -74,31 +74,36 @@ const CANONICAL_FIELDS: Array<{
   },
 ];
 
-export function ImportSellerProductsDialog({
+export function ImportSellerProductsForm({
   sellers,
   initialSellerId,
-  disabled,
 }: {
   sellers: Seller[];
   initialSellerId?: number;
-  disabled?: boolean;
 }) {
   const router = useRouter();
   const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const [sellerId, setSellerId] = useState<string>(
-    initialSellerId ? String(initialSellerId) : "",
-  );
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedSellerIdOverride, setSelectedSellerIdOverride] = useState<
+    string | null
+  >(null);
   const [file, setFile] = useState<File | null>(null);
   const [mappingOverrides, setMappingOverrides] = useState<
     Record<string, string>
   >({});
 
+  const defaultSellerId = initialSellerId
+    ? String(initialSellerId)
+    : sellers.length === 1
+      ? String(sellers[0].id)
+      : "";
+  const sellerId = selectedSellerIdOverride ?? defaultSellerId;
+
   const selectedSellerId = Number(sellerId);
   const mappingQ = useQuery({
     queryKey: queryKeys.sellerProductImports.mapping(selectedSellerId),
     queryFn: () => sellerProductImportsService.getMapping(selectedSellerId),
-    enabled: open && Number.isFinite(selectedSellerId) && selectedSellerId > 0,
+    enabled: Number.isFinite(selectedSellerId) && selectedSellerId > 0,
   });
 
   const savedMapping = useMemo(() => {
@@ -136,8 +141,6 @@ export function ImportSellerProductsDialog({
     },
     onSuccess: (job) => {
       qc.invalidateQueries({ queryKey: queryKeys.sellerProductImports.all() });
-      setOpen(false);
-      setFile(null);
       toast.success("Importacao criada");
       router.push(`/seller-product-imports/${job.id}`);
     },
@@ -162,29 +165,23 @@ export function ImportSellerProductsDialog({
     !createMutation.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button type="button" variant="outline" disabled={disabled}>
-          <FileUp className="size-4" />
-          Importar CSV
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Importar ofertas por CSV</DialogTitle>
-          <DialogDescription>
-            Envie o arquivo do ERP e informe quais colunas alimentam cada campo
-            do PeDiObra. O ETL processa a carga antes da aplicacao.
-          </DialogDescription>
-        </DialogHeader>
+    <Card className="max-w-5xl">
+      <CardHeader>
+        <CardTitle>Importar ofertas por CSV</CardTitle>
+        <CardDescription>
+          Envie o arquivo do ERP e informe quais colunas alimentam cada campo do
+          PeDiObra. O ETL processa a carga antes da aplicacao.
+        </CardDescription>
+      </CardHeader>
 
+      <CardContent className="grid gap-5">
         <div className="grid gap-4">
           <div className="grid gap-2">
             <Label htmlFor="catalog-import-seller">Loja</Label>
             <Select
               value={sellerId}
               onValueChange={(value) => {
-                setSellerId(value);
+                setSelectedSellerIdOverride(value);
                 setMappingOverrides({});
               }}
             >
@@ -201,86 +198,92 @@ export function ImportSellerProductsDialog({
             </Select>
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="catalog-import-file">Arquivo CSV</Label>
-            <Input
-              id="catalog-import-file"
-              type="file"
-              accept=".csv,text/csv"
-              onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-            />
-          </div>
-
-          <div className="grid gap-3 rounded-md border border-border p-3">
-            <div>
-              <div className="text-sm font-semibold">De-para de colunas</div>
-              <p className="text-xs text-muted-foreground">
-                Informe o nome exato da coluna no CSV. O mapeamento fica salvo
-                para a proxima importacao desta loja.
-              </p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {CANONICAL_FIELDS.map((field) => (
-                <div key={field.field} className="grid gap-1.5">
-                  <Label htmlFor={`mapping-${field.field}`}>
-                    {field.label}
-                    {field.required ? " *" : ""}
-                  </Label>
-                  <Input
-                    id={`mapping-${field.field}`}
-                    value={effectiveMapping[field.field] ?? ""}
-                    placeholder={field.placeholder}
-                    onChange={(event) =>
-                      setMappingOverrides((current) => ({
-                        ...current,
-                        [field.field]: event.target.value,
-                      }))
-                    }
-                  />
+          <div>
+            <div className="rounded-md border border-dashed border-border bg-muted/20 p-3">
+              <Label htmlFor="catalog-import-file">Arquivo CSV</Label>
+              <Input
+                ref={fileInputRef}
+                id="catalog-import-file"
+                type="file"
+                accept=".csv,text/csv"
+                className="sr-only"
+                onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <FileUp className="size-4" />
+                  Selecionar arquivo
+                </Button>
+                <div
+                  className="min-w-0 flex-1 truncate text-sm text-muted-foreground"
+                  title={file?.name}
+                >
+                  {file?.name ?? "Nenhum arquivo selecionado"}
                 </div>
-              ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Use um arquivo `.csv` exportado pelo ERP da loja.
+              </p>
             </div>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(false)}
-          >
+        <div className="grid gap-3 rounded-md border border-border p-3">
+          <div>
+            <div className="text-sm font-semibold">De-para de colunas</div>
+            <p className="text-xs text-muted-foreground">
+              Informe o nome exato da coluna no CSV. O mapeamento fica salvo
+              para a proxima importacao desta loja.
+            </p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {CANONICAL_FIELDS.map((field) => (
+              <div key={field.field} className="grid gap-1.5">
+                <Label htmlFor={`mapping-${field.field}`}>
+                  {field.label}
+                  {field.required ? " *" : ""}
+                </Label>
+                <Input
+                  id={`mapping-${field.field}`}
+                  value={effectiveMapping[field.field] ?? ""}
+                  placeholder={field.placeholder}
+                  onChange={(event) =>
+                    setMappingOverrides((current) => ({
+                      ...current,
+                      [field.field]: event.target.value,
+                    }))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+
+      <CardFooter className="justify-end gap-2">
+        <Button type="button" variant="outline" asChild>
+          <Link href="/seller-products">
+            <ArrowLeft className="size-4" />
             Cancelar
-          </Button>
-          <Button
-            type="button"
-            disabled={!canSubmit}
-            onClick={() => createMutation.mutate()}
-          >
-            {createMutation.isPending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <FileUp className="size-4" />
-            )}
-            Criar importacao
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </Link>
+        </Button>
+        <Button
+          type="button"
+          disabled={!canSubmit}
+          onClick={() => createMutation.mutate()}
+        >
+          {createMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <FileUp className="size-4" />
+          )}
+          Criar importacao
+        </Button>
+      </CardFooter>
+    </Card>
   );
-
-  function handleOpenChange(nextOpen: boolean) {
-    setOpen(nextOpen);
-    if (!nextOpen) return;
-
-    if (initialSellerId) {
-      setSellerId(String(initialSellerId));
-      setMappingOverrides({});
-      return;
-    }
-
-    if (sellers.length === 1) {
-      setSellerId(String(sellers[0].id));
-      setMappingOverrides({});
-    }
-  }
 }

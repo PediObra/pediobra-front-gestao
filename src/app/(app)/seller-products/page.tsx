@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileClock,
+  FileUp,
   Plus,
   RotateCcw,
   Search,
@@ -34,7 +35,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { DataTable } from "@/components/data-table/data-table";
-import { ImportSellerProductsDialog } from "@/components/seller-products/import-seller-products-dialog";
 import {
   sellerProductsService,
   type ListSellerProductsParams,
@@ -297,6 +297,11 @@ export default function SellerProductsListPage() {
     setMaxPrice("");
   }
 
+  const importHref =
+    sellerId === "ALL"
+      ? "/seller-product-imports/new"
+      : `/seller-product-imports/new?sellerId=${sellerId}`;
+
   return (
     <div className="space-y-6">
       {isAdmin && <ProductAreaTabs active="store" />}
@@ -307,13 +312,19 @@ export default function SellerProductsListPage() {
         actions={
           canCreate && (
             <div className="flex flex-wrap items-center gap-2">
-              <ImportSellerProductsDialog
-                sellers={sellerOptions}
-                initialSellerId={
-                  sellerId === "ALL" ? undefined : Number(sellerId)
-                }
-                disabled={sellerOptions.length === 0}
-              />
+              {sellerOptions.length === 0 ? (
+                <Button type="button" variant="outline" disabled>
+                  <FileUp className="size-4" />
+                  {t("sellerProductImports.importCsv")}
+                </Button>
+              ) : (
+                <Button asChild variant="outline">
+                  <Link href={importHref}>
+                    <FileUp className="size-4" />
+                    {t("sellerProductImports.importCsv")}
+                  </Link>
+                </Button>
+              )}
               <Button asChild>
                 <Link href="/seller-products/new">
                   <Plus className="size-4" />
@@ -348,7 +359,7 @@ export default function SellerProductsListPage() {
           </Button>
         </div>
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
           <FilterField
             label={t("sellerProducts.searchLabel")}
             htmlFor="seller-products-search"
@@ -437,34 +448,46 @@ export default function SellerProductsListPage() {
             />
           </FilterField>
           <FilterField
-            label={t("sellerProducts.minPriceLabel")}
+            label={t("sellerProducts.price")}
             htmlFor="seller-products-min-price"
+            className="md:col-span-2 xl:col-span-2"
           >
-            <Input
-              id="seller-products-min-price"
-              placeholder={t("sellerProducts.minPrice")}
-              inputMode="decimal"
-              value={minPrice}
-              onChange={(e) => {
-                setPage(1);
-                setMinPrice(e.target.value);
-              }}
-            />
-          </FilterField>
-          <FilterField
-            label={t("sellerProducts.maxPriceLabel")}
-            htmlFor="seller-products-max-price"
-          >
-            <Input
-              id="seller-products-max-price"
-              placeholder={t("sellerProducts.maxPrice")}
-              inputMode="decimal"
-              value={maxPrice}
-              onChange={(e) => {
-                setPage(1);
-                setMaxPrice(e.target.value);
-              }}
-            />
+            <div className="grid min-h-9 overflow-hidden rounded-md border border-input bg-transparent shadow-sm transition-colors focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background sm:grid-cols-2">
+              <div className="flex min-w-0 items-center gap-2 px-3 py-1">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  Mín.
+                </span>
+                <Input
+                  id="seller-products-min-price"
+                  aria-label={t("sellerProducts.minPriceLabel")}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  value={minPrice}
+                  onChange={(e) => {
+                    setPage(1);
+                    setMinPrice(e.target.value);
+                  }}
+                  className="h-7 min-w-0 rounded-none border-0 px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+              <div className="flex min-w-0 items-center gap-2 border-t border-border px-3 py-1 sm:border-l sm:border-t-0">
+                <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                  Máx.
+                </span>
+                <Input
+                  id="seller-products-max-price"
+                  aria-label={t("sellerProducts.maxPriceLabel")}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                  value={maxPrice}
+                  onChange={(e) => {
+                    setPage(1);
+                    setMaxPrice(e.target.value);
+                  }}
+                  className="h-7 min-w-0 rounded-none border-0 px-0 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+              </div>
+            </div>
           </FilterField>
         </div>
       </div>

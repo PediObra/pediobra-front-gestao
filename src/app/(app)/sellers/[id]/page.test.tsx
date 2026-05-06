@@ -127,12 +127,12 @@ describe("SellerDetailPage", () => {
 
     expect(radiusInput).not.toBeDisabled();
     await waitFor(() => {
-      expect(radiusInput).toHaveValue(5);
+      expect(radiusInput).toHaveValue("5");
     });
 
     fireEvent.change(radiusInput, { target: { value: "8.5" } });
     await waitFor(() => {
-      expect(radiusInput).toHaveValue(8.5);
+      expect(radiusInput).toHaveValue("8.5");
     });
     fireEvent.click(screen.getByRole("button", { name: /salvar raio/i }));
 
@@ -141,6 +141,36 @@ describe("SellerDetailPage", () => {
         maxDeliveryRadiusMeters: 8500,
       });
     });
+  });
+
+  it("shows delivery radius inside operational data and receiving as a separate section", async () => {
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    expect(
+      await screen.findByRole("tab", { name: "Dados Operacionais" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByLabelText("Nome")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Raio máximo de entrega (km)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: /Importar Produtos/i }),
+    ).toHaveAttribute("href", "/seller-product-imports/new?sellerId=3");
+    expect(
+      screen.queryByRole("tab", { name: "Área de entrega" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Conta Stripe")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Dados Bancários" }));
+
+    expect(
+      screen.getByRole("tab", { name: "Dados Bancários" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("Conta Stripe")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Nome")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Raio máximo de entrega (km)"),
+    ).not.toBeInTheDocument();
   });
 });
 
