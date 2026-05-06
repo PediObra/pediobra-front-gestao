@@ -42,6 +42,7 @@ export function StripeConnectStatusCard({
   status,
   actionLabel,
   actionLoading,
+  blockedNotice,
   onAction,
 }: {
   title: string;
@@ -49,10 +50,15 @@ export function StripeConnectStatusCard({
   status?: StripeConnectStatus | null;
   actionLabel?: string;
   actionLoading?: boolean;
+  blockedNotice?: string;
   onAction?: () => void;
 }) {
   const onboardingStatus = status?.stripeOnboardingStatus ?? "NOT_STARTED";
   const actionDisabled = !status?.connectEnabled || actionLoading;
+  const showBlockedNotice =
+    Boolean(status?.connectEnabled) &&
+    onboardingStatus !== "READY" &&
+    Boolean(blockedNotice);
 
   return (
     <Card>
@@ -89,6 +95,11 @@ export function StripeConnectStatusCard({
         {status?.stripeDisabledReason ? (
           <div className="sm:col-span-2">
             <ConnectMetric label="Restricao" value={status.stripeDisabledReason} />
+          </div>
+        ) : null}
+        {showBlockedNotice ? (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 sm:col-span-2">
+            {blockedNotice}
           </div>
         ) : null}
         {onAction && actionLabel ? (

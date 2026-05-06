@@ -235,6 +235,7 @@ export default function DriverDetailPage({
               title="Recebimento Stripe"
               description="Dados de repasse do motorista"
               status={stripeConnectQuery.data}
+              blockedNotice="Este motorista nao pode ficar online nem receber entregas ate o recebimento Stripe ficar pronto."
             />
           </div>
         </div>

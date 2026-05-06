@@ -319,6 +319,7 @@ export default function SellerDetailPage({
               title="Recebimento Stripe"
               description="Dados de repasse da loja"
               status={stripeConnectQuery.data}
+              blockedNotice="Esta loja nao aparece no catalogo dos clientes e nao aceita novos pedidos ate o recebimento Stripe ficar pronto."
               actionLabel={canEdit ? "Configurar recebimento" : undefined}
               actionLoading={stripeConnectMutation.isPending}
               onAction={
