@@ -140,7 +140,7 @@ export default function SellerProductsListPage() {
   const importsParams = useMemo(
     () => ({
       page: 1,
-      limit: 5,
+      limit: 3,
       sellerId: sellerId === "ALL" ? undefined : Number(sellerId),
     }),
     [sellerId],
@@ -515,7 +515,7 @@ export default function SellerProductsListPage() {
             </p>
           ) : (
             <div className="grid gap-2">
-              {importsQ.data?.data.map((job) => (
+              {importsQ.data?.data.slice(0, 3).map((job) => (
                 <button
                   key={job.id}
                   type="button"

@@ -134,4 +134,12 @@ export const sellersService = {
       `/sellers/${sellerId}/users/${userId}/access`,
       payload,
     ),
+
+  getUserAccess: (sellerId: number, userId: number) =>
+    api.get<UserWithRelations>(`/sellers/${sellerId}/users/${userId}/access`),
+
+  removeUserAccess: (sellerId: number, userId: number) =>
+    api.delete<UserWithRelations>(
+      `/sellers/${sellerId}/users/${userId}/access`,
+    ),
 };

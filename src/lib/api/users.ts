@@ -13,6 +13,7 @@ export interface ListUsersParams {
   search?: string;
   email?: string;
   role?: RoleName;
+  sellerId?: number;
 }
 
 export const usersService = {

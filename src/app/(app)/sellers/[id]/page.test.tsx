@@ -3,10 +3,15 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import SellerDetailPage from "./page";
 import { sellersService } from "@/lib/api/sellers";
+import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
+import { usersService } from "@/lib/api/users";
 import type {
+  Paginated,
   Seller,
   SellerDeliverySettings,
+  SellerProductImportJob,
   StripeConnectStatus,
+  UserWithRelations,
 } from "@/lib/api/types";
 
 jest.mock("react", () => {
@@ -25,9 +30,16 @@ const mockAuth = {
   canEditSeller: jest.fn(() => true),
   canManageSellerStaff: jest.fn(() => false),
 };
+const pushMock = jest.fn();
 
 jest.mock("@/hooks/use-auth", () => ({
   useAuth: () => mockAuth,
+}));
+
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: pushMock,
+  }),
 }));
 
 jest.mock("@/lib/api/sellers", () => ({
@@ -38,6 +50,18 @@ jest.mock("@/lib/api/sellers", () => ({
     createStripeConnectOnboardingLink: jest.fn(),
     getDeliverySettings: jest.fn(),
     updateDeliverySettings: jest.fn(),
+  },
+}));
+
+jest.mock("@/lib/api/seller-product-imports", () => ({
+  sellerProductImportsService: {
+    list: jest.fn(),
+  },
+}));
+
+jest.mock("@/lib/api/users", () => ({
+  usersService: {
+    list: jest.fn(),
   },
 }));
 
@@ -68,6 +92,10 @@ describe("SellerDetailPage", () => {
       .mockResolvedValue(
         makeDeliverySettings({ maxDeliveryRadiusMeters: 8500 }),
       );
+    jest
+      .mocked(sellerProductImportsService.list)
+      .mockResolvedValue(paginated([]));
+    jest.mocked(usersService.list).mockResolvedValue(paginated([]));
   });
 
   afterEach(() => {
@@ -157,6 +185,15 @@ describe("SellerDetailPage", () => {
       screen.getByRole("link", { name: /Importar Produtos/i }),
     ).toHaveAttribute("href", "/seller-product-imports/new?sellerId=3");
     expect(
+      screen.getByRole("tab", { name: "Dados Importação" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Dados Equipe" })).not.toHaveAttribute(
+      "href",
+    );
+    expect(
+      screen.queryByRole("link", { name: /Gerenciar equipe/i }),
+    ).not.toBeInTheDocument();
+    expect(
       screen.queryByRole("tab", { name: "Área de entrega" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Conta Stripe")).not.toBeInTheDocument();
@@ -171,6 +208,94 @@ describe("SellerDetailPage", () => {
     expect(
       screen.queryByLabelText("Raio máximo de entrega (km)"),
     ).not.toBeInTheDocument();
+  });
+
+  it("shows paginated seller import data in the import section", async () => {
+    jest.mocked(sellerProductImportsService.list).mockResolvedValue(
+      paginated(
+        [
+          makeImportJob({
+            id: 4,
+            sourceOriginalFilename: "produtos-maio.csv",
+            status: "APPLIED",
+          }),
+        ],
+        { page: 1, limit: 10, total: 1, totalPages: 1 },
+      ),
+    );
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Importação" }));
+
+    expect(await screen.findByText("produtos-maio.csv")).toBeInTheDocument();
+    expect(screen.getByText("APPLIED")).toBeInTheDocument();
+    expect(sellerProductImportsService.list).toHaveBeenCalledWith({
+      page: 1,
+      limit: 10,
+      sellerId: 3,
+    });
+  });
+
+  it("shows paginated seller team data inside the detail page", async () => {
+    jest.mocked(usersService.list).mockResolvedValue(
+      paginated(
+        [
+          makeTeamUser({
+            id: 22,
+            name: "Lucas Indaiatuba",
+            email: "lucas@sellers.pediobra.local",
+          }),
+        ],
+        { page: 1, limit: 10, total: 1, totalPages: 1 },
+      ),
+    );
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Equipe" }));
+
+    expect(await screen.findByText("Lucas Indaiatuba")).toBeInTheDocument();
+    expect(screen.getByText("lucas@sellers.pediobra.local")).toBeInTheDocument();
+    expect(screen.getByText("Vendas")).toBeInTheDocument();
+    expect(usersService.list).toHaveBeenCalledWith({
+      page: 1,
+      limit: 10,
+      sellerId: 3,
+    });
+
+    fireEvent.click(screen.getByText("Lucas Indaiatuba"));
+
+    expect(pushMock).toHaveBeenCalledWith("/sellers/3/team/22");
+  });
+
+  it("does not show job title for owner team members", async () => {
+    jest.mocked(usersService.list).mockResolvedValue(
+      paginated([
+        makeTeamUser({
+          id: 23,
+          name: "Proprietario Loja",
+          sellers: [
+            {
+              sellerId: 3,
+              jobTitle: "Dono",
+              membershipRole: "OWNER",
+              canEditSeller: true,
+              canManageSellerProducts: true,
+              canManageSellerStaff: true,
+              seller: makeSeller(),
+            },
+          ],
+        }),
+      ]),
+    );
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Equipe" }));
+
+    expect(await screen.findByText("Proprietario Loja")).toBeInTheDocument();
+    expect(screen.queryByText("Dono")).not.toBeInTheDocument();
   });
 });
 
@@ -219,6 +344,53 @@ function makeStripeConnectStatus(
     stripeAccountUpdatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,
   };
+}
+
+function makeImportJob(
+  overrides: Partial<SellerProductImportJob> = {},
+): SellerProductImportJob {
+  return {
+    id: 1,
+    sellerId: 3,
+    createdByUserId: 1,
+    status: "UPLOADED",
+    mode: "CSV",
+    sourceOriginalFilename: "produtos.csv",
+    createdAt: "2026-05-07T12:00:00.000Z",
+    seller: { id: 3, name: "Deposito Indaiatuba Local" },
+    ...overrides,
+  };
+}
+
+function makeTeamUser(
+  overrides: Partial<UserWithRelations> = {},
+): UserWithRelations {
+  return {
+    id: 10,
+    name: "Colaborador",
+    email: "colaborador@sellers.pediobra.local",
+    createdAt: "2026-05-07T12:00:00.000Z",
+    roles: [{ id: 2, name: "SELLER" }],
+    sellers: [
+      {
+        sellerId: 3,
+        jobTitle: "Vendas",
+        membershipRole: "EMPLOYEE",
+        canEditSeller: false,
+        canManageSellerProducts: true,
+        canManageSellerStaff: false,
+        seller: makeSeller(),
+      },
+    ],
+    ...overrides,
+  };
+}
+
+function paginated<T>(
+  data: T[],
+  meta = { page: 1, limit: 10, total: data.length, totalPages: 1 },
+): Paginated<T> {
+  return { data, meta };
 }
 
 function resolvedParams() {

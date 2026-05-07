@@ -1,10 +1,13 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowLeft,
+  FileClock,
   FileUp,
   Loader2,
   MapPinned,
@@ -13,9 +16,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { sellersService, type UpdateSellerPayload } from "@/lib/api/sellers";
+import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
+import { usersService } from "@/lib/api/users";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
-import { formatCep, formatPhone } from "@/lib/formatters";
+import { formatCep, formatDateTime, formatPhone } from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
@@ -28,16 +33,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/data-table/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
 import { StripeConnectStatusCard } from "@/components/payments/stripe-connect-status-card";
+import { MembershipRoleBadge } from "@/components/badges";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { cn } from "@/lib/utils";
+import type {
+  MembershipRole,
+  SellerProductImportJob,
+  UserWithRelations,
+} from "@/lib/api/types";
 
-type SellerDetailSection = "operations" | "receiving";
+type SellerDetailSection = "operations" | "receiving" | "imports" | "team";
+
+interface TeamMember {
+  userId: number;
+  name: string;
+  email: string;
+  jobTitle: string | null;
+  membershipRole: MembershipRole;
+  canEditSeller: boolean;
+  canManageSellerProducts: boolean;
+  canManageSellerStaff: boolean;
+}
 
 export default function SellerDetailPage({
   params,
@@ -46,6 +70,7 @@ export default function SellerDetailPage({
 }) {
   const { id } = use(params);
   const t = useTranslation();
+  const router = useRouter();
   const sellerId = Number(id);
   const qc = useQueryClient();
   const {
@@ -75,10 +100,40 @@ export default function SellerDetailPage({
 
   const seller = query.data;
   const canEdit = canEditSeller(sellerId);
-  const canEditMasterData = canEdit && isAdmin;
   const canEditTeam = canManageSellerStaff(sellerId);
+  const canEditMasterData = canEdit && isAdmin;
   const [activeSection, setActiveSection] =
     useState<SellerDetailSection>("operations");
+  const [importsPage, setImportsPage] = useState(1);
+  const [teamPage, setTeamPage] = useState(1);
+  const importsParams = {
+    page: importsPage,
+    limit: 10,
+    sellerId,
+  };
+  const teamParams = {
+    page: teamPage,
+    limit: 10,
+    sellerId,
+  };
+  const importsQuery = useQuery({
+    queryKey: queryKeys.sellerProductImports.list(importsParams),
+    queryFn: () => sellerProductImportsService.list(importsParams),
+    enabled:
+      Number.isFinite(sellerId) &&
+      authReady &&
+      Boolean(query.data) &&
+      activeSection === "imports",
+  });
+  const teamQuery = useQuery({
+    queryKey: queryKeys.users.list(teamParams),
+    queryFn: () => usersService.list(teamParams),
+    enabled:
+      Number.isFinite(sellerId) &&
+      authReady &&
+      Boolean(query.data) &&
+      activeSection === "team",
+  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -208,7 +263,129 @@ export default function SellerDetailPage({
   }> = [
     { value: "operations", label: t("seller.operationalData") },
     { value: "receiving", label: t("seller.receiving") },
+    { value: "imports", label: "Dados Importação" },
+    { value: "team", label: "Dados Equipe" },
   ];
+  const teamMembers = useMemo<TeamMember[]>(() => {
+    const all = (teamQuery.data?.data as unknown as UserWithRelations[]) ?? [];
+
+    return all.flatMap((user) => {
+      const sellerLink = user.sellers?.find(
+        (link) => link.sellerId === sellerId,
+      );
+
+      if (!sellerLink) {
+        return [];
+      }
+
+      return [
+        {
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+          jobTitle: sellerLink.jobTitle,
+          membershipRole: sellerLink.membershipRole,
+          canEditSeller: sellerLink.canEditSeller,
+          canManageSellerProducts: sellerLink.canManageSellerProducts,
+          canManageSellerStaff: sellerLink.canManageSellerStaff,
+        },
+      ];
+    });
+  }, [teamQuery.data, sellerId]);
+  const importColumns: ColumnDef<SellerProductImportJob>[] = [
+    {
+      accessorKey: "id",
+      header: "ID",
+      cell: ({ row }) => (
+        <span className="font-mono text-xs text-muted-foreground">
+          #{row.original.id}
+        </span>
+      ),
+      size: 60,
+    },
+    {
+      id: "file",
+      header: "Importação",
+      cell: ({ row }) => (
+        <div>
+          <div className="font-medium">
+            {row.original.sourceOriginalFilename ?? "Importação manual"}
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {row.original.seller?.name ?? `Loja #${row.original.sellerId}`}
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => (
+        <Badge variant="secondary">{row.original.status}</Badge>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Criada em",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {formatDateTime(row.original.createdAt)}
+        </span>
+      ),
+    },
+  ];
+  const teamColumns = useMemo<ColumnDef<TeamMember>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: t("team.name"),
+        cell: ({ row }) => (
+          <div>
+            <div className="font-medium">{row.original.name}</div>
+            <div className="text-xs text-muted-foreground">
+              {row.original.email}
+            </div>
+          </div>
+        ),
+      },
+      {
+        accessorKey: "jobTitle",
+        header: t("team.jobTitle"),
+        cell: ({ row }) =>
+          row.original.membershipRole === "OWNER" ? null : (
+            <span className="text-sm text-muted-foreground">
+              {row.original.jobTitle ?? "—"}
+            </span>
+          ),
+      },
+      {
+        accessorKey: "membershipRole",
+        header: t("team.role"),
+        cell: ({ row }) => (
+          <MembershipRoleBadge role={row.original.membershipRole} />
+        ),
+      },
+      {
+        id: "permissions",
+        header: t("team.permissions"),
+        cell: ({ row }) => {
+          const labels: string[] = [];
+          if (row.original.canEditSeller) labels.push(t("team.editStore"));
+          if (row.original.canManageSellerProducts) {
+            labels.push(t("team.offers"));
+          }
+          if (row.original.canManageSellerStaff) labels.push(t("team.staff"));
+
+          return (
+            <span className="text-xs text-muted-foreground">
+              {labels.length ? labels.join(", ") : "—"}
+            </span>
+          );
+        },
+      },
+    ],
+    [t],
+  );
 
   return (
     <div className="space-y-6">
@@ -251,7 +428,7 @@ export default function SellerDetailPage({
                   aria-selected={activeSection === section.value}
                   aria-controls={`seller-section-panel-${section.value}`}
                   className={cn(
-                    "inline-flex h-9 flex-1 items-center justify-center whitespace-nowrap rounded-sm px-3 text-sm font-medium text-muted-foreground transition-colors sm:flex-none",
+                    "inline-flex h-9 flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-sm px-3 text-sm font-medium text-muted-foreground transition-colors sm:flex-none",
                     "hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                     activeSection === section.value &&
                       "bg-background text-foreground shadow-sm",
@@ -281,26 +458,16 @@ export default function SellerDetailPage({
                         : t("seller.noEditPermission")}
                     </CardDescription>
                   </div>
-                  {(canEdit || canEditTeam) && (
+                  {canEdit && (
                     <div className="flex flex-wrap items-center gap-2">
-                      {canEdit && (
-                        <Button asChild variant="outline">
-                          <Link
-                            href={`/seller-product-imports/new?sellerId=${sellerId}`}
-                          >
-                            <FileUp className="size-4" />
-                            {t("sellerProductImports.importCsv")}
-                          </Link>
-                        </Button>
-                      )}
-                      {canEditTeam && (
-                        <Button asChild variant="outline">
-                          <Link href={`/sellers/${sellerId}/team`}>
-                            <Users className="size-4" />
-                            {t("seller.manageTeam")}
-                          </Link>
-                        </Button>
-                      )}
+                      <Button asChild variant="outline">
+                        <Link
+                          href={`/seller-product-imports/new?sellerId=${sellerId}`}
+                        >
+                          <FileUp className="size-4" />
+                          {t("sellerProductImports.importCsv")}
+                        </Link>
+                      </Button>
                     </div>
                   )}
                 </CardHeader>
@@ -509,6 +676,95 @@ export default function SellerDetailPage({
                   canEdit ? () => stripeConnectMutation.mutate() : undefined
                 }
               />
+            </div>
+          )}
+
+          {activeSection === "imports" && (
+            <div
+              id="seller-section-panel-imports"
+              role="tabpanel"
+              aria-labelledby="seller-section-tab-imports"
+              className="w-full max-w-6xl space-y-4"
+            >
+              <Card>
+                <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle className="flex items-center gap-2">
+                      <FileClock className="size-5 text-muted-foreground" />
+                      Dados Importação
+                    </CardTitle>
+                    <CardDescription>
+                      Histórico de importações de ofertas desta loja.
+                    </CardDescription>
+                  </div>
+                  {canEdit && (
+                    <Button asChild variant="outline">
+                      <Link
+                        href={`/seller-product-imports/new?sellerId=${sellerId}`}
+                      >
+                        <FileUp className="size-4" />
+                        {t("sellerProductImports.importCsv")}
+                      </Link>
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent className="p-6">
+                  <DataTable
+                    data={importsQuery.data?.data ?? []}
+                    columns={importColumns}
+                    meta={importsQuery.data?.meta}
+                    page={importsPage}
+                    onPageChange={setImportsPage}
+                    isLoading={importsQuery.isLoading}
+                    isFetching={importsQuery.isFetching}
+                    emptyMessage="Nenhuma importação encontrada."
+                    onRowClick={(job) =>
+                      router.push(`/seller-product-imports/${job.id}`)
+                    }
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeSection === "team" && (
+            <div
+              id="seller-section-panel-team"
+              role="tabpanel"
+              aria-labelledby="seller-section-tab-team"
+              className="w-full max-w-6xl space-y-4"
+            >
+              <Card>
+                <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="size-5 text-muted-foreground" />
+                      Dados Equipe
+                    </CardTitle>
+                    <CardDescription>{t("team.description")}</CardDescription>
+                  </div>
+                </CardHeader>
+                {!canEditTeam && (
+                  <CardContent className="border-b border-border py-4 text-sm text-muted-foreground">
+                    {t("team.readonly")}
+                  </CardContent>
+                )}
+                <CardContent className="p-6">
+                  <DataTable
+                    data={teamMembers}
+                    columns={teamColumns}
+                    meta={teamQuery.data?.meta}
+                    page={teamPage}
+                    onPageChange={setTeamPage}
+                    isLoading={teamQuery.isLoading}
+                    isFetching={teamQuery.isFetching}
+                    emptyMessage={t("team.empty")}
+                    onRowClick={(member) =>
+                      router.push(`/sellers/${sellerId}/team/${member.userId}`)
+                    }
+                  />
+                </CardContent>
+              </Card>
             </div>
           )}
         </>

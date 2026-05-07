@@ -120,7 +120,9 @@ export function canManageSellerStaff(
   sellerId: number,
 ): boolean {
   if (isAdmin(user)) return true;
-  return isOwnerOf(user, sellerId);
+  const m = membershipFor(user, sellerId);
+  if (!m) return false;
+  return m.membershipRole === "OWNER" || m.canManageSellerStaff;
 }
 
 export function canAccessSeller(
