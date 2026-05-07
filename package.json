@@ -17,7 +17,10 @@
     "test": "jest",
     "test:ci": "jest --coverage --runInBand",
     "test:cov": "jest --coverage",
-    "prepare": "husky"
+    "prepare": "husky",
+    "erp:analyze": "bun run scripts/erp-analyzer/index.ts",
+    "erp:schema-only": "bun run scripts/erp-analyzer/index.ts --schema-only",
+    "erp:no-ai": "bun run scripts/erp-analyzer/index.ts --no-ai"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -52,18 +55,22 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@anthropic-ai/sdk": "^0.95.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/jest": "^30.0.0",
     "@types/node": "^24",
+    "@types/pg": "^8.20.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "husky": "^9.1.7",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
+    "pg": "^8.20.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
