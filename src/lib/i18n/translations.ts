@@ -594,9 +594,17 @@ export const translations = {
       "Selecione uma loja antes de escolher produtos.",
     "sellerProduct.searchProduct": "Buscar produto…",
     "sellerProduct.selectProduct": "Selecione um produto",
+    "sellerProduct.selectOrNameProduct":
+      "Selecione um produto do catálogo ou digite o nome do produto novo.",
     "sellerProduct.noProductsFound": "Nenhum produto encontrado.",
     "sellerProduct.noAvailableProducts":
       "Todos os produtos encontrados já estão ligados a esta loja.",
+    "sellerProduct.newProductReviewHint":
+      "Você pode selecionar um produto existente do catálogo ou digitar o nome de um produto novo.",
+    "sellerProduct.newProductReviewNotice":
+      '"{product}" será enviado para revisão externa. A oferta só entra no catálogo depois da aprovação.',
+    "sellerProduct.sentToReview": "Produto enviado para revisão externa",
+    "sellerProduct.submitForReview": "Enviar para revisão",
     "sellerProduct.managePermissionError":
       "Você não tem permissão de gerenciar ofertas nessa loja.",
     "sellerProduct.skuOptional": "SKU (opcional)",
@@ -774,8 +782,7 @@ export const translations = {
     "dashboard.pendingOrdersCount": "{count} pending",
     "dashboard.pendingOrdersAction": "Open order",
     "dashboard.pendingImports": "Imports awaiting review",
-    "dashboard.pendingImportsDescription":
-      "{product} needs catalog review.",
+    "dashboard.pendingImportsDescription": "{product} needs catalog review.",
     "dashboard.pendingImportsCount": "{count} pending",
     "dashboard.pendingImportsAction": "Review",
     "dashboard.activeDeliveries": "Active deliveries",
@@ -1281,9 +1288,17 @@ export const translations = {
       "Select a store before choosing products.",
     "sellerProduct.searchProduct": "Search product…",
     "sellerProduct.selectProduct": "Select a product",
+    "sellerProduct.selectOrNameProduct":
+      "Select a catalog product or type the new product name.",
     "sellerProduct.noProductsFound": "No products found.",
     "sellerProduct.noAvailableProducts":
       "All matching products are already linked to this store.",
+    "sellerProduct.newProductReviewHint":
+      "You can select an existing catalog product or type the name of a new product.",
+    "sellerProduct.newProductReviewNotice":
+      '"{product}" will be sent to external review. The offer only enters the catalog after approval.',
+    "sellerProduct.sentToReview": "Product sent to external review",
+    "sellerProduct.submitForReview": "Send to review",
     "sellerProduct.managePermissionError":
       "You do not have permission to manage offers in this store.",
     "sellerProduct.skuOptional": "SKU (optional)",
@@ -1971,9 +1986,17 @@ export const translations = {
       "Selecciona una tienda antes de elegir productos.",
     "sellerProduct.searchProduct": "Buscar producto…",
     "sellerProduct.selectProduct": "Selecciona un producto",
+    "sellerProduct.selectOrNameProduct":
+      "Selecciona un producto del catálogo o escribe el nombre del producto nuevo.",
     "sellerProduct.noProductsFound": "No se encontraron productos.",
     "sellerProduct.noAvailableProducts":
       "Todos los productos encontrados ya están vinculados a esta tienda.",
+    "sellerProduct.newProductReviewHint":
+      "Puedes seleccionar un producto existente del catálogo o escribir el nombre de un producto nuevo.",
+    "sellerProduct.newProductReviewNotice":
+      '"{product}" será enviado a revisión externa. La oferta solo entra en el catálogo después de la aprobación.',
+    "sellerProduct.sentToReview": "Producto enviado a revisión externa",
+    "sellerProduct.submitForReview": "Enviar a revisión",
     "sellerProduct.managePermissionError":
       "No tienes permiso para gestionar ofertas en esta tienda.",
     "sellerProduct.skuOptional": "SKU (opcional)",

@@ -20,6 +20,25 @@ export interface CreateSellerProductImportPayload {
   mapping: CatalogImportMappingEntry[];
 }
 
+export interface CreateManualProductReviewPayload {
+  sellerId: number;
+  product: {
+    name: string;
+    brand?: string;
+    unit?: string;
+    size?: string;
+    description?: string;
+    weight?: number;
+    barcodes?: string[];
+  };
+  sellerProduct: {
+    unitPriceCents: number;
+    stockAmount?: number;
+    active?: boolean;
+    sku?: string;
+  };
+}
+
 export interface CatalogImportMappingResponse {
   sellerId: number;
   mappings: CatalogImportMappingEntry[];
@@ -41,6 +60,12 @@ export const sellerProductImportsService = {
       {
         query: params,
       },
+    ),
+
+  createProductReview: (payload: CreateManualProductReviewPayload) =>
+    api.post<SellerProductImportJob>(
+      "/seller-product-imports/product-review",
+      payload,
     ),
 
   create: (payload: CreateSellerProductImportPayload) => {

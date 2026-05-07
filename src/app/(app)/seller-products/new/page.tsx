@@ -4,9 +4,10 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Check, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Check, Info, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { sellerProductsService } from "@/lib/api/seller-products";
+import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
 import { productsService } from "@/lib/api/products";
 import { sellersService } from "@/lib/api/sellers";
 import type { Product } from "@/lib/api/types";
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/select";
 import { MoneyInput } from "@/components/forms/money-input";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 const EMPTY_PRODUCTS: Product[] = [];
 
@@ -42,14 +44,16 @@ export default function NewSellerProductPage() {
   const router = useRouter();
   const t = useTranslation();
   const qc = useQueryClient();
-  const { isAdmin, sellerIds, canManageSellerProducts } = useAuth();
+  const { isAdmin, user, canManageSellerProducts } = useAuth();
 
-  const [sellerId, setSellerId] = useState<string>(
-    sellerIds[0] ? String(sellerIds[0]) : "",
-  );
+  const [selectedSellerId, setSelectedSellerId] = useState<string>("");
   const [productId, setProductId] = useState<string>("");
   const [productSearch, setProductSearch] = useState("");
   const [productSearchOpen, setProductSearchOpen] = useState(false);
+  const [newProductBrand, setNewProductBrand] = useState("");
+  const [newProductUnit, setNewProductUnit] = useState("");
+  const [newProductSize, setNewProductSize] = useState("");
+  const [newProductDescription, setNewProductDescription] = useState("");
   const [priceCents, setPriceCents] = useState(0);
   const [stock, setStock] = useState(0);
   const [active, setActive] = useState(true);
@@ -62,6 +66,18 @@ export default function NewSellerProductPage() {
     queryFn: () => sellersService.list({ page: 1, limit: 100 }),
     enabled: isAdmin,
   });
+
+  const availableSellers = useMemo(
+    () =>
+      isAdmin
+        ? (sellersQ.data?.data ?? [])
+        : (user?.sellers.map((membership) => membership.seller) ?? []),
+    [isAdmin, sellersQ.data?.data, user?.sellers],
+  );
+
+  const sellerId =
+    selectedSellerId ||
+    (!isAdmin && availableSellers[0] ? String(availableSellers[0].id) : "");
 
   const productsQ = useQuery({
     queryKey: queryKeys.products.list({
@@ -83,13 +99,6 @@ export default function NewSellerProductPage() {
     enabled: Boolean(sellerId),
   });
 
-  const availableSellers = useMemo(() => {
-    if (isAdmin) return sellersQ.data?.data ?? [];
-    return (sellersQ.data?.data ?? []).filter((s) =>
-      sellerIds.includes(s.id),
-    );
-  }, [isAdmin, sellersQ.data, sellerIds]);
-
   const canCreateForSelected = sellerId
     ? isAdmin || canManageSellerProducts(Number(sellerId))
     : false;
@@ -103,34 +112,68 @@ export default function NewSellerProductPage() {
     () => products.filter((product) => !linkedProductIds.has(product.id)),
     [linkedProductIds, products],
   );
+  const newProductName = productId ? "" : productSearch.trim();
+  const shouldCreateProductReview = Boolean(sellerId && newProductName);
   const emptyProductLabel =
     products.length > 0 && selectableProducts.length === 0
       ? t("sellerProduct.noAvailableProducts")
       : t("sellerProduct.noProductsFound");
 
   function handleSellerChange(nextSellerId: string) {
-    setSellerId(nextSellerId);
+    setSelectedSellerId(nextSellerId);
     setProductId("");
     setProductSearch("");
   }
 
   const mutation = useMutation({
-    mutationFn: () => {
-      if (!sellerId || !productId)
-        throw new Error(t("sellerProduct.selectStoreProduct"));
-      return sellerProductsService.create({
+    mutationFn: async () => {
+      if (!sellerId) throw new Error(t("sellerProduct.selectStoreProduct"));
+      if (productId) {
+        const sellerProduct = await sellerProductsService.create({
+          sellerId: Number(sellerId),
+          productId: Number(productId),
+          unitPriceCents: priceCents,
+          stockAmount: stock,
+          active,
+          sku: sku || undefined,
+        });
+        return { type: "sellerProduct" as const, sellerProduct };
+      }
+      if (!newProductName) {
+        throw new Error(t("sellerProduct.selectOrNameProduct"));
+      }
+
+      const job = await sellerProductImportsService.createProductReview({
         sellerId: Number(sellerId),
-        productId: Number(productId),
-        unitPriceCents: priceCents,
-        stockAmount: stock,
-        active,
-        sku: sku || undefined,
+        product: {
+          name: newProductName,
+          brand: newProductBrand.trim() || undefined,
+          unit: newProductUnit.trim() || undefined,
+          size: newProductSize.trim() || undefined,
+          description: newProductDescription.trim() || undefined,
+        },
+        sellerProduct: {
+          unitPriceCents: priceCents,
+          stockAmount: stock,
+          active,
+          sku: sku.trim() || undefined,
+        },
       });
+      return { type: "productReview" as const, job };
     },
-    onSuccess: (sp) => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: queryKeys.sellerProducts.all() });
+      if (result.type === "productReview") {
+        qc.invalidateQueries({
+          queryKey: queryKeys.sellerProductImports.all(),
+        });
+        toast.success(t("sellerProduct.sentToReview"));
+        router.push(`/seller-product-imports/${result.job.id}`);
+        return;
+      }
+
       toast.success(t("sellerProduct.created"));
-      router.push(`/seller-products/${sp.id}`);
+      router.push(`/seller-products/${result.sellerProduct.id}`);
     },
     onError: (err: unknown) => {
       const msg =
@@ -160,15 +203,13 @@ export default function NewSellerProductPage() {
       <Card className="max-w-2xl">
         <CardHeader>
           <CardTitle>{t("sellerProduct.data")}</CardTitle>
-          <CardDescription>
-            {t("sellerProduct.priceHint")}
-          </CardDescription>
+          <CardDescription>{t("sellerProduct.priceHint")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 sm:col-span-2">
             <Label>{t("sellerProducts.store")}</Label>
             <Select value={sellerId} onValueChange={handleSellerChange}>
-              <SelectTrigger>
+              <SelectTrigger aria-label={t("sellerProducts.store")}>
                 <SelectValue placeholder={t("sellerProduct.selectStore")} />
               </SelectTrigger>
               <SelectContent>
@@ -193,6 +234,7 @@ export default function NewSellerProductPage() {
               search={productSearch}
               open={productSearchOpen}
               products={selectableProducts}
+              ariaLabel={t("sellerProducts.product")}
               disabled={formFieldsDisabled}
               isLoading={
                 Boolean(sellerId) &&
@@ -216,11 +258,73 @@ export default function NewSellerProductPage() {
                 setProductSearchOpen(false);
               }}
             />
+            {!productId && sellerId ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100">
+                <div className="flex items-start gap-2">
+                  <Info className="mt-0.5 size-4 shrink-0" />
+                  <p>
+                    {newProductName
+                      ? t("sellerProduct.newProductReviewNotice", {
+                          product: newProductName,
+                        })
+                      : t("sellerProduct.newProductReviewHint")}
+                  </p>
+                </div>
+              </div>
+            ) : null}
           </div>
+
+          {shouldCreateProductReview ? (
+            <div className="grid gap-4 sm:col-span-2 sm:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="new-product-brand">{t("product.brand")}</Label>
+                <Input
+                  id="new-product-brand"
+                  value={newProductBrand}
+                  disabled={formFieldsDisabled}
+                  onChange={(event) => setNewProductBrand(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-product-unit">{t("product.unit")}</Label>
+                <Input
+                  id="new-product-unit"
+                  value={newProductUnit}
+                  disabled={formFieldsDisabled}
+                  placeholder={t("product.unitPlaceholder")}
+                  onChange={(event) => setNewProductUnit(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-product-size">{t("product.size")}</Label>
+                <Input
+                  id="new-product-size"
+                  value={newProductSize}
+                  disabled={formFieldsDisabled}
+                  onChange={(event) => setNewProductSize(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2 sm:col-span-3">
+                <Label htmlFor="new-product-description">
+                  {t("common.description")}
+                </Label>
+                <Textarea
+                  id="new-product-description"
+                  value={newProductDescription}
+                  disabled={formFieldsDisabled}
+                  rows={3}
+                  onChange={(event) =>
+                    setNewProductDescription(event.target.value)
+                  }
+                />
+              </div>
+            </div>
+          ) : null}
 
           <div className="space-y-2">
             <Label htmlFor="price">{t("sellerProduct.unitPrice")}</Label>
             <MoneyInput
+              id="price"
               valueCents={priceCents}
               onChangeCents={setPriceCents}
               disabled={formFieldsDisabled}
@@ -242,7 +346,9 @@ export default function NewSellerProductPage() {
           <div className="space-y-2 sm:col-span-2">
             <div className="flex items-center justify-between gap-4 rounded-md border border-border px-3 py-2.5">
               <div className="space-y-0.5">
-                <Label htmlFor="active">{t("sellerProduct.availability")}</Label>
+                <Label htmlFor="active">
+                  {t("sellerProduct.availability")}
+                </Label>
                 <p className="text-xs font-medium text-muted-foreground">
                   {active
                     ? t("sellerProducts.active")
@@ -282,7 +388,7 @@ export default function NewSellerProductPage() {
               disabled={
                 mutation.isPending ||
                 !sellerId ||
-                !productId ||
+                (!productId && !newProductName) ||
                 !canCreateForSelected ||
                 linkedProductIdsQ.isFetching
               }
@@ -292,7 +398,9 @@ export default function NewSellerProductPage() {
               ) : (
                 <Save className="size-4" />
               )}
-              {t("sellerProduct.create")}
+              {shouldCreateProductReview
+                ? t("sellerProduct.submitForReview")
+                : t("sellerProduct.create")}
             </Button>
           </div>
         </CardContent>
@@ -306,6 +414,7 @@ function ProductCombobox({
   search,
   open,
   products,
+  ariaLabel,
   disabled = false,
   isLoading,
   placeholder,
@@ -319,6 +428,7 @@ function ProductCombobox({
   search: string;
   open: boolean;
   products: Product[];
+  ariaLabel: string;
   disabled?: boolean;
   isLoading: boolean;
   placeholder: string;
@@ -334,6 +444,7 @@ function ProductCombobox({
     <div className="relative">
       <Input
         role="combobox"
+        aria-label={ariaLabel}
         aria-expanded={open && !disabled}
         aria-controls="seller-product-product-options"
         aria-autocomplete="list"
