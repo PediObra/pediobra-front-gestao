@@ -5,6 +5,7 @@ import DashboardPage from "./page";
 import { ordersService } from "@/lib/api/orders";
 import { deliveryRequestsService } from "@/lib/api/delivery-requests";
 import { operationsService } from "@/lib/api/operations";
+import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
 import { sellersService } from "@/lib/api/sellers";
 import type {
   AuthUser,
@@ -12,6 +13,7 @@ import type {
   Order,
   Paginated,
   Seller,
+  SellerProductImportReviewRow,
 } from "@/lib/api/types";
 
 const sellers = [
@@ -66,6 +68,12 @@ jest.mock("@/lib/api/operations", () => ({
   },
 }));
 
+jest.mock("@/lib/api/seller-product-imports", () => ({
+  sellerProductImportsService: {
+    listProductReview: jest.fn(),
+  },
+}));
+
 jest.mock("sonner", () => ({
   toast: {
     success: jest.fn(),
@@ -82,6 +90,38 @@ const pendingOrder = {
   totalAmountCents: 10_000,
   seller: sellers[0],
 } as Order;
+
+const pendingImportReviewRow = {
+  id: 88,
+  jobId: 123,
+  rowNumber: 4,
+  status: "PENDING_PRODUCT_REVIEW",
+  matchStrategy: "NEW_CANDIDATE",
+  matchConfidenceBps: 0,
+  normalizedPayload: {
+    product: {
+      name: "Argamassa ACIII",
+      brand: "Quartzolit",
+      unit: "UN",
+      size: "20kg",
+    },
+    sellerProduct: {
+      sku: "ERP-88",
+      unitPriceCents: 3290,
+      stockAmount: 6,
+    },
+  },
+  errors: [],
+  warnings: [],
+  job: {
+    id: 123,
+    sellerId: 20,
+    createdByUserId: 1,
+    status: "PENDING_PRODUCT_REVIEW",
+    mode: "MERGE_UPSERT",
+    seller: sellers[0],
+  },
+} satisfies SellerProductImportReviewRow;
 
 const overview = {
   summary: {
@@ -169,6 +209,11 @@ describe("DashboardPage", () => {
     jest
       .mocked(sellersService.list)
       .mockResolvedValue(paginated<Seller>(sellers));
+    jest
+      .mocked(sellerProductImportsService.listProductReview)
+      .mockResolvedValue(
+        paginated<SellerProductImportReviewRow>([], { total: 0 }),
+      );
   });
 
   afterEach(() => {
@@ -277,6 +322,35 @@ describe("DashboardPage", () => {
     });
   });
 
+  it("shows the pending import review alert only for admins", async () => {
+    mockAuth = { ...buildAuth(), isAdmin: true, isSeller: false };
+    jest
+      .mocked(sellerProductImportsService.listProductReview)
+      .mockResolvedValueOnce(
+        paginated<SellerProductImportReviewRow>([pendingImportReviewRow], {
+          total: 3,
+        }),
+      );
+    const { container } = renderWithQueryClient(<DashboardPage />);
+
+    expect(
+      await screen.findByText("Importações aguardando revisão"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Argamassa ACIII precisa de revisão do catálogo/),
+    ).toBeInTheDocument();
+    expect(screen.getByText("3 pendente(s)")).toBeInTheDocument();
+    expect(
+      container.querySelector('a[href="/seller-product-imports/product-review"]'),
+    ).toBeTruthy();
+    expect(screen.queryByText("Pedidos aguardando aceite")).toBeNull();
+    expect(sellerProductImportsService.listProductReview).toHaveBeenCalledWith({
+      page: 1,
+      limit: 1,
+    });
+    expect(ordersService.list).not.toHaveBeenCalled();
+  });
+
   it("hides the pending-order alert when there are no pending orders", async () => {
     jest
       .mocked(ordersService.list)
@@ -288,6 +362,7 @@ describe("DashboardPage", () => {
       expect(ordersService.list).toHaveBeenCalled();
     });
     expect(screen.queryByText("Pedidos aguardando aceite")).toBeNull();
+    expect(sellerProductImportsService.listProductReview).not.toHaveBeenCalled();
   });
 });
 

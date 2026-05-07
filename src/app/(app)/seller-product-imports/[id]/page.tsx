@@ -88,8 +88,8 @@ export default function SellerProductImportDetailPage({
       setConfirmApplyOpen(false);
       toast.success(
         job.status === "PENDING_PRODUCT_REVIEW"
-          ? "Ofertas existentes aplicadas; produtos novos ficaram para analise master"
-          : "Importacao aplicada",
+          ? "Ofertas existentes aplicadas; produtos novos ficaram para revisão do catálogo"
+          : "Importação aplicada",
       );
     },
     onError: (error: unknown) => {
@@ -111,6 +111,11 @@ export default function SellerProductImportDetailPage({
   const reviewPreviewRows =
     job?.status === "READY_FOR_REVIEW" ? rows.filter(needsProductReview) : [];
   const productReviewRows = [...pendingProductRows, ...reviewPreviewRows];
+  const productReviewCountLabel = `${productReviewRows.length} produto${
+    productReviewRows.length === 1 ? "" : "s"
+  }`;
+  const productReviewVerb =
+    productReviewRows.length === 1 ? "será enviado" : "serão enviados";
 
   return (
     <div className="space-y-6">
@@ -157,17 +162,22 @@ export default function SellerProductImportDetailPage({
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 text-sm md:grid-cols-2">
-                <InfoLine label="Status ETL" value={job.status} />
+                <InfoLine
+                  label="Status da importação"
+                  value={statusLabel(job.status)}
+                />
                 <InfoLine
                   label="Processado em"
                   value={formatDateTime(job.processedAt)}
                 />
+                {job.appliedAt ? (
+                  <InfoLine
+                    label="Aplicado em"
+                    value={formatDateTime(job.appliedAt)}
+                  />
+                ) : null}
                 <InfoLine
-                  label="Aplicado em"
-                  value={formatDateTime(job.appliedAt)}
-                />
-                <InfoLine
-                  label="Tentativas"
+                  label="Execuções ETL"
                   value={String(job.attemptCount ?? 0)}
                 />
                 {job.etlNotificationError ? (
@@ -192,8 +202,8 @@ export default function SellerProductImportDetailPage({
                 <Metric
                   label={
                     job.status === "READY_FOR_REVIEW"
-                      ? "Irão para master"
-                      : "Aguardando master"
+                      ? "Revisão do catálogo"
+                      : "Revisão externa"
                   }
                   value={stats.productReviewRows}
                 />
@@ -207,19 +217,19 @@ export default function SellerProductImportDetailPage({
                 <div className="space-y-2">
                   <div className="font-medium">
                     {job.status === "READY_FOR_REVIEW"
-                      ? `${productReviewRows.length} produto(s) irão para aprovação master ao aplicar`
-                      : `${productReviewRows.length} produto(s) aguardando aprovação master`}
+                      ? `${productReviewCountLabel} ${productReviewVerb} para revisão do catálogo ao aplicar`
+                      : `${productReviewCountLabel} aguardando revisão do catálogo`}
                   </div>
                   <div className="text-muted-foreground">
                     {job.status === "READY_FOR_REVIEW"
-                      ? "A fila master ainda não aparece para admins. Ela será criada quando a loja clicar em Aplicar importação."
-                      : "As ofertas que já tinham produto global confiável foram aplicadas. Produtos novos precisam ser aprovados ou vinculados por um admin antes de entrar no catálogo."}
+                      ? "A pendência de revisão será criada quando a loja clicar em Aplicar importação."
+                      : "As ofertas que já tinham produto global confiável foram aplicadas. Produtos novos precisam ser aprovados ou vinculados pela equipe de catálogo antes de entrar na base global."}
                   </div>
                   {job.status === "READY_FOR_REVIEW" ? (
                     <div className="text-muted-foreground">
                       Ao aplicar, somente linhas com produto existente e match
                       confiável viram ofertas da loja agora. Produtos novos ou
-                      pouco confiáveis seguem para análise master.
+                      pouco confiáveis seguem para revisão do catálogo.
                     </div>
                   ) : null}
                 </div>
@@ -255,7 +265,7 @@ export default function SellerProductImportDetailPage({
                 <p className="max-w-2xl text-right text-sm text-muted-foreground">
                   Ao aplicar, somente linhas com produto existente e match
                   confiável viram ofertas da loja agora. Produtos novos ou pouco
-                  confiáveis seguem para análise master.
+                  confiáveis seguem para revisão do catálogo.
                 </p>
               ) : null}
               <Button
@@ -313,6 +323,7 @@ export default function SellerProductImportDetailPage({
                           <TableCell>
                             <Badge
                               variant={rowStatusVariant(row)}
+                              className="whitespace-nowrap"
                             >
                               {rowStatusLabel(row)}
                             </Badge>
@@ -372,7 +383,7 @@ export default function SellerProductImportDetailPage({
               </DialogHeader>
               <div className="rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-muted-foreground">
                 Produtos novos ou pouco confiáveis não entram direto no catálogo
-                global. Eles serão enviados para análise master.
+                global. Eles serão enviados para revisão do catálogo.
               </div>
               <DialogFooter>
                 <Button
@@ -455,7 +466,7 @@ function statusLabel(status: SellerProductImportStatus) {
     PROCESSING: "Processando",
     READY_FOR_REVIEW: "Pronto para revisar",
     APPLYING: "Aplicando",
-    PENDING_PRODUCT_REVIEW: "Aguardando master",
+    PENDING_PRODUCT_REVIEW: "Revisão externa",
     APPLIED: "Aplicado",
     FAILED: "Falhou",
     APPLY_FAILED: "Falha ao aplicar",
@@ -464,7 +475,7 @@ function statusLabel(status: SellerProductImportStatus) {
 }
 
 function rowStatusLabel(row: SellerProductImportRow) {
-  if (needsProductReview(row)) return "Ira para master";
+  if (needsProductReview(row)) return "Revisão externa";
 
   const labels: Record<SellerProductImportRowStatus, string> = {
     VALID: "Aplicavel",
@@ -472,7 +483,7 @@ function rowStatusLabel(row: SellerProductImportRow) {
     INVALID: "Invalida",
     APPLIED: "Aplicada",
     SKIPPED: "Ignorada",
-    PENDING_PRODUCT_REVIEW: "Aguardando master",
+    PENDING_PRODUCT_REVIEW: "Revisão externa",
     PRODUCT_REJECTED: "Rejeitada",
   };
   return labels[row.status];

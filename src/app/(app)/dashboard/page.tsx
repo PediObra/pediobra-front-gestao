@@ -10,6 +10,7 @@ import {
   CircleDot,
   ClipboardList,
   DollarSign,
+  FileSearch,
   Loader2,
   RefreshCw,
   Route,
@@ -49,12 +50,14 @@ import {
   type OrderStats,
 } from "@/lib/api/orders";
 import { operationsService } from "@/lib/api/operations";
+import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
 import { sellersService } from "@/lib/api/sellers";
 import type {
   OperationIssue,
   OperationJob,
   OperationOffer,
   Order,
+  SellerProductImportReviewRow,
 } from "@/lib/api/types";
 import {
   centsToBRL,
@@ -71,6 +74,7 @@ type DashboardPeriod = "today" | "yesterday" | "last7Days";
 
 const ALL_SELLERS = "ALL";
 const PENDING_ORDERS_FALLBACK_REFRESH_MS = 30_000;
+const PENDING_IMPORT_REVIEWS_FALLBACK_REFRESH_MS = 30_000;
 
 export default function DashboardPage() {
   const t = useTranslation();
@@ -134,6 +138,13 @@ export default function DashboardPage() {
     }),
     [],
   );
+  const pendingProductReviewParams = useMemo(
+    () => ({
+      page: 1,
+      limit: 1,
+    }),
+    [],
+  );
 
   const ordersStatsQ = useQuery({
     queryKey: queryKeys.orders.stats(orderParams),
@@ -146,7 +157,20 @@ export default function DashboardPage() {
   const pendingOrdersQ = useQuery({
     queryKey: queryKeys.orders.list(pendingOrderParams),
     queryFn: () => ordersService.list(pendingOrderParams),
+    enabled: !isAdmin,
     refetchInterval: PENDING_ORDERS_FALLBACK_REFRESH_MS,
+    refetchIntervalInBackground: false,
+  });
+  const pendingProductReviewsQ = useQuery({
+    queryKey: queryKeys.sellerProductImports.productReview(
+      pendingProductReviewParams,
+    ),
+    queryFn: () =>
+      sellerProductImportsService.listProductReview(
+        pendingProductReviewParams,
+      ),
+    enabled: isAdmin,
+    refetchInterval: PENDING_IMPORT_REVIEWS_FALLBACK_REFRESH_MS,
     refetchIntervalInBackground: false,
   });
   const overviewQuery = useQuery({
@@ -177,10 +201,16 @@ export default function DashboardPage() {
   const isFetching =
     ordersStatsQ.isFetching ||
     deliveriesStatsQ.isFetching ||
-    pendingOrdersQ.isFetching ||
+    (!isAdmin && pendingOrdersQ.isFetching) ||
+    (isAdmin && pendingProductReviewsQ.isFetching) ||
     overviewQuery.isFetching;
-  const pendingOrder = pendingOrdersQ.data?.data[0];
-  const pendingOrdersCount = pendingOrdersQ.data?.meta.total ?? 0;
+  const pendingOrder = !isAdmin ? pendingOrdersQ.data?.data[0] : undefined;
+  const pendingOrdersCount = !isAdmin
+    ? (pendingOrdersQ.data?.meta.total ?? 0)
+    : 0;
+  const pendingProductReview = pendingProductReviewsQ.data?.data[0];
+  const pendingProductReviewsCount =
+    pendingProductReviewsQ.data?.meta.total ?? 0;
   const overview = overviewQuery.data;
   const periodOptions: Array<{ value: DashboardPeriod; label: string }> = [
     { value: "today", label: t("dashboard.period.today") },
@@ -194,6 +224,7 @@ export default function DashboardPage() {
     qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
     qc.invalidateQueries({ queryKey: queryKeys.drivers.all() });
     qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
+    qc.invalidateQueries({ queryKey: queryKeys.sellerProductImports.all() });
   }
 
   return (
@@ -206,13 +237,24 @@ export default function DashboardPage() {
               Números, fila de atenção e despacho em tempo real.
             </p>
           </div>
-          {pendingOrder && pendingOrdersCount > 0 ? (
-            <div className="flex shrink-0 justify-end">
-              <PendingOrderAlert
-                order={pendingOrder}
-                count={pendingOrdersCount}
-                showSellerName={sellerOptions.length > 1}
-              />
+          {(!isAdmin && pendingOrder) ||
+          (isAdmin && pendingProductReview && pendingProductReviewsCount > 0) ? (
+            <div className="flex shrink-0 flex-col items-stretch gap-2 sm:items-end">
+              {!isAdmin && pendingOrder && pendingOrdersCount > 0 ? (
+                <PendingOrderAlert
+                  order={pendingOrder}
+                  count={pendingOrdersCount}
+                  showSellerName={sellerOptions.length > 1}
+                />
+              ) : null}
+              {isAdmin &&
+              pendingProductReview &&
+              pendingProductReviewsCount > 0 ? (
+                <PendingImportReviewAlert
+                  row={pendingProductReview}
+                  count={pendingProductReviewsCount}
+                />
+              ) : null}
             </div>
           ) : null}
         </div>
@@ -526,6 +568,48 @@ function PendingOrderAlert({
       </span>
       <span className="hidden items-center gap-1 text-sm font-medium sm:inline-flex">
         {t("dashboard.pendingOrdersAction")}
+        <ArrowRight className="size-3.5" />
+      </span>
+    </Link>
+  );
+}
+
+function PendingImportReviewAlert({
+  row,
+  count,
+}: {
+  row: SellerProductImportReviewRow;
+  count: number;
+}) {
+  const t = useTranslation();
+  const productName =
+    row.normalizedPayload?.product?.name ?? `Linha #${row.rowNumber}`;
+  const sellerName = row.job.seller?.name;
+
+  return (
+    <Link
+      href="/seller-product-imports/product-review"
+      className="animate-pending-order-attention flex w-full items-center gap-3 rounded-md border border-primary/60 bg-primary/10 px-3 py-2 text-left shadow-sm transition-colors hover:border-primary hover:bg-primary/15 sm:w-auto"
+    >
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-primary/20 text-[color-mix(in_oklch,var(--primary)_75%,black)] dark:text-primary">
+        <FileSearch className="size-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold">
+          {t("dashboard.pendingImports")}
+        </span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {t("dashboard.pendingImportsDescription", {
+            product: productName,
+          })}
+          {sellerName ? ` · ${sellerName}` : ""}
+        </span>
+      </span>
+      <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-semibold text-primary-foreground">
+        {t("dashboard.pendingImportsCount", { count })}
+      </span>
+      <span className="hidden items-center gap-1 text-sm font-medium sm:inline-flex">
+        {t("dashboard.pendingImportsAction")}
         <ArrowRight className="size-3.5" />
       </span>
     </Link>

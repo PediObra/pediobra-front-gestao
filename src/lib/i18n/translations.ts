@@ -86,6 +86,11 @@ export const translations = {
     "dashboard.pendingOrdersDescription": "{code} precisa de atenção.",
     "dashboard.pendingOrdersCount": "{count} pendente(s)",
     "dashboard.pendingOrdersAction": "Abrir pedido",
+    "dashboard.pendingImports": "Importações aguardando revisão",
+    "dashboard.pendingImportsDescription":
+      "{product} precisa de revisão do catálogo.",
+    "dashboard.pendingImportsCount": "{count} pendente(s)",
+    "dashboard.pendingImportsAction": "Revisar",
     "dashboard.activeDeliveries": "Entregas ativas",
     "dashboard.deliveryRequestsHint":
       "Entregas avulsas em andamento no período",
@@ -768,6 +773,11 @@ export const translations = {
     "dashboard.pendingOrdersDescription": "{code} needs attention.",
     "dashboard.pendingOrdersCount": "{count} pending",
     "dashboard.pendingOrdersAction": "Open order",
+    "dashboard.pendingImports": "Imports awaiting review",
+    "dashboard.pendingImportsDescription":
+      "{product} needs catalog review.",
+    "dashboard.pendingImportsCount": "{count} pending",
+    "dashboard.pendingImportsAction": "Review",
     "dashboard.activeDeliveries": "Active deliveries",
     "dashboard.deliveryRequestsHint":
       "Standalone deliveries in progress in the period",
@@ -1451,6 +1461,11 @@ export const translations = {
     "dashboard.pendingOrdersDescription": "{code} necesita atención.",
     "dashboard.pendingOrdersCount": "{count} pendiente(s)",
     "dashboard.pendingOrdersAction": "Abrir pedido",
+    "dashboard.pendingImports": "Importaciones aguardando revisión",
+    "dashboard.pendingImportsDescription":
+      "{product} necesita revisión del catálogo.",
+    "dashboard.pendingImportsCount": "{count} pendiente(s)",
+    "dashboard.pendingImportsAction": "Revisar",
     "dashboard.activeDeliveries": "Entregas activas",
     "dashboard.deliveryRequestsHint": "Entregas avulsas en curso en el período",
     "dashboard.recentDeliveries": "Entregas recientes",

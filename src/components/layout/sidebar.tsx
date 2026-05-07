@@ -75,12 +75,6 @@ const NAV_ITEMS: NavItem[] = [
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
   },
   {
-    labelKey: "nav.importReviews",
-    href: "/seller-product-imports/product-review",
-    icon: FileSearch,
-    show: ({ isAdmin }) => isAdmin,
-  },
-  {
     labelKey: "nav.orders",
     href: "/orders",
     icon: ClipboardList,
@@ -120,6 +114,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.payments",
     href: "/payments",
     icon: Receipt,
+    show: ({ isAdmin }) => isAdmin,
+  },
+  {
+    labelKey: "nav.importReviews",
+    href: "/seller-product-imports/product-review",
+    icon: FileSearch,
     show: ({ isAdmin }) => isAdmin,
   },
 ];
