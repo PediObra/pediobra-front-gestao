@@ -11,6 +11,7 @@ import {
   Truck,
   Receipt,
   ClipboardList,
+  FileSearch,
   Menu,
   Recycle,
   Route,
@@ -40,6 +41,7 @@ type NavItem = {
     | "nav.orders"
     | "nav.deliveryRequests"
     | "nav.products"
+    | "nav.importReviews"
     | "nav.usedListings"
     | "nav.sellers"
     | "nav.drivers"
@@ -71,6 +73,12 @@ const NAV_ITEMS: NavItem[] = [
     ],
     icon: Package,
     show: ({ isAdmin, isSeller }) => isAdmin || isSeller,
+  },
+  {
+    labelKey: "nav.importReviews",
+    href: "/seller-product-imports/product-review",
+    icon: FileSearch,
+    show: ({ isAdmin }) => isAdmin,
   },
   {
     labelKey: "nav.orders",
@@ -118,6 +126,14 @@ const NAV_ITEMS: NavItem[] = [
 
 const SIDEBAR_COLLAPSED_STORAGE_KEY = "pediobra:sidebar-collapsed";
 const sidebarCollapsedListeners = new Set<() => void>();
+
+function getActiveMatchScore(pathname: string, activePrefixes: string[]) {
+  return activePrefixes.reduce((bestScore, prefix) => {
+    const matches = pathname === prefix || pathname.startsWith(`${prefix}/`);
+
+    return matches ? Math.max(bestScore, prefix.length) : bestScore;
+  }, -1);
+}
 
 function readStoredSidebarCollapsed() {
   if (typeof window === "undefined") {
@@ -212,17 +228,32 @@ function SidebarNav({
   const t = useTranslation();
   const navContext = { isAdmin, isSeller };
 
-  const items = NAV_ITEMS.filter((item) => item.show(navContext));
+  const items = NAV_ITEMS.filter((item) => item.show(navContext)).map(
+    (item) => {
+      const href =
+        typeof item.href === "function" ? item.href(navContext) : item.href;
+
+      return {
+        ...item,
+        activePrefixes: item.activePrefixes ?? [href],
+        href,
+      };
+    },
+  );
+  const activeIndex = items.reduce(
+    (best, item, index) => {
+      const score = getActiveMatchScore(pathname, item.activePrefixes);
+
+      return score > best.score ? { index, score } : best;
+    },
+    { index: -1, score: -1 },
+  ).index;
 
   return (
     <nav aria-label={t("sidebar.nav")} className={className}>
-      {items.map((item) => {
-        const href =
-          typeof item.href === "function" ? item.href(navContext) : item.href;
-        const activePrefixes = item.activePrefixes ?? [href];
-        const active = activePrefixes.some(
-          (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-        );
+      {items.map((item, index) => {
+        const { href } = item;
+        const active = index === activeIndex;
         const Icon = item.icon;
         const label = t(item.labelKey);
         const link = (

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   FileClock,
+  FileSearch,
   FileUp,
   Plus,
   RotateCcw,
@@ -312,6 +313,14 @@ export default function SellerProductsListPage() {
         actions={
           canCreate && (
             <div className="flex flex-wrap items-center gap-2">
+              {isAdmin ? (
+                <Button asChild variant="outline">
+                  <Link href="/seller-product-imports/product-review">
+                    <FileSearch className="size-4" />
+                    Revisar importados
+                  </Link>
+                </Button>
+              ) : null}
               {sellerOptions.length === 0 ? (
                 <Button type="button" variant="outline" disabled>
                   <FileUp className="size-4" />

@@ -42,6 +42,9 @@ describe("MobileSidebar", () => {
       "href",
       "/products",
     );
+    expect(
+      within(nav).getByRole("link", { name: /Importações pendentes/ }),
+    ).toHaveAttribute("href", "/seller-product-imports/product-review");
     expect(within(nav).getByRole("link", { name: /Pedidos/ })).toHaveAttribute(
       "aria-current",
       "page",
@@ -90,6 +93,26 @@ describe("MobileSidebar", () => {
     expect(within(nav).queryByRole("link", { name: /Motoristas/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Usuários/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Pagamentos/ })).toBeNull();
+    expect(
+      within(nav).queryByRole("link", { name: /Importações pendentes/ }),
+    ).toBeNull();
+  });
+
+  it("highlights the admin import review entry over the products prefix", () => {
+    mockUsePathname.mockReturnValue("/seller-product-imports/product-review");
+
+    render(<Sidebar />);
+
+    const nav = screen.getByRole("navigation", {
+      name: "Navegação principal",
+    });
+
+    expect(
+      within(nav).getByRole("link", { name: /Importações pendentes/ }),
+    ).toHaveAttribute("aria-current", "page");
+    expect(
+      within(nav).getByRole("link", { name: /Produtos/ }),
+    ).not.toHaveAttribute("aria-current");
   });
 
   it("toggles the desktop sidebar collapsed state", () => {

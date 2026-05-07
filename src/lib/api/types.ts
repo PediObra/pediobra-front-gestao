@@ -348,6 +348,7 @@ export type SellerProductImportStatus =
   | "PROCESSING"
   | "READY_FOR_REVIEW"
   | "APPLYING"
+  | "PENDING_PRODUCT_REVIEW"
   | "APPLIED"
   | "FAILED"
   | "APPLY_FAILED";
@@ -357,7 +358,9 @@ export type SellerProductImportRowStatus =
   | "WARNING"
   | "INVALID"
   | "APPLIED"
-  | "SKIPPED";
+  | "SKIPPED"
+  | "PENDING_PRODUCT_REVIEW"
+  | "PRODUCT_REJECTED";
 
 export type CatalogImportCanonicalField =
   | "product.name"
@@ -405,6 +408,9 @@ export interface SellerProductImportRow {
   existingProductId?: number | null;
   createdProductId?: number | null;
   sellerProductId?: number | null;
+  reviewedByUserId?: number | null;
+  reviewedAt?: string | null;
+  reviewRejectionReason?: string | null;
   errors?: string[] | null;
   warnings?: string[] | null;
   createdAt?: string;
@@ -436,6 +442,11 @@ export interface SellerProductImportJob {
   seller?: Pick<Seller, "id" | "name"> | null;
   createdByUser?: Pick<User, "id" | "name" | "email"> | null;
   rows?: SellerProductImportRow[];
+}
+
+export interface SellerProductImportReviewRow
+  extends SellerProductImportRow {
+  job: SellerProductImportJob;
 }
 
 // ---- Seller Products ----

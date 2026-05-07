@@ -3,6 +3,7 @@ import type {
   CatalogImportMappingEntry,
   Paginated,
   SellerProductImportJob,
+  SellerProductImportReviewRow,
   SellerProductImportStatus,
 } from "./types";
 
@@ -34,6 +35,14 @@ export const sellerProductImportsService = {
   getById: (id: number) =>
     api.get<SellerProductImportJob>(`/seller-product-imports/${id}`),
 
+  listProductReview: (params: ListSellerProductImportsParams = {}) =>
+    api.get<Paginated<SellerProductImportReviewRow>>(
+      "/seller-product-imports/product-review",
+      {
+        query: params,
+      },
+    ),
+
   create: (payload: CreateSellerProductImportPayload) => {
     const formData = new FormData();
     formData.set("sellerId", String(payload.sellerId));
@@ -47,6 +56,23 @@ export const sellerProductImportsService = {
 
   apply: (id: number) =>
     api.post<SellerProductImportJob>(`/seller-product-imports/${id}/apply`),
+
+  approveProduct: (rowId: number) =>
+    api.post<SellerProductImportJob>(
+      `/seller-product-imports/rows/${rowId}/approve-product`,
+    ),
+
+  linkProduct: (rowId: number, productId: number) =>
+    api.post<SellerProductImportJob>(
+      `/seller-product-imports/rows/${rowId}/link-product`,
+      { productId },
+    ),
+
+  rejectProduct: (rowId: number, reason: string) =>
+    api.post<SellerProductImportJob>(
+      `/seller-product-imports/rows/${rowId}/reject-product`,
+      { reason },
+    ),
 
   getMapping: (sellerId: number) =>
     api.get<CatalogImportMappingResponse>(

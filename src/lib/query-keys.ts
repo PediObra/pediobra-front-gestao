@@ -53,6 +53,8 @@ export const queryKeys = {
     list: (params: ListSellerProductImportsParams) =>
       ["sellerProductImports", "list", params] as const,
     byId: (id: number) => ["sellerProductImports", "byId", id] as const,
+    productReview: (params: ListSellerProductImportsParams) =>
+      ["sellerProductImports", "productReview", params] as const,
     mapping: (sellerId: number) =>
       ["sellerProductImports", "mapping", sellerId] as const,
   },
