@@ -1,4 +1,4 @@
-import type { SchemaData, Module, TableInfo, ViewInfo, FunctionInfo, TriggerInfo } from './types'
+import type { SchemaData, Module, TableInfo } from './types'
 
 // Known ERP module prefixes (Portuguese and English)
 const MODULE_PREFIXES: Record<string, string> = {
