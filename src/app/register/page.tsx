@@ -60,6 +60,12 @@ export default function RegisterPage() {
         err instanceof ApiError
           ? err.displayMessage
           : "Nao foi possivel criar a conta";
+
+      if (err instanceof ApiError && err.status === 409) {
+        form.setError("email", { type: "server", message: msg });
+        form.setFocus("email");
+      }
+
       toast.error(msg);
     } finally {
       setSubmitting(false);

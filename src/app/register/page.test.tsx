@@ -1,6 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import RegisterPage from "./page";
 import { authService } from "@/lib/api/auth";
+import { ApiError } from "@/lib/api/client";
+import { toast } from "sonner";
 
 const mockReplace = jest.fn();
 const mockSetSession = jest.fn();
@@ -78,5 +80,36 @@ describe("RegisterPage", () => {
       expect.objectContaining({ accessToken: "access" }),
     );
     expect(mockReplace).toHaveBeenCalledWith("/onboarding/seller");
+  });
+
+  it("shows email conflict errors in the email field", async () => {
+    jest.mocked(authService.registerSeller).mockRejectedValueOnce(
+      new ApiError(409, "Email já cadastrado.", {
+        statusCode: 409,
+        message: "Email já cadastrado.",
+        error: "Conflict",
+      }),
+    );
+
+    render(<RegisterPage />);
+
+    fireEvent.change(screen.getByLabelText("Nome"), {
+      target: { value: "Lucas" },
+    });
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "lucas@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "secret123" },
+    });
+    fireEvent.change(screen.getByLabelText("Confirmar senha"), {
+      target: { value: "secret123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Criar conta/i }));
+
+    expect(await screen.findByText("Email já cadastrado.")).toBeInTheDocument();
+    expect(toast.error).toHaveBeenCalledWith("Email já cadastrado.");
+    expect(mockSetSession).not.toHaveBeenCalled();
+    expect(mockReplace).not.toHaveBeenCalled();
   });
 });
