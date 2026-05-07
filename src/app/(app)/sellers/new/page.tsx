@@ -10,7 +10,10 @@ import { z } from "zod";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import { sellersService, type CreateSellerPayload } from "@/lib/api/sellers";
+import { sellerOnboardingService } from "@/lib/api/seller-onboarding";
+import { authService } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
+import { useAuthStore } from "@/lib/auth/store";
 import { queryKeys } from "@/lib/query-keys";
 import { PageHeader } from "@/components/layout/page-header";
 import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
@@ -47,7 +50,10 @@ export default function NewSellerPage() {
   const router = useRouter();
   const t = useTranslation();
   const qc = useQueryClient();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSeller } = useAuth();
+  const refreshToken = useAuthStore((s) => s.refreshToken);
+  const setSession = useAuthStore((s) => s.setSession);
+  const setUser = useAuthStore((s) => s.setUser);
   const [logoFile, setLogoFile] = useState<File | undefined>();
   const [placesSessionToken] = useState(
     () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -82,9 +88,21 @@ export default function NewSellerPage() {
         primaryColor: values.primaryColor || undefined,
         secondaryColor: values.secondaryColor || undefined,
       };
-      return sellersService.create(payload);
+      return isAdmin
+        ? sellersService.create(payload)
+        : sellerOnboardingService.createSeller(payload);
     },
-    onSuccess: (seller) => {
+    onSuccess: async (seller) => {
+      if (!isAdmin) {
+        if (refreshToken) {
+          const session = await authService.refresh(refreshToken);
+          setSession(session);
+        } else {
+          const user = await authService.me();
+          setUser(user);
+        }
+      }
+
       qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
       toast.success(t("seller.created", { seller: seller.name }));
       router.push(`/sellers/${seller.id}`);
@@ -98,7 +116,7 @@ export default function NewSellerPage() {
     },
   });
 
-  if (!isAdmin) {
+  if (!isAdmin && !isSeller) {
     return (
       <Card>
         <CardContent className="py-12 text-center text-muted-foreground">

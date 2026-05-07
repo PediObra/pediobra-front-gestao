@@ -21,7 +21,7 @@ import type { Seller } from "@/lib/api/types";
 export default function SellersListPage() {
   const t = useTranslation();
   const router = useRouter();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSeller } = useAuth();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -100,7 +100,7 @@ export default function SellersListPage() {
         title={t("sellers.title")}
         description={t("sellers.description")}
         actions={
-          isAdmin && (
+          (isAdmin || isSeller) && (
             <Button asChild>
               <Link href="/sellers/new">
                 <Plus className="size-4" />
