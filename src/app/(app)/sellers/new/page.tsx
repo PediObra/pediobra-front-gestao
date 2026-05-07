@@ -9,7 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { sellersService, type CreateSellerPayload } from "@/lib/api/sellers";
+import type { CreateSellerPayload } from "@/lib/api/sellers";
 import { sellerOnboardingService } from "@/lib/api/seller-onboarding";
 import { authService } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
@@ -50,7 +50,7 @@ export default function NewSellerPage() {
   const router = useRouter();
   const t = useTranslation();
   const qc = useQueryClient();
-  const { isAdmin, isSeller } = useAuth();
+  const { isSeller } = useAuth();
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const setSession = useAuthStore((s) => s.setSession);
   const setUser = useAuthStore((s) => s.setUser);
@@ -88,19 +88,15 @@ export default function NewSellerPage() {
         primaryColor: values.primaryColor || undefined,
         secondaryColor: values.secondaryColor || undefined,
       };
-      return isAdmin
-        ? sellersService.create(payload)
-        : sellerOnboardingService.createSeller(payload);
+      return sellerOnboardingService.createSeller(payload);
     },
     onSuccess: async (seller) => {
-      if (!isAdmin) {
-        if (refreshToken) {
-          const session = await authService.refresh(refreshToken);
-          setSession(session);
-        } else {
-          const user = await authService.me();
-          setUser(user);
-        }
+      if (refreshToken) {
+        const session = await authService.refresh(refreshToken);
+        setSession(session);
+      } else {
+        const user = await authService.me();
+        setUser(user);
       }
 
       qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
@@ -116,7 +112,7 @@ export default function NewSellerPage() {
     },
   });
 
-  if (!isAdmin && !isSeller) {
+  if (!isSeller) {
     return (
       <Card>
         <CardContent className="py-12 text-center text-muted-foreground">

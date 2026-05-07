@@ -602,7 +602,8 @@ export const translations = {
     "seller.addressRequired": "Informe o endereço",
     "seller.cepRequired": "CEP deve ter 8 dígitos",
     "seller.phoneRequired": "Informe o telefone",
-    "seller.adminOnlyCreate": "Apenas administradores podem criar lojas.",
+    "seller.adminOnlyCreate":
+      "Apenas vendedores podem criar lojas por este fluxo.",
     "seller.newDescription": "Cadastre uma nova loja parceira.",
     "seller.data": "Dados da loja",
     "seller.dataDescription": "Preencha os dados operacionais da loja.",
@@ -1282,7 +1283,7 @@ export const translations = {
     "seller.addressRequired": "Enter the address",
     "seller.cepRequired": "ZIP code must have 8 digits",
     "seller.phoneRequired": "Enter the phone number",
-    "seller.adminOnlyCreate": "Only administrators can create stores.",
+    "seller.adminOnlyCreate": "Only sellers can create stores in this flow.",
     "seller.newDescription": "Register a new partner store.",
     "seller.data": "Store data",
     "seller.dataDescription": "Fill in the store operational data.",
@@ -1966,7 +1967,8 @@ export const translations = {
     "seller.addressRequired": "Informa la dirección",
     "seller.cepRequired": "El CEP debe tener 8 dígitos",
     "seller.phoneRequired": "Informa el teléfono",
-    "seller.adminOnlyCreate": "Solo administradores pueden crear tiendas.",
+    "seller.adminOnlyCreate":
+      "Solo vendedores pueden crear tiendas en este flujo.",
     "seller.newDescription": "Registra una nueva tienda asociada.",
     "seller.data": "Datos de la tienda",
     "seller.dataDescription": "Completa los datos operativos de la tienda.",
