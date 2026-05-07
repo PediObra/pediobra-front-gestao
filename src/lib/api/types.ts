@@ -881,6 +881,14 @@ export interface OperationOverview {
   offers: OperationOffer[];
 }
 
+export interface DriverLocationCleanupResult {
+  deleted: number;
+  retentionHours: number;
+  cutoff: string;
+  batchSize: number;
+  batches: number;
+}
+
 // ---- Cart ----
 
 export interface CartItem {

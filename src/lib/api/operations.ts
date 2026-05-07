@@ -1,5 +1,9 @@
 import { api } from "./client";
-import type { OperationOffer, OperationOverview } from "./types";
+import type {
+  DriverLocationCleanupResult,
+  OperationOffer,
+  OperationOverview,
+} from "./types";
 
 export interface ListOperationsOverviewParams {
   sellerId?: number;
@@ -16,4 +20,9 @@ export const operationsService = {
 
   expireOffer: (offerId: number) =>
     api.post<OperationOffer>(`/operations/offers/${offerId}/expire`),
+
+  cleanupDriverLocations: () =>
+    api.post<DriverLocationCleanupResult>(
+      "/operations/driver-locations/cleanup",
+    ),
 };
