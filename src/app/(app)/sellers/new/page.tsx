@@ -108,6 +108,12 @@ export default function NewSellerPage() {
         err instanceof ApiError
           ? err.displayMessage
           : t("seller.createFailed");
+
+      if (err instanceof ApiError && err.status === 409) {
+        form.setError("email", { type: "server", message: msg });
+        form.setFocus("email");
+      }
+
       toast.error(msg);
     },
   });

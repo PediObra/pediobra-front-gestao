@@ -100,6 +100,12 @@ export default function SellerOnboardingPage() {
         err instanceof ApiError
           ? err.displayMessage
           : "Nao foi possivel cadastrar a loja";
+
+      if (err instanceof ApiError && err.status === 409) {
+        form.setError("email", { type: "server", message: msg });
+        form.setFocus("email");
+      }
+
       toast.error(msg);
     },
   });
