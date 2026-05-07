@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +10,7 @@ import { HardHat, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api/client";
+import { needsSellerOnboarding } from "@/lib/auth/permissions";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +39,11 @@ export default function LoginPage() {
   async function onSubmit(values: LoginForm) {
     setSubmitting(true);
     try {
-      await login(values);
+      const user = await login(values);
       toast.success(t("login.success"));
-      router.replace("/dashboard");
+      router.replace(
+        needsSellerOnboarding(user) ? "/onboarding/seller" : "/dashboard",
+      );
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -136,6 +140,13 @@ export default function LoginPage() {
               {t("login.submit")}
             </Button>
           </form>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Ainda nao tem conta?{" "}
+            <Link href="/register" className="font-medium text-primary">
+              Criar conta
+            </Link>
+          </p>
 
           <div className="rounded-md border border-dashed border-border p-4 text-xs text-muted-foreground space-y-1 font-mono">
             <p className="font-medium text-foreground">

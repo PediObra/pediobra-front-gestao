@@ -15,6 +15,7 @@ import {
   isDriver,
   isSeller,
   membershipFor,
+  needsSellerOnboarding,
   sellerIdsOf,
 } from "@/lib/auth/permissions";
 
@@ -28,6 +29,7 @@ export interface UseAuthReturn {
   isAdmin: boolean;
   isSeller: boolean;
   isDriver: boolean;
+  needsSellerOnboarding: boolean;
   sellerIds: number[];
   canAccessSeller: (sellerId: number) => boolean;
   canEditSeller: (sellerId: number) => boolean;
@@ -68,6 +70,7 @@ export function useAuth(): UseAuthReturn {
     isAdmin: isAdmin(user),
     isSeller: isSeller(user),
     isDriver: isDriver(user),
+    needsSellerOnboarding: needsSellerOnboarding(user),
     sellerIds: sellerIdsOf(user),
     canAccessSeller: (sellerId: number) => canAccessSeller(user, sellerId),
     canEditSeller: (sellerId: number) => canEditSeller(user, sellerId),

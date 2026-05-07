@@ -30,7 +30,7 @@ const EVENT_LABELS: Record<(typeof OPERATION_EVENTS)[number], string> = {
   "messages.updated": "Nova mensagem",
 };
 
-export function useOperationsRealtime() {
+export function useOperationsRealtime(enabled = true) {
   const qc = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
   const isAuthenticated = useAuthStore(
@@ -38,7 +38,7 @@ export function useOperationsRealtime() {
   );
 
   useEffect(() => {
-    if (!isAuthenticated || !accessToken) return;
+    if (!enabled || !isAuthenticated || !accessToken) return;
 
     const socket = io(`${getApiUrl()}/realtime`, {
       auth: { token: accessToken },
@@ -75,5 +75,5 @@ export function useOperationsRealtime() {
       }
       socket.disconnect();
     };
-  }, [accessToken, isAuthenticated, qc]);
+  }, [accessToken, enabled, isAuthenticated, qc]);
 }

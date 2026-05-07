@@ -77,6 +77,12 @@ export function isDriver(user: AuthUser | null): boolean {
   return hasRole(user, "DRIVER") || (user?.driverProfiles.length ?? 0) > 0;
 }
 
+export function needsSellerOnboarding(user: AuthUser | null): boolean {
+  return (
+    !isAdmin(user) && hasRole(user, "SELLER") && sellerIdsOf(user).length === 0
+  );
+}
+
 export function sellerIdsOf(user: AuthUser | null): number[] {
   return user?.sellers.map((s) => s.sellerId) ?? [];
 }

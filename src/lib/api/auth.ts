@@ -12,6 +12,11 @@ export const authService = {
       { skipAuth: true },
     ),
 
+  registerSeller: (payload: { name: string; email: string; password: string }) =>
+    api.post<AuthResponse>("/auth/register/seller", payload, {
+      skipAuth: true,
+    }),
+
   refresh: (refreshToken: string) =>
     api.post<AuthResponse>(
       "/auth/refresh",
