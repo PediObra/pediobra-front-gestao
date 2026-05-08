@@ -120,7 +120,7 @@ describe("SellerDetailPage", () => {
 
     expect(await screen.findByLabelText("Email")).toBeDisabled();
     expect(screen.getByLabelText("Endereço")).toBeDisabled();
-    expect(screen.getByLabelText("CEP")).toBeDisabled();
+    expect(screen.queryByLabelText("CEP")).not.toBeInTheDocument();
     expect(screen.getByLabelText("Nome")).not.toBeDisabled();
     expect(screen.getByLabelText("Telefone")).not.toBeDisabled();
 
@@ -156,7 +156,7 @@ describe("SellerDetailPage", () => {
 
     expect(await screen.findByLabelText("Email")).not.toBeDisabled();
     expect(screen.getByLabelText("Endereço")).not.toBeDisabled();
-    expect(screen.getByLabelText("CEP")).not.toBeDisabled();
+    expect(screen.queryByLabelText("CEP")).not.toBeInTheDocument();
   });
 
   it("lets seller editors update the delivery radius without master data access", async () => {

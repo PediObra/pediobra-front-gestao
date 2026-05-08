@@ -24,7 +24,7 @@ import { sellerProductImportsService } from "@/lib/api/seller-product-imports";
 import { usersService } from "@/lib/api/users";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
-import { formatCep, formatDateTime, formatPhone } from "@/lib/formatters";
+import { formatDateTime, formatPhone } from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
@@ -179,7 +179,6 @@ export default function SellerDetailPage({
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [placeId, setPlaceId] = useState("");
-  const [cep, setCep] = useState("");
   const [phone, setPhone] = useState("");
   const [placesSessionToken] = useState(
     () => `${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -202,7 +201,6 @@ export default function SellerDetailPage({
       setEmail(seller.email);
       setAddress(seller.address);
       setPlaceId("");
-      setCep(seller.cep);
       setPhone(seller.phone);
     }
   }, [seller?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -262,7 +260,6 @@ export default function SellerDetailPage({
         payload.email = email;
         payload.placeId = placeId || undefined;
         payload.address = address;
-        payload.cep = cep;
       }
 
       return sellersService.update(sellerId, payload);
@@ -692,18 +689,6 @@ export default function SellerDetailPage({
                           setPlaceId(place.placeId);
                         }}
                       />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cep">CEP</Label>
-                      <Input
-                        id="cep"
-                        disabled={!canEditMasterData}
-                        value={cep}
-                        onChange={(e) => setCep(e.target.value)}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {formatCep(seller.cep)}
-                      </p>
                     </div>
                   </div>
 
