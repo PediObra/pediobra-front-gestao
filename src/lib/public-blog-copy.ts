@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
-
-export type Locale = "pt-BR" | "en-US";
-const LOCALE_COOKIE = "pediobra-locale";
+import {
+  getInitialLocale,
+  LOCALE_PREFERENCE_KEY,
+  type Locale,
+} from "@/lib/preferences";
 
 const publicBlogCopy = {
   "pt-BR": {
@@ -44,6 +46,8 @@ const publicBlogCopy = {
     updated: "Atualizado",
     reading: "Leitura",
     minutes: "{minutes} minutos",
+    ctaEyebrow: "Próximo passo",
+    ctaSupport: "Continue com uma ação prática",
     continueEyebrow: "Continue lendo",
     continueTitle: "Mais guias para sua obra",
     allArticles: "Todos os artigos",
@@ -88,6 +92,8 @@ const publicBlogCopy = {
     updated: "Updated",
     reading: "Reading",
     minutes: "{minutes} minutes",
+    ctaEyebrow: "Next step",
+    ctaSupport: "Keep going with one practical action",
     continueEyebrow: "Keep reading",
     continueTitle: "More guides for your jobsite",
     allArticles: "All articles",
@@ -107,9 +113,7 @@ export function getPublicBlogCopy(locale: Locale): PublicBlogCopy {
 
 export async function getPublicBlogLocale(): Promise<Locale> {
   const cookieStore = await cookies();
-  const locale = cookieStore.get(LOCALE_COOKIE)?.value;
-
-  return locale === "en-US" ? "en-US" : "pt-BR";
+  return getInitialLocale(cookieStore.get(LOCALE_PREFERENCE_KEY)?.value);
 }
 
 export function publicBlogText(

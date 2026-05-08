@@ -61,6 +61,7 @@ export const queryKeys = {
     all: () => ["blogPosts"] as const,
     list: (params: ListAdminBlogPostsParams) =>
       ["blogPosts", "list", params] as const,
+    tags: () => ["blogPosts", "tags"] as const,
     byId: (id: number) => ["blogPosts", "byId", id] as const,
   },
 } as const;

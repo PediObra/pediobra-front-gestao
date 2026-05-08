@@ -4,9 +4,9 @@ import { ArrowRight, CalendarDays, Clock3, Search } from "lucide-react";
 import {
   getBlogPostCover,
   getBlogPostDescription,
-  stripHtml,
   type BlogPost,
 } from "@/lib/api/blog-posts";
+import { normalizeArticleHtml, stripHtml } from "@/lib/blog-html";
 import { formatDate } from "@/lib/formatters";
 import {
   DEFAULT_PUBLIC_BLOG_COPY,
@@ -422,24 +422,4 @@ export function ArticleBody({ post }: { post: BlogPost }) {
         ))}
     </div>
   );
-}
-
-function normalizeArticleHtml(html: string, fallbackAlt: string) {
-  const safeFallbackAlt = escapeAttribute(fallbackAlt);
-
-  return html
-    .replace(/<h1(\s|>)/gi, "<h2$1")
-    .replace(/<\/h1>/gi, "</h2>")
-    .replace(/<img\b(?![^>]*\balt=)/gi, `<img alt="${safeFallbackAlt}"`)
-    .replace(/<img\b(?![^>]*\bloading=)/gi, '<img loading="lazy"')
-    .replace(/<img\b(?![^>]*\bdecoding=)/gi, '<img decoding="async"')
-    .replace(/<a\b(?![^>]*\brel=)/gi, '<a rel="noopener noreferrer"');
-}
-
-function escapeAttribute(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
 }

@@ -1,6 +1,8 @@
 import { cache } from "react";
 import { API_URL } from "./base-url";
 import type { BlogPost, Paginated } from "./types";
+import { getBlogPostDescriptionFromContent, stripHtml } from "@/lib/blog-html";
+import { isPublicBlogPost } from "@/lib/blog-visibility";
 
 export interface ListBlogPostsParams {
   page?: number;
@@ -8,10 +10,6 @@ export interface ListBlogPostsParams {
   search?: string;
   tag?: string;
 }
-
-const BLOG_REVALIDATE_SECONDS = Number(
-  process.env.NEXT_PUBLIC_BLOG_REVALIDATE_SECONDS ?? 300,
-);
 
 function buildUrl(path: string, params?: ListBlogPostsParams) {
   const url = new URL(
@@ -38,10 +36,7 @@ async function fetchBlogJson<T>(
       headers: {
         Accept: "application/json",
       },
-      next: {
-        revalidate: BLOG_REVALIDATE_SECONDS,
-        tags: ["blog-posts"],
-      },
+      cache: "no-store",
     });
 
     if (response.status === 404 && !options.strict) {
@@ -83,24 +78,29 @@ export const getBlogPosts = cache(
       throw new Error("Blog posts response was empty.");
     }
 
-    return (
-      response ?? {
-        data: [],
-        meta: {
-          page,
-          limit,
-          total: 0,
-          totalPages: 1,
-        },
-      }
-    );
+    const result = response ?? {
+      data: [],
+      meta: {
+        page,
+        limit,
+        total: 0,
+        totalPages: 1,
+      },
+    };
+
+    return {
+      ...result,
+      data: result.data.filter((post) => isPublicBlogPost(post)),
+    };
   },
 );
 
 export const getBlogPostBySlug = cache(async (slug: string) => {
-  return fetchBlogJson<BlogPost>(
+  const post = await fetchBlogJson<BlogPost>(
     buildUrl(`/blog-posts/slug/${encodeURIComponent(slug)}`),
   );
+
+  return post && isPublicBlogPost(post) ? post : null;
 });
 
 export async function getAllPublishedBlogPosts(
@@ -138,11 +138,7 @@ export function getBlogPostCover(post: BlogPost) {
 }
 
 export function getBlogPostDescription(post: BlogPost) {
-  return (
-    post.seoDescription ??
-    post.excerpt ??
-    stripHtml(post.content).slice(0, 155)
-  ).trim();
+  return getBlogPostDescriptionFromContent(post);
 }
 
 export function getBlogPostKeywords(post: BlogPost) {
@@ -163,21 +159,6 @@ export function getBlogPostKeywords(post: BlogPost) {
   ];
 }
 
-export function stripHtml(value: string) {
-  return value
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 export function normalizeMediaUrl(value: string) {
   try {
     return new URL(value).toString();
@@ -189,3 +170,4 @@ export function normalizeMediaUrl(value: string) {
 }
 
 export type { BlogPost };
+export { isPublicBlogPost, stripHtml };

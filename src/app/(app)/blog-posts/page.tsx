@@ -45,6 +45,7 @@ import {
   type ListAdminBlogPostsParams,
 } from "@/lib/api/blog-posts-admin";
 import type { BlogPost, BlogPostStatus } from "@/lib/api/types";
+import { syncBlogPostMutationCaches } from "@/lib/blog-post-cache";
 import { formatDateTime } from "@/lib/formatters";
 import { useI18n } from "@/lib/i18n";
 import { queryKeys } from "@/lib/query-keys";
@@ -93,8 +94,15 @@ function BlogPostsListContent() {
 
   const bulkDeleteMutation = useMutation({
     mutationFn: () => blogPostsAdminService.removeMany([...selectedIds]),
-    onSuccess: (result) => {
-      qc.invalidateQueries({ queryKey: queryKeys.blogPosts.all() });
+    onSuccess: async (result) => {
+      const deletedIds = [...selectedIds];
+      const deletedPosts =
+        query.data?.data.filter((post) => selectedIds.has(post.id)) ?? [];
+
+      await syncBlogPostMutationCaches(qc, {
+        deletedPosts,
+        deletedPostIds: deletedIds,
+      });
       toast.success(
         t("blogCms.toast.bulkDeleted", { count: result.deleted }),
       );

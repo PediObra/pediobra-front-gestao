@@ -242,6 +242,11 @@ export interface BlogPost {
   seoDescription?: string | null;
   seoKeywords?: string | null;
   canonicalUrl?: string | null;
+  ctaTitle?: string | null;
+  ctaDescription?: string | null;
+  ctaButtonText?: string | null;
+  ctaHref?: string | null;
+  ctaOpenInNewTab: boolean;
   readingTimeMinutes: number;
   publishedAt?: string | null;
   createdAt: string;

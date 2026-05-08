@@ -3,6 +3,7 @@ import type {
   BlogPost,
   BlogPostContentFormat,
   BlogPostStatus,
+  BlogTag,
   Paginated,
 } from "./types";
 
@@ -37,6 +38,11 @@ export interface SaveBlogPostPayload {
   seoDescription?: string;
   seoKeywords?: string;
   canonicalUrl?: string;
+  ctaTitle?: string;
+  ctaDescription?: string;
+  ctaButtonText?: string;
+  ctaHref?: string;
+  ctaOpenInNewTab?: boolean;
   readingTimeMinutes?: number;
   publishedAt?: string;
   tags?: string[];
@@ -62,8 +68,18 @@ function appendOptional(formData: FormData, key: string, value: unknown) {
   formData.append(key, String(value));
 }
 
+function appendClearableText(
+  formData: FormData,
+  key: string,
+  value: string | undefined,
+) {
+  if (value === undefined) return;
+  formData.append(key, value);
+}
+
 function buildBlogPostFormData(
   payload: CreateBlogPostPayload | UpdateBlogPostPayload,
+  options: { clearableCta?: boolean } = {},
 ) {
   const formData = new FormData();
 
@@ -78,6 +94,25 @@ function buildBlogPostFormData(
   appendOptional(formData, "seoDescription", payload.seoDescription);
   appendOptional(formData, "seoKeywords", payload.seoKeywords);
   appendOptional(formData, "canonicalUrl", payload.canonicalUrl);
+  const hasCtaPayload = Boolean(
+    payload.ctaTitle?.trim() ||
+      payload.ctaDescription?.trim() ||
+      payload.ctaButtonText?.trim() ||
+      payload.ctaHref?.trim() ||
+      payload.ctaOpenInNewTab,
+  );
+
+  if (options.clearableCta || hasCtaPayload) {
+    appendClearableText(formData, "ctaTitle", payload.ctaTitle ?? "");
+    appendClearableText(
+      formData,
+      "ctaDescription",
+      payload.ctaDescription ?? "",
+    );
+    appendClearableText(formData, "ctaButtonText", payload.ctaButtonText ?? "");
+    appendClearableText(formData, "ctaHref", payload.ctaHref ?? "");
+    formData.append("ctaOpenInNewTab", String(payload.ctaOpenInNewTab === true));
+  }
   appendOptional(formData, "readingTimeMinutes", payload.readingTimeMinutes);
   appendOptional(formData, "publishedAt", payload.publishedAt);
   appendOptional(formData, "clearImages", payload.clearImages);
@@ -111,13 +146,18 @@ export const blogPostsAdminService = {
   list: (params: ListAdminBlogPostsParams = {}) =>
     api.get<Paginated<BlogPost>>("/blog-posts/admin", { query: params }),
 
+  listTags: () => api.get<BlogTag[]>("/blog-posts/admin/tags"),
+
   getById: (id: number) => api.get<BlogPost>(`/blog-posts/admin/${id}`),
 
   create: (payload: CreateBlogPostPayload) =>
     api.post<BlogPost>("/blog-posts", buildBlogPostFormData(payload)),
 
   update: (id: number, payload: UpdateBlogPostPayload) =>
-    api.patch<BlogPost>(`/blog-posts/${id}`, buildBlogPostFormData(payload)),
+    api.patch<BlogPost>(
+      `/blog-posts/${id}`,
+      buildBlogPostFormData(payload, { clearableCta: true }),
+    ),
 
   remove: (id: number) => api.delete<BlogPost>(`/blog-posts/${id}`),
 

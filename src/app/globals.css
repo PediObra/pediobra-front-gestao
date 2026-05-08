@@ -336,6 +336,42 @@
     background: var(--muted);
   }
 
+  .blog-editor-prose .ProseMirror {
+    min-height: 22rem;
+    outline: none;
+    overflow-y: auto;
+    padding: 1rem;
+  }
+
+  @media (min-width: 640px) {
+    .blog-editor-prose .ProseMirror {
+      min-height: 28rem;
+    }
+  }
+
+  .blog-editor-prose .ProseMirror:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--ring);
+  }
+
+  .blog-editor-prose p.is-editor-empty:first-child::before {
+    color: var(--muted-foreground);
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  .blog-editor-prose a {
+    color: #7b4e19;
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 0.18em;
+  }
+
+  .dark .blog-editor-prose a {
+    color: var(--primary);
+  }
+
   .blog-editor-prose h2,
   .blog-editor-prose h3 {
     font-weight: 650;

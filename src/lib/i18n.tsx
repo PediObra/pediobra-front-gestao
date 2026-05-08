@@ -6,18 +6,23 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import {
+  LOCALE_PREFERENCE_KEY,
+  parseLocale,
+  PREFERENCE_MAX_AGE_SECONDS,
+  type Locale,
+} from "@/lib/preferences";
 
-export type Locale = "pt-BR" | "en-US";
+export type { Locale } from "@/lib/preferences";
 
 interface I18nContextValue {
   locale: Locale;
   setLocale: (locale: Locale) => void;
   t: (key: string, values?: Record<string, string | number>) => string;
 }
-
-const STORAGE_KEY = "pediobra-locale";
 
 const dictionaries: Record<Locale, Record<string, string>> = {
   "pt-BR": {
@@ -32,6 +37,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "common.back": "Voltar",
     "common.active": "Ativo",
     "common.actions": "Ações",
+    "common.add": "Adicionar",
     "common.optional": "opcional",
     "common.none": "Nenhum",
     "common.remove": "Remover",
@@ -60,7 +66,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "Crie, publique e otimize artigos para tráfego orgânico.",
     "blogCms.list.new": "Novo artigo",
     "blogCms.list.searchPlaceholder": "Buscar por título, slug ou conteúdo…",
-    "blogCms.list.tagPlaceholder": "Filtrar por tag…",
+    "blogCms.list.tagPlaceholder": "Filtrar por categoria…",
     "blogCms.list.allStatuses": "Todos os status",
     "blogCms.list.empty": "Nenhum artigo encontrado.",
     "blogCms.list.bulkDelete": "Excluir selecionados",
@@ -69,7 +75,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "Essa ação arquiva os artigos selecionados e remove eles das listagens públicas.",
     "blogCms.table.post": "Artigo",
     "blogCms.table.status": "Status",
-    "blogCms.table.tags": "Tags",
+    "blogCms.table.tags": "Categorias",
     "blogCms.table.updated": "Atualizado",
     "blogCms.table.selected": "{count} selecionado(s)",
     "blogCms.new.title": "Novo artigo",
@@ -78,6 +84,30 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "blogCms.edit.fallbackTitle": "Editar artigo",
     "blogCms.edit.description": "Ajuste conteúdo, mídia, status e SEO.",
     "blogCms.form.content": "Conteúdo",
+    "blogCms.form.cta": "Chamada de ação",
+    "blogCms.form.ctaDescription":
+      "Configure o bloco que aparece sempre no fim do artigo para levar o leitor ao próximo passo.",
+    "blogCms.form.ctaTitle": "Título do CTA",
+    "blogCms.form.ctaTitlePlaceholder": "Pronto para começar sua obra?",
+    "blogCms.form.ctaDescriptionLabel": "Descrição do CTA",
+    "blogCms.form.ctaDescriptionPlaceholder":
+      "Explique rapidamente por que o leitor deve clicar.",
+    "blogCms.form.ctaButtonText": "Texto do botão",
+    "blogCms.form.ctaButtonPlaceholder": "Falar com a PediObra",
+    "blogCms.form.ctaHref": "Link do botão",
+    "blogCms.form.ctaHrefPlaceholder": "https://instagram.com/pediobra",
+    "blogCms.form.ctaHrefHelp":
+      "Use um link externo com https://, um caminho interno como /blog, mailto: ou tel:.",
+    "blogCms.form.ctaOpenInNewTab": "Abrir em nova aba",
+    "blogCms.form.ctaOpenInNewTabHelp":
+      "Recomendado para Instagram, WhatsApp e links externos.",
+    "blogCms.form.ctaOptionalHelp":
+      "Opcional. Preencha título, botão e link para ativar o CTA no fim do artigo.",
+    "blogCms.form.ctaPreviewEyebrow": "Prévia do CTA",
+    "blogCms.form.ctaPreviewTitle": "Sua chamada aparece aqui",
+    "blogCms.form.ctaPreviewDescription":
+      "A descrição ajuda a dar contexto antes do clique.",
+    "blogCms.form.ctaPreviewButton": "Texto do botão",
     "blogCms.form.main": "Informações principais",
     "blogCms.form.mainDescription":
       "Título, URL, resumo e conteúdo que aparecem no blog.",
@@ -90,16 +120,43 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "Resumo curto para listagens, SEO e compartilhamento.",
     "blogCms.form.status": "Status",
     "blogCms.form.publishedAt": "Data de publicação",
-    "blogCms.form.tags": "Tags",
-    "blogCms.form.tagsPlaceholder": "materiais, cimento, orçamento",
-    "blogCms.form.tagsHelp": "Separe tags por vírgula.",
-    "blogCms.form.readingTime": "Tempo de leitura",
+    "blogCms.form.publishedAtHelp":
+      "Opcional. Sem data, o artigo é publicado imediatamente. Datas futuras ficam ocultas no blog até chegar o horário.",
+    "blogCms.form.publishNow": "Publicar agora",
+    "blogCms.form.publishDate": "Data",
+    "blogCms.form.publishTime": "Hora",
+    "blogCms.form.clearPublishDate": "Limpar data",
+    "blogCms.form.useNow": "Usar agora",
+    "blogCms.form.tags": "Categorias",
+    "blogCms.form.tagsPlaceholder": "Buscar ou criar categoria",
+    "blogCms.form.tagsHelp":
+      "Reutilize categorias já cadastradas ou crie uma nova pelo próprio campo.",
+    "blogCms.form.noCategories": "Nenhuma categoria adicionada.",
+    "blogCms.form.createCategory": "Criar categoria",
+    "blogCms.form.categorySuggestions": "Categorias existentes",
+    "blogCms.form.noCategorySuggestions": "Nenhuma categoria encontrada.",
+    "blogCms.form.loadingCategories": "Carregando categorias…",
+    "blogCms.form.readingTime": "Tempo de leitura (minutos)",
     "blogCms.form.readingTimeHelp":
-      "Opcional. Se vazio, o backend calcula pelo conteúdo.",
-    "blogCms.form.coverImages": "Imagens do post",
+      "Opcional. Se vazio, o servidor calcula pelo conteúdo.",
+    "blogCms.form.readingTimePlaceholder": "Ex.: 5",
+    "blogCms.form.coverImages": "Imagem do post (obrigatória)",
     "blogCms.form.coverImagesDescription":
-      "Envie capa e galeria. A primeira imagem vira capa por padrão.",
+      "Envie a capa do artigo. A primeira imagem vira capa por padrão.",
     "blogCms.form.clearImages": "Remover imagens atuais",
+    "blogCms.form.imageRequired": "Adicione uma imagem de capa para o post.",
+    "blogCms.form.imageRequiredEmpty": "Nenhuma capa adicionada.",
+    "blogCms.form.imageSpecsTitle": "Especificação recomendada",
+    "blogCms.form.imageSpecsResolutionLabel": "Resolução",
+    "blogCms.form.imageSpecsResolutionValue": "1600 × 1000 px ideal",
+    "blogCms.form.imageSpecsRatioLabel": "Proporção",
+    "blogCms.form.imageSpecsRatioValue": "16:10, mínimo 1200 × 750 px",
+    "blogCms.form.imageSpecsFormatsLabel": "Formatos",
+    "blogCms.form.imageSpecsFormatsValue": "JPG, PNG, WEBP, AVIF ou GIF",
+    "blogCms.form.imageSpecsSizeLabel": "Tamanho",
+    "blogCms.form.imageSpecsSizeValue": "Até 10 MB",
+    "blogCms.form.imageSpecsHelp":
+      "Use imagem nítida, horizontal e sem texto pequeno. Ela aparece nas listagens, no topo do artigo e em compartilhamentos.",
     "blogCms.form.imageAlt": "Texto alternativo",
     "blogCms.form.imageCaption": "Legenda",
     "blogCms.form.imageCover": "Capa",
@@ -110,6 +167,9 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "blogCms.form.seoTitle": "Título SEO",
     "blogCms.form.seoMetaDescription": "Descrição SEO",
     "blogCms.form.seoKeywords": "Palavras-chave",
+    "blogCms.form.seoKeywordsPlaceholder":
+      "Digite uma palavra e pressione Enter",
+    "blogCms.form.noSeoKeywords": "Nenhuma palavra-chave adicionada.",
     "blogCms.form.canonicalUrl": "URL canônica",
     "blogCms.form.saveDraft": "Salvar rascunho",
     "blogCms.form.publish": "Publicar",
@@ -120,6 +180,27 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "O artigo será arquivado e deixará de aparecer para leitores.",
     "blogCms.form.editorPlaceholder":
       "Escreva o artigo aqui. Use subtítulos, listas, citações e imagens para facilitar a leitura.",
+    "blogCms.preview.tabsLabel": "Modo do editor",
+    "blogCms.preview.editTab": "Editar",
+    "blogCms.preview.previewTab": "Preview blog",
+    "blogCms.preview.helper":
+      "Alterne para conferir a página pública antes de publicar.",
+    "blogCms.preview.mode": "Modo preview",
+    "blogCms.preview.exit": "Sair do preview",
+    "blogCms.preview.untitled": "Título do artigo",
+    "blogCms.preview.emptyContent": "O conteúdo do artigo aparecerá aqui.",
+    "blogCms.preview.emptyDescription": "A descrição do artigo aparecerá aqui.",
+    "blogCms.preview.backToBlog": "Voltar ao blog",
+    "blogCms.preview.breadcrumb": "Caminho do artigo",
+    "blogCms.preview.blog": "Blog",
+    "blogCms.preview.publishNow": "Publicar agora",
+    "blogCms.preview.readMinutes": "{minutes} min de leitura",
+    "blogCms.preview.details": "Detalhes do artigo",
+    "blogCms.preview.publishedBy": "Publicado por",
+    "blogCms.preview.reading": "Leitura",
+    "blogCms.preview.minutes": "{minutes} minutos",
+    "blogCms.preview.ctaEyebrow": "Próximo passo",
+    "blogCms.preview.ctaSupport": "Continue com uma ação prática",
     "blogCms.editor.paragraph": "Parágrafo",
     "blogCms.editor.heading2": "Título H2",
     "blogCms.editor.heading3": "Título H3",
@@ -129,7 +210,18 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "blogCms.editor.orderedList": "Lista numerada",
     "blogCms.editor.quote": "Citação",
     "blogCms.editor.link": "Link",
+    "blogCms.editor.toolbar": "Ferramentas do editor",
+    "blogCms.editor.linkTitle": "Adicionar link",
+    "blogCms.editor.linkDescription":
+      "Cole a URL que será aplicada ao texto selecionado.",
+    "blogCms.editor.linkUrl": "URL do link",
+    "blogCms.editor.applyLink": "Aplicar link",
+    "blogCms.editor.removeLink": "Remover link",
     "blogCms.editor.image": "Imagem",
+    "blogCms.editor.imageAltTitle": "Texto alternativo da imagem",
+    "blogCms.editor.imageAltDescription":
+      "Descreva brevemente a imagem para acessibilidade e SEO antes de inserir no conteúdo.",
+    "blogCms.editor.insertImage": "Inserir imagem",
     "blogCms.editor.undo": "Desfazer",
     "blogCms.editor.redo": "Refazer",
     "blogCms.toast.created": "Artigo criado",
@@ -158,6 +250,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "common.back": "Back",
     "common.active": "Active",
     "common.actions": "Actions",
+    "common.add": "Add",
     "common.optional": "optional",
     "common.none": "None",
     "common.remove": "Remove",
@@ -186,7 +279,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "Create, publish, and optimize articles for organic traffic.",
     "blogCms.list.new": "New article",
     "blogCms.list.searchPlaceholder": "Search by title, slug, or content…",
-    "blogCms.list.tagPlaceholder": "Filter by tag…",
+    "blogCms.list.tagPlaceholder": "Filter by category…",
     "blogCms.list.allStatuses": "All statuses",
     "blogCms.list.empty": "No articles found.",
     "blogCms.list.bulkDelete": "Delete selected",
@@ -195,7 +288,7 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "This archives the selected articles and removes them from public lists.",
     "blogCms.table.post": "Article",
     "blogCms.table.status": "Status",
-    "blogCms.table.tags": "Tags",
+    "blogCms.table.tags": "Categories",
     "blogCms.table.updated": "Updated",
     "blogCms.table.selected": "{count} selected",
     "blogCms.new.title": "New article",
@@ -204,6 +297,30 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "blogCms.edit.fallbackTitle": "Edit article",
     "blogCms.edit.description": "Adjust content, media, status, and SEO.",
     "blogCms.form.content": "Content",
+    "blogCms.form.cta": "Call to action",
+    "blogCms.form.ctaDescription":
+      "Configure the block that always appears at the end of the article to send readers to the next step.",
+    "blogCms.form.ctaTitle": "CTA title",
+    "blogCms.form.ctaTitlePlaceholder": "Ready to start your project?",
+    "blogCms.form.ctaDescriptionLabel": "CTA description",
+    "blogCms.form.ctaDescriptionPlaceholder":
+      "Briefly explain why the reader should click.",
+    "blogCms.form.ctaButtonText": "Button text",
+    "blogCms.form.ctaButtonPlaceholder": "Contact PediObra",
+    "blogCms.form.ctaHref": "Button link",
+    "blogCms.form.ctaHrefPlaceholder": "https://instagram.com/pediobra",
+    "blogCms.form.ctaHrefHelp":
+      "Use an external https:// link, an internal path like /blog, mailto:, or tel:.",
+    "blogCms.form.ctaOpenInNewTab": "Open in a new tab",
+    "blogCms.form.ctaOpenInNewTabHelp":
+      "Recommended for Instagram, WhatsApp, and external links.",
+    "blogCms.form.ctaOptionalHelp":
+      "Optional. Fill title, button, and link to activate the CTA at the end of the article.",
+    "blogCms.form.ctaPreviewEyebrow": "CTA preview",
+    "blogCms.form.ctaPreviewTitle": "Your callout appears here",
+    "blogCms.form.ctaPreviewDescription":
+      "The description gives context before the click.",
+    "blogCms.form.ctaPreviewButton": "Button text",
     "blogCms.form.main": "Main information",
     "blogCms.form.mainDescription":
       "Title, URL, summary, and content shown on the blog.",
@@ -215,16 +332,43 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "Short summary for lists, SEO, and sharing.",
     "blogCms.form.status": "Status",
     "blogCms.form.publishedAt": "Publish date",
-    "blogCms.form.tags": "Tags",
-    "blogCms.form.tagsPlaceholder": "materials, cement, budgeting",
-    "blogCms.form.tagsHelp": "Separate tags with commas.",
-    "blogCms.form.readingTime": "Reading time",
+    "blogCms.form.publishedAtHelp":
+      "Optional. Without a date, the article publishes immediately. Future dates stay hidden from the blog until that time.",
+    "blogCms.form.publishNow": "Publish now",
+    "blogCms.form.publishDate": "Date",
+    "blogCms.form.publishTime": "Time",
+    "blogCms.form.clearPublishDate": "Clear date",
+    "blogCms.form.useNow": "Use now",
+    "blogCms.form.tags": "Categories",
+    "blogCms.form.tagsPlaceholder": "Search or create a category",
+    "blogCms.form.tagsHelp":
+      "Reuse existing categories or create a new one directly from the field.",
+    "blogCms.form.noCategories": "No categories added.",
+    "blogCms.form.createCategory": "Create category",
+    "blogCms.form.categorySuggestions": "Existing categories",
+    "blogCms.form.noCategorySuggestions": "No categories found.",
+    "blogCms.form.loadingCategories": "Loading categories…",
+    "blogCms.form.readingTime": "Reading time (minutes)",
     "blogCms.form.readingTimeHelp":
-      "Optional. If empty, the backend calculates it from the content.",
-    "blogCms.form.coverImages": "Post images",
+      "Optional. If empty, the server calculates it from the content.",
+    "blogCms.form.readingTimePlaceholder": "E.g. 5",
+    "blogCms.form.coverImages": "Post image (required)",
     "blogCms.form.coverImagesDescription":
-      "Upload cover and gallery images. The first image becomes cover by default.",
+      "Upload the article cover. The first image becomes the cover by default.",
     "blogCms.form.clearImages": "Remove current images",
+    "blogCms.form.imageRequired": "Add a cover image for the post.",
+    "blogCms.form.imageRequiredEmpty": "No cover added.",
+    "blogCms.form.imageSpecsTitle": "Recommended specification",
+    "blogCms.form.imageSpecsResolutionLabel": "Resolution",
+    "blogCms.form.imageSpecsResolutionValue": "1600 × 1000 px ideal",
+    "blogCms.form.imageSpecsRatioLabel": "Ratio",
+    "blogCms.form.imageSpecsRatioValue": "16:10, minimum 1200 × 750 px",
+    "blogCms.form.imageSpecsFormatsLabel": "Formats",
+    "blogCms.form.imageSpecsFormatsValue": "JPG, PNG, WEBP, AVIF, or GIF",
+    "blogCms.form.imageSpecsSizeLabel": "Size",
+    "blogCms.form.imageSpecsSizeValue": "Up to 10 MB",
+    "blogCms.form.imageSpecsHelp":
+      "Use a sharp horizontal image without tiny text. It appears in lists, at the top of the article, and in shares.",
     "blogCms.form.imageAlt": "Alt text",
     "blogCms.form.imageCaption": "Caption",
     "blogCms.form.imageCover": "Cover",
@@ -235,6 +379,8 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "blogCms.form.seoTitle": "SEO title",
     "blogCms.form.seoMetaDescription": "SEO description",
     "blogCms.form.seoKeywords": "Keywords",
+    "blogCms.form.seoKeywordsPlaceholder": "Type a keyword and press Enter",
+    "blogCms.form.noSeoKeywords": "No keywords added.",
     "blogCms.form.canonicalUrl": "Canonical URL",
     "blogCms.form.saveDraft": "Save draft",
     "blogCms.form.publish": "Publish",
@@ -245,6 +391,28 @@ const dictionaries: Record<Locale, Record<string, string>> = {
       "The article will be archived and hidden from readers.",
     "blogCms.form.editorPlaceholder":
       "Write the article here. Use headings, lists, quotes, and images to make it easy to read.",
+    "blogCms.preview.tabsLabel": "Editor mode",
+    "blogCms.preview.editTab": "Edit",
+    "blogCms.preview.previewTab": "Blog preview",
+    "blogCms.preview.helper":
+      "Switch modes to review the public page before publishing.",
+    "blogCms.preview.mode": "Preview mode",
+    "blogCms.preview.exit": "Exit preview",
+    "blogCms.preview.untitled": "Article title",
+    "blogCms.preview.emptyContent": "The article content will appear here.",
+    "blogCms.preview.emptyDescription":
+      "The article description will appear here.",
+    "blogCms.preview.backToBlog": "Back to blog",
+    "blogCms.preview.breadcrumb": "Article path",
+    "blogCms.preview.blog": "Blog",
+    "blogCms.preview.publishNow": "Publish now",
+    "blogCms.preview.readMinutes": "{minutes} min read",
+    "blogCms.preview.details": "Article details",
+    "blogCms.preview.publishedBy": "Published by",
+    "blogCms.preview.reading": "Reading",
+    "blogCms.preview.minutes": "{minutes} minutes",
+    "blogCms.preview.ctaEyebrow": "Next step",
+    "blogCms.preview.ctaSupport": "Keep going with one practical action",
     "blogCms.editor.paragraph": "Paragraph",
     "blogCms.editor.heading2": "Heading H2",
     "blogCms.editor.heading3": "Heading H3",
@@ -254,7 +422,18 @@ const dictionaries: Record<Locale, Record<string, string>> = {
     "blogCms.editor.orderedList": "Numbered list",
     "blogCms.editor.quote": "Quote",
     "blogCms.editor.link": "Link",
+    "blogCms.editor.toolbar": "Editor tools",
+    "blogCms.editor.linkTitle": "Add link",
+    "blogCms.editor.linkDescription":
+      "Paste the URL that will be applied to the selected text.",
+    "blogCms.editor.linkUrl": "Link URL",
+    "blogCms.editor.applyLink": "Apply link",
+    "blogCms.editor.removeLink": "Remove link",
     "blogCms.editor.image": "Image",
+    "blogCms.editor.imageAltTitle": "Image alt text",
+    "blogCms.editor.imageAltDescription":
+      "Briefly describe the image for accessibility and SEO before inserting it into the content.",
+    "blogCms.editor.insertImage": "Insert image",
     "blogCms.editor.undo": "Undo",
     "blogCms.editor.redo": "Redo",
     "blogCms.toast.created": "Article created",
@@ -279,19 +458,23 @@ function persistLocale(locale: Locale) {
   if (typeof document === "undefined") return;
 
   document.documentElement.lang = locale;
-  document.cookie = `${STORAGE_KEY}=${locale};path=/;max-age=31536000;samesite=lax`;
-  window.localStorage.setItem(STORAGE_KEY, locale);
+  document.cookie = `${LOCALE_PREFERENCE_KEY}=${locale};path=/;max-age=${PREFERENCE_MAX_AGE_SECONDS};samesite=lax`;
+
+  try {
+    window.localStorage.setItem(LOCALE_PREFERENCE_KEY, locale);
+  } catch {
+    // localStorage can be unavailable in restricted browser contexts.
+  }
 }
 
-function getStoredLocale(): Locale {
-  if (typeof window === "undefined") return "pt-BR";
+function getStoredLocale(): Locale | null {
+  if (typeof window === "undefined") return null;
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "pt-BR" || stored === "en-US") return stored;
-
-  return window.navigator.language.toLowerCase().startsWith("en")
-    ? "en-US"
-    : "pt-BR";
+  try {
+    return parseLocale(window.localStorage.getItem(LOCALE_PREFERENCE_KEY));
+  } catch {
+    return null;
+  }
 }
 
 function interpolate(
@@ -305,10 +488,32 @@ function interpolate(
   );
 }
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(getStoredLocale);
+export function I18nProvider({
+  children,
+  initialLocale = "pt-BR",
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+}) {
+  const [locale, setLocaleState] = useState<Locale>(initialLocale);
+  const hasSyncedStoredLocale = useRef(false);
 
   useEffect(() => {
+    if (!hasSyncedStoredLocale.current) {
+      hasSyncedStoredLocale.current = true;
+
+      const storedLocale = getStoredLocale();
+      if (storedLocale && storedLocale !== locale) {
+        persistLocale(storedLocale);
+
+        queueMicrotask(() => {
+          setLocaleState(storedLocale);
+        });
+
+        return;
+      }
+    }
+
     persistLocale(locale);
   }, [locale]);
 
@@ -321,8 +526,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     () => ({
       locale,
       setLocale,
-      t: (key, values) =>
-        interpolate(dictionaries[locale][key] ?? key, values),
+      t: (key, values) => interpolate(dictionaries[locale][key] ?? key, values),
     }),
     [locale, setLocale],
   );

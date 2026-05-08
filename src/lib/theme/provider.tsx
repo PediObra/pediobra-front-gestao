@@ -6,10 +6,17 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
+import {
+  parseThemePreference,
+  PREFERENCE_MAX_AGE_SECONDS,
+  THEME_PREFERENCE_KEY,
+  type ThemePreference,
+} from "@/lib/preferences";
 
-export type ThemePreference = "light" | "dark" | "system";
+export type { ThemePreference } from "@/lib/preferences";
 
 interface ThemeContextValue {
   theme: ThemePreference;
@@ -17,18 +24,16 @@ interface ThemeContextValue {
   setTheme: (theme: ThemePreference) => void;
 }
 
-const STORAGE_KEY = "pediobra-theme";
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function getStoredTheme(): ThemePreference {
-  if (typeof window === "undefined") return "system";
+function getStoredTheme(): ThemePreference | null {
+  if (typeof window === "undefined") return null;
 
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark" || stored === "system") {
-    return stored;
+  try {
+    return parseThemePreference(window.localStorage.getItem(THEME_PREFERENCE_KEY));
+  } catch {
+    return null;
   }
-
-  return "system";
 }
 
 function getSystemTheme(): "light" | "dark" {
@@ -42,26 +47,56 @@ function getSystemTheme(): "light" | "dark" {
   return "light";
 }
 
-function applyTheme(theme: ThemePreference) {
-  if (typeof document === "undefined") return getSystemTheme();
+function resolveTheme(theme: ThemePreference): "light" | "dark" {
+  return theme === "system" ? getSystemTheme() : theme;
+}
 
-  const resolvedTheme = theme === "system" ? getSystemTheme() : theme;
+function applyTheme(theme: ThemePreference) {
+  if (typeof document === "undefined") return resolveTheme(theme);
+
+  const resolvedTheme = resolveTheme(theme);
   document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
   document.documentElement.style.colorScheme = resolvedTheme;
-  document.cookie = `${STORAGE_KEY}=${theme};path=/;max-age=31536000;samesite=lax`;
-  window.localStorage.setItem(STORAGE_KEY, theme);
+  document.cookie = `${THEME_PREFERENCE_KEY}=${theme};path=/;max-age=${PREFERENCE_MAX_AGE_SECONDS};samesite=lax`;
+
+  try {
+    window.localStorage.setItem(THEME_PREFERENCE_KEY, theme);
+  } catch {
+    // localStorage can be unavailable in restricted browser contexts.
+  }
 
   return resolvedTheme;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemePreference>(getStoredTheme);
+export function ThemeProvider({
+  children,
+  initialTheme = "system",
+}: {
+  children: React.ReactNode;
+  initialTheme?: ThemePreference;
+}) {
+  const [theme, setThemeState] = useState<ThemePreference>(initialTheme);
   const [resolvedTheme, setResolvedTheme] = useState<"light" | "dark">(() =>
-    theme === "system" ? getSystemTheme() : theme,
+    initialTheme === "system" ? "light" : initialTheme,
   );
+  const hasSyncedStoredTheme = useRef(false);
 
   useEffect(() => {
-    applyTheme(theme);
+    if (!hasSyncedStoredTheme.current) {
+      hasSyncedStoredTheme.current = true;
+
+      const storedTheme = getStoredTheme();
+      if (storedTheme && storedTheme !== theme) {
+        queueMicrotask(() => {
+          setThemeState(storedTheme);
+          setResolvedTheme(resolveTheme(storedTheme));
+        });
+
+        return;
+      }
+    }
+
+    setResolvedTheme(applyTheme(theme));
 
     if (theme !== "system") return;
 
@@ -74,7 +109,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setTheme = useCallback((nextTheme: ThemePreference) => {
     setThemeState(nextTheme);
-    setResolvedTheme(nextTheme === "system" ? getSystemTheme() : nextTheme);
+    setResolvedTheme(resolveTheme(nextTheme));
   }, []);
 
   const value = useMemo(

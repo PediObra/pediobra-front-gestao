@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { Providers } from "@/components/providers";
+import {
+  getInitialLocale,
+  getInitialThemePreference,
+  LOCALE_PREFERENCE_KEY,
+  THEME_PREFERENCE_KEY,
+} from "@/lib/preferences";
 import {
   absoluteUrl,
   getSiteUrl,
@@ -72,19 +79,30 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const initialLocale = getInitialLocale(
+    cookieStore.get(LOCALE_PREFERENCE_KEY)?.value,
+  );
+  const initialTheme = getInitialThemePreference(
+    cookieStore.get(THEME_PREFERENCE_KEY)?.value,
+  );
+  const initialThemeClassName = initialTheme === "dark" ? " dark" : "";
+
   return (
     <html
-      lang="pt-BR"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang={initialLocale}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased${initialThemeClassName}`}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <Providers>{children}</Providers>
+        <Providers initialLocale={initialLocale} initialTheme={initialTheme}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

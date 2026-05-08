@@ -7,9 +7,18 @@ import { Toaster } from "sonner";
 import { AuthProvider } from "@/lib/auth/provider";
 import { ApiError } from "@/lib/api/client";
 import { I18nProvider } from "@/lib/i18n";
+import type { Locale, ThemePreference } from "@/lib/preferences";
 import { ThemeProvider } from "@/lib/theme/provider";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  initialLocale,
+  initialTheme,
+}: {
+  children: React.ReactNode;
+  initialLocale?: Locale;
+  initialTheme?: ThemePreference;
+}) {
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -33,8 +42,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <I18nProvider>
+      <ThemeProvider initialTheme={initialTheme}>
+        <I18nProvider initialLocale={initialLocale}>
           <AuthProvider>{children}</AuthProvider>
         </I18nProvider>
       </ThemeProvider>

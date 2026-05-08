@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { BlogPostCta } from "@/components/blog/blog-post-cta";
 import {
   getBlogPostBySlug,
   getBlogPostCover,
@@ -211,6 +212,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[minmax(0,740px)_300px] lg:px-8">
           <div className="min-w-0">
             <ArticleBody post={post} />
+            <BlogPostCta
+              cta={post}
+              eyebrow={copy.ctaEyebrow}
+              supportText={copy.ctaSupport}
+            />
           </div>
 
           <aside className="lg:sticky lg:top-8 lg:self-start">

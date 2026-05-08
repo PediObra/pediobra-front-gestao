@@ -19,6 +19,7 @@ import {
   getPublicBlogCopy,
   getPublicBlogLocale,
 } from "@/lib/public-blog-copy";
+import { getRecentBlogPosts } from "@/lib/blog-listing";
 import {
   BlogDiscovery,
   BlogHero,
@@ -113,7 +114,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   const posts = postsResponse.data;
   const topics = getTopics(topicPostsResponse.data);
   const featuredPost = page === 1 ? (posts[0] ?? null) : null;
-  const listedPosts = featuredPost ? posts.slice(1) : posts;
+  const listedPosts = getRecentBlogPosts(posts);
 
   if (
     (page > postsResponse.meta.totalPages && postsResponse.meta.total > 0) ||
