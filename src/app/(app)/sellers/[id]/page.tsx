@@ -7,10 +7,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowLeft,
+  CalendarClock,
   FileClock,
   FileUp,
   Loader2,
   MapPinned,
+  Power,
   Save,
   Store,
   Truck,
@@ -41,6 +43,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
 import { StripeConnectStatusCard } from "@/components/payments/stripe-connect-status-card";
 import { MembershipRoleBadge } from "@/components/badges";
@@ -48,7 +58,9 @@ import { useTranslation } from "@/lib/i18n/language-store";
 import { cn } from "@/lib/utils";
 import type {
   MembershipRole,
+  SellerDayOfWeek,
   SellerDeliveryProvider,
+  SellerOperatingHour,
   SellerProductImportJob,
   UserWithRelations,
 } from "@/lib/api/types";
@@ -70,6 +82,21 @@ interface TeamMember {
   canManageSellerProducts: boolean;
   canManageSellerStaff: boolean;
 }
+
+const SELLER_DAY_LABELS: Record<SellerDayOfWeek, string> = {
+  MONDAY: "Segunda",
+  TUESDAY: "Terça",
+  WEDNESDAY: "Quarta",
+  THURSDAY: "Quinta",
+  FRIDAY: "Sexta",
+  SATURDAY: "Sábado",
+  SUNDAY: "Domingo",
+};
+const SELLER_DAYS = Object.keys(SELLER_DAY_LABELS) as SellerDayOfWeek[];
+const HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) =>
+  String(index).padStart(2, "0"),
+);
+const MINUTE_OPTIONS = ["00", "15", "30", "45"] as const;
 
 export default function SellerDetailPage({
   params,
@@ -103,6 +130,11 @@ export default function SellerDetailPage({
   const deliverySettingsQuery = useQuery({
     queryKey: queryKeys.sellers.deliverySettings(sellerId),
     queryFn: () => sellersService.getDeliverySettings(sellerId),
+    enabled: Number.isFinite(sellerId) && authReady && Boolean(query.data),
+  });
+  const operationalSettingsQuery = useQuery({
+    queryKey: queryKeys.sellers.operationalSettings(sellerId),
+    queryFn: () => sellersService.getOperationalSettings(sellerId),
     enabled: Number.isFinite(sellerId) && authReady && Boolean(query.data),
   });
 
@@ -158,6 +190,10 @@ export default function SellerDetailPage({
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState("");
   const [deliveryProvider, setDeliveryProvider] =
     useState<SellerDeliveryProvider>("INTERNAL");
+  const [autoOnlineEnabled, setAutoOnlineEnabled] = useState(false);
+  const [operatingHours, setOperatingHours] = useState<SellerOperatingHour[]>(
+    () => buildDefaultOperatingHours(),
+  );
 
   useEffect(() => {
     if (seller) {
@@ -187,6 +223,22 @@ export default function SellerDetailPage({
     deliverySettingsQuery.data?.maxDeliveryRadiusMeters,
     deliverySettingsQuery.data?.deliveryProvider,
   ]);
+
+  useEffect(() => {
+    const settings = operationalSettingsQuery.data;
+    if (!settings) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Populate editable availability fields from the fetched settings.
+    setAutoOnlineEnabled(settings.autoOnlineEnabled);
+    setOperatingHours(mergeOperatingHours(settings.operatingHours));
+  }, [operationalSettingsQuery.data?.sellerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const isOperationalScheduleComplete = useMemo(
+    () => isCompleteOperatingSchedule(operatingHours),
+    [operatingHours],
+  );
+  const sellerIsOnline =
+    operationalSettingsQuery.data?.isOnline ?? seller?.isOnline ?? true;
 
   const mutation = useMutation({
     mutationFn: () => {
@@ -271,6 +323,71 @@ export default function SellerDetailPage({
           : err instanceof Error
             ? err.message
             : "Nao foi possivel salvar a configuracao de entrega.";
+      toast.error(msg);
+    },
+  });
+  const availabilityMutation = useMutation({
+    mutationFn: (isOnline: boolean) =>
+      sellersService.updateAvailability(sellerId, { isOnline }),
+    onSuccess: (settings) => {
+      qc.setQueryData(
+        queryKeys.sellers.operationalSettings(sellerId),
+        settings,
+      );
+      setAutoOnlineEnabled(settings.autoOnlineEnabled);
+      setOperatingHours(mergeOperatingHours(settings.operatingHours));
+      qc.setQueryData(queryKeys.sellers.byId(sellerId), {
+        ...(seller ?? {}),
+        isOnline: settings.isOnline,
+        autoOnlineEnabled: settings.autoOnlineEnabled,
+      });
+      toast.success(
+        settings.isOnline ? "Loja marcada como online." : "Loja offline.",
+      );
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : "Nao foi possivel atualizar o status da loja.";
+      toast.error(msg);
+    },
+  });
+  const operationalSettingsMutation = useMutation({
+    mutationFn: () => {
+      if (autoOnlineEnabled && !isOperationalScheduleComplete) {
+        throw new Error(
+          "Configure horarios validos para todos os dias antes de ativar o automatico.",
+        );
+      }
+
+      return sellersService.updateOperationalSettings(sellerId, {
+        autoOnlineEnabled,
+        operatingHours,
+      });
+    },
+    onSuccess: (settings) => {
+      qc.setQueryData(
+        queryKeys.sellers.operationalSettings(sellerId),
+        settings,
+      );
+      setAutoOnlineEnabled(settings.autoOnlineEnabled);
+      setOperatingHours(mergeOperatingHours(settings.operatingHours));
+      qc.setQueryData(queryKeys.sellers.byId(sellerId), {
+        ...(seller ?? {}),
+        isOnline: settings.isOnline,
+        autoOnlineEnabled: settings.autoOnlineEnabled,
+      });
+      qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
+      toast.success("Disponibilidade da loja atualizada.");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : "Nao foi possivel salvar a disponibilidade da loja.";
       toast.error(msg);
     },
   });
@@ -404,6 +521,42 @@ export default function SellerDetailPage({
     ],
     [t],
   );
+  function updateOperatingHour(
+    dayOfWeek: SellerDayOfWeek,
+    patch: Partial<SellerOperatingHour>,
+  ) {
+    setOperatingHours((current) =>
+      current.map((hour) =>
+        hour.dayOfWeek === dayOfWeek ? { ...hour, ...patch } : hour,
+      ),
+    );
+  }
+
+  function toggleClosed(dayOfWeek: SellerDayOfWeek, isClosed: boolean) {
+    updateOperatingHour(
+      dayOfWeek,
+      isClosed
+        ? { isClosed, opensAt: null, closesAt: null }
+        : { isClosed, opensAt: "07:00", closesAt: "18:00" },
+    );
+  }
+
+  function updateTimePart(
+    dayOfWeek: SellerDayOfWeek,
+    field: "opensAt" | "closesAt",
+    part: "hour" | "minute",
+    value: string,
+  ) {
+    const current = operatingHours.find((hour) => hour.dayOfWeek === dayOfWeek);
+    const time = splitTime(
+      current?.[field],
+      field === "opensAt" ? "07:00" : "18:00",
+    );
+    const nextTime =
+      part === "hour" ? `${value}:${time.minute}` : `${time.hour}:${value}`;
+
+    updateOperatingHour(dayOfWeek, { [field]: nextTime });
+  }
 
   return (
     <div className="space-y-6">
@@ -615,6 +768,203 @@ export default function SellerDetailPage({
                         <Save className="size-4" />
                       )}
                       {t("common.saveChanges")}
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+              <Card className="w-full max-w-6xl">
+                <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarClock className="size-5 text-muted-foreground" />
+                      Disponibilidade operacional
+                    </CardTitle>
+                    <CardDescription>
+                      Controle se a loja pode receber novos pedidos no app do
+                      cliente.
+                    </CardDescription>
+                  </div>
+                  <Badge variant={sellerIsOnline ? "success" : "destructive"}>
+                    {sellerIsOnline ? "Online" : "Offline"}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-6 p-6">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="rounded-md border border-border p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm font-semibold">
+                            <Power className="size-4 text-muted-foreground" />
+                            Status da loja
+                          </div>
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            Offline bloqueia catálogo, carrinho e checkout.
+                          </p>
+                        </div>
+                        <Switch
+                          aria-label="Alterar status online da loja"
+                          checked={sellerIsOnline}
+                          disabled={
+                            !canEdit ||
+                            availabilityMutation.isPending ||
+                            operationalSettingsQuery.isLoading
+                          }
+                          onCheckedChange={(checked) =>
+                            availabilityMutation.mutate(checked)
+                          }
+                        />
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-border p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="text-sm font-semibold">
+                            Seguir horários cadastrados
+                          </div>
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            Mantém a loja online no expediente e offline fora
+                            dele.
+                          </p>
+                        </div>
+                        <Switch
+                          aria-label="Ativar disponibilidade automática"
+                          checked={autoOnlineEnabled}
+                          disabled={
+                            !canEdit ||
+                            operationalSettingsQuery.isLoading ||
+                            (!autoOnlineEnabled &&
+                              !isOperationalScheduleComplete)
+                          }
+                          onCheckedChange={setAutoOnlineEnabled}
+                        />
+                      </div>
+                      {!isOperationalScheduleComplete && (
+                        <p className="mt-3 text-xs text-destructive">
+                          Revise os horários antes de ativar o automático.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-semibold">
+                        Horários de funcionamento
+                      </h3>
+                      {operationalSettingsQuery.isLoading && (
+                        <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="grid gap-3">
+                      {operatingHours.map((hour) => {
+                        const opens = splitTime(hour.opensAt, "07:00");
+                        const closes = splitTime(hour.closesAt, "18:00");
+
+                        return (
+                          <div
+                            key={hour.dayOfWeek}
+                            className="grid gap-3 rounded-md border border-border p-3 md:grid-cols-[120px_120px_1fr] md:items-center"
+                          >
+                            <div className="text-sm font-medium">
+                              {SELLER_DAY_LABELS[hour.dayOfWeek]}
+                            </div>
+                            <label className="flex items-center gap-2 text-sm">
+                              <Checkbox
+                                checked={hour.isClosed}
+                                disabled={!canEdit}
+                                onCheckedChange={(checked) =>
+                                  toggleClosed(hour.dayOfWeek, checked === true)
+                                }
+                              />
+                              Fechado
+                            </label>
+                            <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+                              <div className="grid grid-cols-2 gap-2">
+                                <TimeSelect
+                                  ariaLabel={`Hora de abertura ${SELLER_DAY_LABELS[hour.dayOfWeek]}`}
+                                  value={opens.hour}
+                                  options={HOUR_OPTIONS}
+                                  disabled={!canEdit || hour.isClosed}
+                                  onChange={(value) =>
+                                    updateTimePart(
+                                      hour.dayOfWeek,
+                                      "opensAt",
+                                      "hour",
+                                      value,
+                                    )
+                                  }
+                                />
+                                <TimeSelect
+                                  ariaLabel={`Minuto de abertura ${SELLER_DAY_LABELS[hour.dayOfWeek]}`}
+                                  value={opens.minute}
+                                  options={MINUTE_OPTIONS}
+                                  disabled={!canEdit || hour.isClosed}
+                                  onChange={(value) =>
+                                    updateTimePart(
+                                      hour.dayOfWeek,
+                                      "opensAt",
+                                      "minute",
+                                      value,
+                                    )
+                                  }
+                                />
+                              </div>
+                              <span className="hidden text-center text-xs text-muted-foreground sm:block">
+                                até
+                              </span>
+                              <div className="grid grid-cols-2 gap-2">
+                                <TimeSelect
+                                  ariaLabel={`Hora de fechamento ${SELLER_DAY_LABELS[hour.dayOfWeek]}`}
+                                  value={closes.hour}
+                                  options={HOUR_OPTIONS}
+                                  disabled={!canEdit || hour.isClosed}
+                                  onChange={(value) =>
+                                    updateTimePart(
+                                      hour.dayOfWeek,
+                                      "closesAt",
+                                      "hour",
+                                      value,
+                                    )
+                                  }
+                                />
+                                <TimeSelect
+                                  ariaLabel={`Minuto de fechamento ${SELLER_DAY_LABELS[hour.dayOfWeek]}`}
+                                  value={closes.minute}
+                                  options={MINUTE_OPTIONS}
+                                  disabled={!canEdit || hour.isClosed}
+                                  onChange={(value) =>
+                                    updateTimePart(
+                                      hour.dayOfWeek,
+                                      "closesAt",
+                                      "minute",
+                                      value,
+                                    )
+                                  }
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </CardContent>
+                {canEdit && (
+                  <CardFooter className="justify-end">
+                    <Button
+                      onClick={() => operationalSettingsMutation.mutate()}
+                      disabled={
+                        operationalSettingsMutation.isPending ||
+                        operationalSettingsQuery.isLoading ||
+                        (autoOnlineEnabled && !isOperationalScheduleComplete)
+                      }
+                    >
+                      {operationalSettingsMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Save className="size-4" />
+                      )}
+                      Salvar disponibilidade
                     </Button>
                   </CardFooter>
                 )}
@@ -863,4 +1213,106 @@ function formatRadiusInput(radiusMeters: number) {
   return Number.isInteger(radiusKm)
     ? String(radiusKm)
     : String(Number(radiusKm.toFixed(2)));
+}
+
+function buildDefaultOperatingHours(): SellerOperatingHour[] {
+  return SELLER_DAYS.map((dayOfWeek) => {
+    if (dayOfWeek === "SUNDAY") {
+      return { dayOfWeek, isClosed: true, opensAt: null, closesAt: null };
+    }
+
+    if (dayOfWeek === "SATURDAY") {
+      return {
+        dayOfWeek,
+        isClosed: false,
+        opensAt: "08:00",
+        closesAt: "13:00",
+      };
+    }
+
+    return {
+      dayOfWeek,
+      isClosed: false,
+      opensAt: "07:00",
+      closesAt: "18:00",
+    };
+  });
+}
+
+function mergeOperatingHours(hours: SellerOperatingHour[]) {
+  const byDay = new Map(hours.map((hour) => [hour.dayOfWeek, hour]));
+
+  return buildDefaultOperatingHours().map((fallback) => ({
+    ...fallback,
+    ...byDay.get(fallback.dayOfWeek),
+  }));
+}
+
+function splitTime(value: string | null | undefined, fallback: string) {
+  const [hour, minute] = (value ?? fallback).split(":");
+
+  return {
+    hour: hour ?? "00",
+    minute: minute ?? "00",
+  };
+}
+
+function isCompleteOperatingSchedule(hours: SellerOperatingHour[]) {
+  if (hours.length !== SELLER_DAYS.length) return false;
+
+  const seenDays = new Set<SellerDayOfWeek>();
+
+  for (const hour of hours) {
+    if (seenDays.has(hour.dayOfWeek)) return false;
+    seenDays.add(hour.dayOfWeek);
+
+    if (hour.isClosed) continue;
+    if (!isValidTime(hour.opensAt) || !isValidTime(hour.closesAt)) {
+      return false;
+    }
+
+    if (timeToMinutes(hour.closesAt!) <= timeToMinutes(hour.opensAt!)) {
+      return false;
+    }
+  }
+
+  return seenDays.size === SELLER_DAYS.length;
+}
+
+function isValidTime(value: string | null | undefined) {
+  return /^([01]\d|2[0-3]):(00|15|30|45)$/.test(value ?? "");
+}
+
+function timeToMinutes(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  return hour * 60 + minute;
+}
+
+function TimeSelect({
+  ariaLabel,
+  value,
+  options,
+  disabled,
+  onChange,
+}: {
+  ariaLabel: string;
+  value: string;
+  options: readonly string[];
+  disabled: boolean;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <Select value={value} disabled={disabled} onValueChange={onChange}>
+      <SelectTrigger aria-label={ariaLabel}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option) => (
+          <SelectItem key={option} value={option}>
+            {option}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }

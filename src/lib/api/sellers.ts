@@ -5,6 +5,8 @@ import type {
   Seller,
   SellerDeliverySettings,
   SellerDeliveryProvider,
+  SellerOperatingHour,
+  SellerOperationalSettings,
   StripeConnectOnboardingLinkResponse,
   StripeConnectStatus,
   UserWithRelations,
@@ -89,6 +91,16 @@ export interface UpdateSellerDeliverySettingsPayload {
   deliveryProvider?: SellerDeliveryProvider;
 }
 
+export interface UpdateSellerOperationalSettingsPayload {
+  isOnline?: boolean;
+  autoOnlineEnabled?: boolean;
+  operatingHours?: SellerOperatingHour[];
+}
+
+export interface UpdateSellerAvailabilityPayload {
+  isOnline: boolean;
+}
+
 export const sellersService = {
   list: (params: ListSellersParams = {}) =>
     api.get<Paginated<Seller>>("/sellers", { query: params }),
@@ -115,6 +127,24 @@ export const sellersService = {
   ) =>
     api.patch<SellerDeliverySettings>(
       `/sellers/${id}/delivery-settings`,
+      payload,
+    ),
+
+  getOperationalSettings: (id: number) =>
+    api.get<SellerOperationalSettings>(`/sellers/${id}/operational-settings`),
+
+  updateOperationalSettings: (
+    id: number,
+    payload: UpdateSellerOperationalSettingsPayload,
+  ) =>
+    api.patch<SellerOperationalSettings>(
+      `/sellers/${id}/operational-settings`,
+      payload,
+    ),
+
+  updateAvailability: (id: number, payload: UpdateSellerAvailabilityPayload) =>
+    api.patch<SellerOperationalSettings>(
+      `/sellers/${id}/availability`,
       payload,
     ),
 

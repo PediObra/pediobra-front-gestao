@@ -34,6 +34,8 @@ export const queryKeys = {
     stripeConnect: (id: number) => ["sellers", "stripeConnect", id] as const,
     deliverySettings: (id: number) =>
       ["sellers", "deliverySettings", id] as const,
+    operationalSettings: (id: number) =>
+      ["sellers", "operationalSettings", id] as const,
   },
   products: {
     all: () => ["products"] as const,

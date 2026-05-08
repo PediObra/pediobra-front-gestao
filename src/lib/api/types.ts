@@ -95,11 +95,7 @@ export type StripeConnectOnboardingStatus =
   | "READY"
   | "RESTRICTED";
 
-export type PaymentPayoutStatus =
-  | "PENDING"
-  | "APPROVED"
-  | "PAID"
-  | "CANCELLED";
+export type PaymentPayoutStatus = "PENDING" | "APPROVED" | "PAID" | "CANCELLED";
 
 export type StripeTransferStatus =
   | "PENDING_RECIPIENT"
@@ -252,9 +248,34 @@ export interface Seller {
   stripeDisabledReason?: string | null;
   stripeAccountUpdatedAt?: string | null;
   deliveryProvider?: SellerDeliveryProvider | null;
+  isOnline?: boolean;
+  autoOnlineEnabled?: boolean;
   active?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export type SellerDayOfWeek =
+  | "MONDAY"
+  | "TUESDAY"
+  | "WEDNESDAY"
+  | "THURSDAY"
+  | "FRIDAY"
+  | "SATURDAY"
+  | "SUNDAY";
+
+export interface SellerOperatingHour {
+  dayOfWeek: SellerDayOfWeek;
+  isClosed: boolean;
+  opensAt?: string | null;
+  closesAt?: string | null;
+}
+
+export interface SellerOperationalSettings {
+  sellerId: number;
+  isOnline: boolean;
+  autoOnlineEnabled: boolean;
+  operatingHours: SellerOperatingHour[];
 }
 
 export interface SellerDeliverySettings {
@@ -282,8 +303,7 @@ export interface StripeConnectStatus {
   stripeAccountUpdatedAt?: string | null;
 }
 
-export interface StripeConnectOnboardingLinkResponse
-  extends StripeConnectStatus {
+export interface StripeConnectOnboardingLinkResponse extends StripeConnectStatus {
   onboardingUrl: string;
   expiresAt: number;
 }
@@ -450,8 +470,7 @@ export interface SellerProductImportJob {
   rows?: SellerProductImportRow[];
 }
 
-export interface SellerProductImportReviewRow
-  extends SellerProductImportRow {
+export interface SellerProductImportReviewRow extends SellerProductImportRow {
   job: SellerProductImportJob;
 }
 

@@ -9,6 +9,7 @@ import type {
   Paginated,
   Seller,
   SellerDeliverySettings,
+  SellerOperationalSettings,
   SellerProductImportJob,
   StripeConnectStatus,
   UserWithRelations,
@@ -50,6 +51,9 @@ jest.mock("@/lib/api/sellers", () => ({
     createStripeConnectOnboardingLink: jest.fn(),
     getDeliverySettings: jest.fn(),
     updateDeliverySettings: jest.fn(),
+    getOperationalSettings: jest.fn(),
+    updateOperationalSettings: jest.fn(),
+    updateAvailability: jest.fn(),
   },
 }));
 
@@ -92,6 +96,15 @@ describe("SellerDetailPage", () => {
       .mockResolvedValue(
         makeDeliverySettings({ maxDeliveryRadiusMeters: 8500 }),
       );
+    jest
+      .mocked(sellersService.getOperationalSettings)
+      .mockResolvedValue(makeOperationalSettings());
+    jest
+      .mocked(sellersService.updateOperationalSettings)
+      .mockResolvedValue(makeOperationalSettings({ autoOnlineEnabled: true }));
+    jest
+      .mocked(sellersService.updateAvailability)
+      .mockResolvedValue(makeOperationalSettings({ isOnline: false }));
     jest
       .mocked(sellerProductImportsService.list)
       .mockResolvedValue(paginated([]));
@@ -193,9 +206,9 @@ describe("SellerDetailPage", () => {
     expect(
       screen.getByRole("tab", { name: "Dados Importação" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Dados Equipe" })).not.toHaveAttribute(
-      "href",
-    );
+    expect(
+      screen.getByRole("tab", { name: "Dados Equipe" }),
+    ).not.toHaveAttribute("href");
     expect(
       screen.queryByRole("link", { name: /Gerenciar equipe/i }),
     ).not.toBeInTheDocument();
@@ -206,10 +219,13 @@ describe("SellerDetailPage", () => {
 
     fireEvent.click(screen.getByRole("tab", { name: "Dados Entrega" }));
 
+    expect(screen.getByRole("tab", { name: "Dados Entrega" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
     expect(
-      screen.getByRole("tab", { name: "Dados Entrega" }),
-    ).toHaveAttribute("aria-selected", "true");
-    expect(await screen.findByText("Configuração de entrega")).toBeInTheDocument();
+      await screen.findByText("Configuração de entrega"),
+    ).toBeInTheDocument();
     expect(
       screen.getByLabelText("Raio máximo de entrega (km)"),
     ).toBeInTheDocument();
@@ -225,6 +241,48 @@ describe("SellerDetailPage", () => {
     expect(
       screen.queryByLabelText("Raio máximo de entrega (km)"),
     ).not.toBeInTheDocument();
+  });
+
+  it("lets seller editors change availability and save operating hours", async () => {
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    expect(
+      await screen.findByText("Disponibilidade operacional"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Status da loja")).toBeInTheDocument();
+
+    const availabilitySwitch = screen.getByRole("switch", {
+      name: "Alterar status online da loja",
+    });
+
+    await waitFor(() => expect(availabilitySwitch).not.toBeDisabled());
+    fireEvent.click(availabilitySwitch);
+
+    await waitFor(() =>
+      expect(sellersService.updateAvailability).toHaveBeenCalledWith(3, {
+        isOnline: false,
+      }),
+    );
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /salvar disponibilidade/i }),
+    );
+
+    await waitFor(() => {
+      expect(sellersService.updateOperationalSettings).toHaveBeenCalledWith(
+        3,
+        expect.objectContaining({
+          autoOnlineEnabled: false,
+          operatingHours: expect.arrayContaining([
+            expect.objectContaining({
+              dayOfWeek: "MONDAY",
+              opensAt: "07:00",
+              closesAt: "18:00",
+            }),
+          ]),
+        }),
+      );
+    });
   });
 
   it("shows paginated seller import data in the import section", async () => {
@@ -243,7 +301,9 @@ describe("SellerDetailPage", () => {
 
     renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
 
-    fireEvent.click(await screen.findByRole("tab", { name: "Dados Importação" }));
+    fireEvent.click(
+      await screen.findByRole("tab", { name: "Dados Importação" }),
+    );
 
     expect(await screen.findByText("produtos-maio.csv")).toBeInTheDocument();
     expect(screen.getByText("APPLIED")).toBeInTheDocument();
@@ -273,7 +333,9 @@ describe("SellerDetailPage", () => {
     fireEvent.click(await screen.findByRole("tab", { name: "Dados Equipe" }));
 
     expect(await screen.findByText("Lucas Indaiatuba")).toBeInTheDocument();
-    expect(screen.getByText("lucas@sellers.pediobra.local")).toBeInTheDocument();
+    expect(
+      screen.getByText("lucas@sellers.pediobra.local"),
+    ).toBeInTheDocument();
     expect(screen.getByText("Vendas")).toBeInTheDocument();
     expect(usersService.list).toHaveBeenCalledWith({
       page: 1,
@@ -339,6 +401,32 @@ function makeDeliverySettings(
     deliveryProvider: "INTERNAL",
     source: "SELLER_RULE",
     updatedAt: "2026-01-01T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeOperationalSettings(
+  overrides: Partial<SellerOperationalSettings> = {},
+): SellerOperationalSettings {
+  return {
+    sellerId: 3,
+    isOnline: true,
+    autoOnlineEnabled: false,
+    operatingHours: [
+      "MONDAY",
+      "TUESDAY",
+      "WEDNESDAY",
+      "THURSDAY",
+      "FRIDAY",
+      "SATURDAY",
+      "SUNDAY",
+    ].map((dayOfWeek) => ({
+      dayOfWeek:
+        dayOfWeek as SellerOperationalSettings["operatingHours"][number]["dayOfWeek"],
+      isClosed: dayOfWeek === "SUNDAY",
+      opensAt: dayOfWeek === "SUNDAY" ? null : "07:00",
+      closesAt: dayOfWeek === "SUNDAY" ? null : "18:00",
+    })),
     ...overrides,
   };
 }
