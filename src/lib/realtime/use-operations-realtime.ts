@@ -29,6 +29,10 @@ const EVENT_LABELS: Record<(typeof OPERATION_EVENTS)[number], string> = {
   "operations.job.offer.expired": "Oferta expirada",
   "messages.updated": "Nova mensagem",
 };
+const TOASTED_OPERATION_EVENTS = new Set<(typeof OPERATION_EVENTS)[number]>([
+  "operations.order.created",
+  "messages.updated",
+]);
 
 export function useOperationsRealtime(enabled = true) {
   const qc = useQueryClient();
@@ -53,9 +57,11 @@ export function useOperationsRealtime(enabled = true) {
       qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
       qc.invalidateQueries({ queryKey: queryKeys.messages.all() });
 
-      toast.message(EVENT_LABELS[eventName], {
-        description: "Painel operacional atualizado em tempo real.",
-      });
+      if (TOASTED_OPERATION_EVENTS.has(eventName)) {
+        toast.message(EVENT_LABELS[eventName], {
+          description: "Painel operacional atualizado em tempo real.",
+        });
+      }
     };
 
     for (const eventName of OPERATION_EVENTS) {

@@ -279,6 +279,43 @@ describe("OrderDetailPage status actions", () => {
       });
     });
   });
+
+  it("orders status history by insertion sequence when timestamps race", async () => {
+    mockOrder = makeOrder({
+      statusHistory: [
+        {
+          id: 39,
+          orderId: 1,
+          fromStatus: "PREPARING",
+          toStatus: "READY_FOR_PICKUP",
+          note: "Status changed to READY_FOR_PICKUP.",
+          createdAt: "2026-05-08T00:39:55.498Z",
+          changedByUser: { ...mockUser, createdAt: "2026-05-01T12:00:00.000Z" },
+        },
+        {
+          id: 40,
+          orderId: 1,
+          fromStatus: "READY_FOR_PICKUP",
+          toStatus: "CANCELLED",
+          note: "Pedido cancelado pela loja",
+          createdAt: "2026-05-08T00:39:52.729Z",
+          changedByUser: { ...mockUser, createdAt: "2026-05-01T12:00:00.000Z" },
+        },
+      ],
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    await screen.findByText("Pedido cancelado");
+
+    const cancelled = screen.getByText("Pedido cancelado");
+    const ready = screen.getByText("Pedido pronto para retirada");
+
+    expect(
+      cancelled.compareDocumentPosition(ready) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
 
 function makeOrder(overrides: Partial<Order> = {}): Order {

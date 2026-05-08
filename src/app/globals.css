@@ -182,3 +182,55 @@
     transform: scale(1.025);
   }
 }
+
+.gestao-toast {
+  position: relative;
+  overflow: hidden;
+}
+
+.gestao-toast::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: -34%;
+  width: 34%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.77 0.16 70 / 0.22),
+    transparent
+  );
+  animation: toast-sweep 720ms ease-out;
+}
+
+.gestao-toast::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  pointer-events: none;
+  background: oklch(0.77 0.16 70 / 0.55);
+  transform-origin: left;
+  animation: toast-life 2600ms linear forwards;
+}
+
+@keyframes toast-sweep {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(395%);
+  }
+}
+
+@keyframes toast-life {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

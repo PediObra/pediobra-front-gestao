@@ -493,11 +493,7 @@ export default function OrderDetailPage({
               {order.statusHistory?.length ? (
                 <ol className="relative border-l border-border ml-2 space-y-4">
                   {[...order.statusHistory]
-                    .sort(
-                      (a, b) =>
-                        new Date(b.createdAt).getTime() -
-                        new Date(a.createdAt).getTime(),
-                    )
+                    .sort((a, b) => b.id - a.id)
                     .map((h) => {
                       const event = formatOrderHistoryEntry(h, t);
 
