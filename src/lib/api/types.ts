@@ -16,6 +16,10 @@ export type DriverAvailability = "ONLINE" | "OFFLINE" | "BUSY";
 
 export type FulfillmentMethod = "DELIVERY" | "STORE_PICKUP";
 
+export type DeliveryProvider = "INTERNAL" | "SELLER" | "NONE";
+
+export type SellerDeliveryProvider = Exclude<DeliveryProvider, "NONE">;
+
 export type MessageTargetType =
   | "ORDER"
   | "DELIVERY_REQUEST"
@@ -247,6 +251,7 @@ export interface Seller {
   stripeRequirementsEventuallyDue?: string[] | null;
   stripeDisabledReason?: string | null;
   stripeAccountUpdatedAt?: string | null;
+  deliveryProvider?: SellerDeliveryProvider | null;
   active?: boolean;
   createdAt?: string;
   updatedAt?: string;
@@ -256,6 +261,7 @@ export interface SellerDeliverySettings {
   sellerId: number;
   ruleId?: number | null;
   maxDeliveryRadiusMeters: number;
+  deliveryProvider: SellerDeliveryProvider;
   source: "SELLER_RULE" | "SYSTEM_DEFAULT";
   updatedAt?: string | null;
 }
@@ -713,6 +719,7 @@ export interface Order {
   assignedDriverProfileId?: number | null;
   status: OrderStatus;
   fulfillmentMethod?: FulfillmentMethod;
+  deliveryProvider?: DeliveryProvider;
   paymentStatus?: PaymentStatus | null;
   deliveryAddress?: string | null;
   deliveryCep?: string | null;

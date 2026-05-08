@@ -46,6 +46,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -123,6 +124,7 @@ export default function OrderDetailPage({
   const [statusConfirmation, setStatusConfirmation] =
     useState<StatusConfirmation | null>(null);
   const [pickupCode, setPickupCode] = useState("");
+  const [deliveryCode, setDeliveryCode] = useState("");
   const [customerPickupCode, setCustomerPickupCode] = useState("");
   const [evType, setEvType] = useState<EvidenceType>("GENERAL");
   const [evFile, setEvFile] = useState<File | null>(null);
@@ -192,6 +194,26 @@ export default function OrderDetailPage({
     },
   });
 
+  const deliveryMutation = useMutation({
+    mutationFn: () =>
+      ordersService.confirmDelivery(orderId, { code: deliveryCode.trim() }),
+    onSuccess: (updated) => {
+      qc.setQueryData(queryKeys.orders.byId(orderId), updated);
+      qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
+      toast.success(t("order.deliveryConfirmed"));
+      setDeliveryCode("");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : t("order.deliveryConfirmationFailed");
+      toast.error(msg);
+    },
+  });
+
   function handlePickupCodeChange(event: ChangeEvent<HTMLInputElement>) {
     const nextCode = event.target.value.replace(/\D/g, "").slice(0, 4);
     setPickupCode(nextCode);
@@ -205,6 +227,14 @@ export default function OrderDetailPage({
   ) {
     const nextCode = event.target.value.replace(/\D/g, "").slice(0, 4);
     setCustomerPickupCode(nextCode);
+    if (nextCode.length === 4) {
+      event.currentTarget.blur();
+    }
+  }
+
+  function handleDeliveryCodeChange(event: ChangeEvent<HTMLInputElement>) {
+    const nextCode = event.target.value.replace(/\D/g, "").slice(0, 4);
+    setDeliveryCode(nextCode);
     if (nextCode.length === 4) {
       event.currentTarget.blur();
     }
@@ -290,9 +320,15 @@ export default function OrderDetailPage({
 
   const canChangeStatus = transitions.length > 0;
   const isStorePickup = order.fulfillmentMethod === "STORE_PICKUP";
+  const isSellerDelivery = order.deliveryProvider === "SELLER";
+  const isInternalDelivery = !isStorePickup && !isSellerDelivery;
   const canConfirmPickup =
     order.status === "READY_FOR_PICKUP" &&
-    !isStorePickup &&
+    isInternalDelivery &&
+    (isAdmin || canAccessSeller(user, order.sellerId));
+  const canConfirmDelivery =
+    order.status === "OUT_FOR_DELIVERY" &&
+    isSellerDelivery &&
     (isAdmin || canAccessSeller(user, order.sellerId));
   const canConfirmCustomerPickup =
     order.status === "READY_FOR_CUSTOMER_PICKUP" &&
@@ -351,6 +387,13 @@ export default function OrderDetailPage({
         })}
         actions={
           <div className="flex items-center gap-2">
+            {!isStorePickup && (
+              <Badge variant={isSellerDelivery ? "secondary" : "outline"}>
+                {isSellerDelivery
+                  ? t("order.deliveryProviderSeller")
+                  : t("order.deliveryProviderInternal")}
+              </Badge>
+            )}
             <OrderStatusBadge status={order.status} />
             {order.paymentStatus && (
               <PaymentStatusBadge status={order.paymentStatus} />
@@ -761,6 +804,11 @@ export default function OrderDetailPage({
               ) : (
                 <>
                   <p>{order.deliveryAddress}</p>
+                  <p className="text-muted-foreground">
+                    {isSellerDelivery
+                      ? t("order.deliveryProviderSeller")
+                      : t("order.deliveryProviderInternal")}
+                  </p>
                   {order.deliveryCep && (
                     <p className="text-muted-foreground">
                       CEP {order.deliveryCep}
@@ -776,7 +824,7 @@ export default function OrderDetailPage({
             </CardContent>
           </Card>
 
-          {!isStorePickup && (
+          {isInternalDelivery && (
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -914,6 +962,47 @@ export default function OrderDetailPage({
                     <CheckCircle2 className="size-4" />
                   )}
                   {t("order.confirmCustomerPickup")}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {canConfirmDelivery && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("order.deliveryConfirmation")}</CardTitle>
+                <CardDescription>
+                  {t("order.sellerDeliveryConfirmationDescription")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="delivery-code">
+                    {t("order.deliveryCode")}
+                  </Label>
+                  <Input
+                    id="delivery-code"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={deliveryCode}
+                    onChange={handleDeliveryCodeChange}
+                    placeholder="0000"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => deliveryMutation.mutate()}
+                  disabled={
+                    deliveryCode.length !== 4 || deliveryMutation.isPending
+                  }
+                >
+                  {deliveryMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="size-4" />
+                  )}
+                  {t("order.confirmDelivery")}
                 </Button>
               </CardContent>
             </Card>

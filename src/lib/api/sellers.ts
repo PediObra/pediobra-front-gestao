@@ -4,6 +4,7 @@ import type {
   Paginated,
   Seller,
   SellerDeliverySettings,
+  SellerDeliveryProvider,
   StripeConnectOnboardingLinkResponse,
   StripeConnectStatus,
   UserWithRelations,
@@ -85,6 +86,7 @@ export interface StripeConnectOnboardingLinkPayload {
 
 export interface UpdateSellerDeliverySettingsPayload {
   maxDeliveryRadiusMeters: number;
+  deliveryProvider?: SellerDeliveryProvider;
 }
 
 export const sellersService = {

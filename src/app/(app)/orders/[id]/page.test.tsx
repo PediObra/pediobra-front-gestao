@@ -65,6 +65,7 @@ jest.mock("@/lib/api/orders", () => ({
     updateStatus: jest.fn(),
     assignDriver: jest.fn(),
     confirmPickup: jest.fn(),
+    confirmDelivery: jest.fn(),
     confirmCustomerPickup: jest.fn(),
     addEvidence: jest.fn(),
   },
@@ -99,6 +100,9 @@ describe("OrderDetailPage status actions", () => {
     jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
     jest.mocked(ordersService.updateStatus).mockImplementation((_id, payload) =>
       Promise.resolve({ ...mockOrder, status: payload.status } as Order),
+    );
+    jest.mocked(ordersService.confirmDelivery).mockImplementation(() =>
+      Promise.resolve({ ...mockOrder, status: "DELIVERED" } as Order),
     );
   });
 
@@ -227,6 +231,53 @@ describe("OrderDetailPage status actions", () => {
 
     expect(screen.queryByText("Atribuir motorista")).toBeNull();
     expect(screen.queryByRole("button", { name: "Em rota" })).toBeNull();
+  });
+
+  it("shows seller-fulfilled delivery status action without driver details", async () => {
+    mockOrder = makeOrder({
+      status: "PREPARING",
+      deliveryProvider: "SELLER",
+      assignedDriverProfileId: null,
+      assignedDriverProfile: null,
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    expect(await screen.findAllByText("Entrega feita pela loja")).not.toHaveLength(
+      0,
+    );
+    expect(screen.queryByText("Motorista")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Em rota" }));
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "OUT_FOR_DELIVERY",
+      });
+    });
+  });
+
+  it("lets seller users confirm seller-fulfilled delivery with the customer code", async () => {
+    mockOrder = makeOrder({
+      status: "OUT_FOR_DELIVERY",
+      deliveryProvider: "SELLER",
+      assignedDriverProfileId: null,
+      assignedDriverProfile: null,
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    const input = await screen.findByLabelText("Código de entrega");
+    fireEvent.change(input, { target: { value: "1234" } });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar entrega" }));
+
+    await waitFor(() => {
+      expect(ordersService.confirmDelivery).toHaveBeenCalledWith(1, {
+        code: "1234",
+      });
+    });
   });
 });
 

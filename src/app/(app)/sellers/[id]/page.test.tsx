@@ -149,6 +149,8 @@ describe("SellerDetailPage", () => {
   it("lets seller editors update the delivery radius without master data access", async () => {
     renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
 
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Entrega" }));
+
     const radiusInput = await screen.findByLabelText(
       "Raio máximo de entrega (km)",
     );
@@ -162,16 +164,17 @@ describe("SellerDetailPage", () => {
     await waitFor(() => {
       expect(radiusInput).toHaveValue("8.5");
     });
-    fireEvent.click(screen.getByRole("button", { name: /salvar raio/i }));
+    fireEvent.click(screen.getByRole("button", { name: /salvar entrega/i }));
 
     await waitFor(() => {
       expect(sellersService.updateDeliverySettings).toHaveBeenCalledWith(3, {
         maxDeliveryRadiusMeters: 8500,
+        deliveryProvider: "INTERNAL",
       });
     });
   });
 
-  it("shows delivery radius inside operational data and receiving as a separate section", async () => {
+  it("shows delivery settings and receiving as separate sections", async () => {
     renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
 
     expect(
@@ -179,11 +182,14 @@ describe("SellerDetailPage", () => {
     ).toHaveAttribute("aria-selected", "true");
     expect(screen.getByLabelText("Nome")).toBeInTheDocument();
     expect(
-      screen.getByLabelText("Raio máximo de entrega (km)"),
-    ).toBeInTheDocument();
+      screen.queryByLabelText("Raio máximo de entrega (km)"),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("link", { name: /Importar Produtos/i }),
     ).toHaveAttribute("href", "/seller-product-imports/new?sellerId=3");
+    expect(
+      screen.getByRole("tab", { name: "Dados Entrega" }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("tab", { name: "Dados Importação" }),
     ).toBeInTheDocument();
@@ -197,6 +203,17 @@ describe("SellerDetailPage", () => {
       screen.queryByRole("tab", { name: "Área de entrega" }),
     ).not.toBeInTheDocument();
     expect(screen.queryByText("Conta Stripe")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Dados Entrega" }));
+
+    expect(
+      screen.getByRole("tab", { name: "Dados Entrega" }),
+    ).toHaveAttribute("aria-selected", "true");
+    expect(await screen.findByText("Configuração de entrega")).toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Raio máximo de entrega (km)"),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Nome")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("tab", { name: "Dados Bancários" }));
 
@@ -319,6 +336,7 @@ function makeDeliverySettings(
     sellerId: 3,
     ruleId: 1,
     maxDeliveryRadiusMeters: 5000,
+    deliveryProvider: "INTERNAL",
     source: "SELLER_RULE",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...overrides,

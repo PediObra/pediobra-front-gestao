@@ -1,5 +1,6 @@
 import type {
   AuthUser,
+  DeliveryProvider,
   DeliveryRequestStatus,
   OrderStatus,
   RoleName,
@@ -26,6 +27,15 @@ const STORE_PICKUP_ORDER_STATUS_GRAPH = {
   CANCELLED: [],
 } as const satisfies Partial<Record<OrderStatus, readonly OrderStatus[]>>;
 
+const SELLER_DELIVERY_ORDER_STATUS_GRAPH = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: ["PREPARING", "CANCELLED"],
+  PREPARING: ["OUT_FOR_DELIVERY", "CANCELLED"],
+  OUT_FOR_DELIVERY: ["DELIVERED"],
+  DELIVERED: [],
+  CANCELLED: [],
+} as const satisfies Partial<Record<OrderStatus, readonly OrderStatus[]>>;
+
 const DELIVERY_REQUEST_STATUS_GRAPH = {
   PENDING: ["CANCELLED"],
   ASSIGNED: ["PICKED_UP", "CANCELLED"],
@@ -47,6 +57,11 @@ const SELLER_ORDER_STATUSES: readonly OrderStatus[] = [
   "CUSTOMER_PICKED_UP",
   "CANCELLED",
 ] as const;
+
+const SELLER_DELIVERY_ORDER_STATUSES: readonly OrderStatus[] = [
+  ...SELLER_ORDER_STATUSES,
+  "OUT_FOR_DELIVERY",
+];
 
 const DRIVER_WORK_STATUSES: readonly (OrderStatus | DeliveryRequestStatus)[] = [
   "PICKED_UP",
@@ -145,11 +160,14 @@ export function allowedOrderStatusTransitions(
     status: string;
     paymentStatus?: string | null;
     fulfillmentMethod?: string | null;
+    deliveryProvider?: DeliveryProvider | null;
   },
 ) {
+  const isSellerDelivery = order.deliveryProvider === "SELLER";
   const graphTransitions = orderStatusTransitions(
     order.status,
     order.fulfillmentMethod,
+    order.deliveryProvider,
   );
   const filterPaymentLockedDispatch = (statuses: readonly OrderStatus[]) =>
     ["PAID", "AUTHORIZED"].includes(order.paymentStatus ?? "")
@@ -157,14 +175,18 @@ export function allowedOrderStatusTransitions(
       : statuses.filter(
           (status) =>
             status !== "READY_FOR_PICKUP" &&
-            status !== "READY_FOR_CUSTOMER_PICKUP",
+            status !== "READY_FOR_CUSTOMER_PICKUP" &&
+            !(isSellerDelivery && status === "OUT_FOR_DELIVERY"),
         );
   const filterCodeProtectedStatuses = (statuses: readonly OrderStatus[]) =>
     statuses.filter(
       (status) => !ORDER_CODE_PROTECTED_STATUSES.includes(status),
     );
   const filterDriverManagedStatuses = (statuses: readonly OrderStatus[]) =>
-    statuses.filter((status) => !DRIVER_WORK_STATUSES.includes(status));
+    statuses.filter((status) => {
+      if (isSellerDelivery && status === "OUT_FOR_DELIVERY") return true;
+      return !DRIVER_WORK_STATUSES.includes(status);
+    });
 
   if (isAdmin(user)) {
     return filterCodeProtectedStatuses(
@@ -176,7 +198,10 @@ export function allowedOrderStatusTransitions(
     return filterCodeProtectedStatuses(
       filterPaymentLockedDispatch(
         graphTransitions.filter((status) =>
-          SELLER_ORDER_STATUSES.includes(status),
+          (isSellerDelivery
+            ? SELLER_DELIVERY_ORDER_STATUSES
+            : SELLER_ORDER_STATUSES
+          ).includes(status),
         ),
       ),
     );
@@ -250,10 +275,13 @@ export function allowedDeliveryRequestStatusTransitions(
 function orderStatusTransitions(
   status: string,
   fulfillmentMethod?: string | null,
+  deliveryProvider?: DeliveryProvider | null,
 ): readonly OrderStatus[] {
   const graph: Partial<Record<OrderStatus, readonly OrderStatus[]>> =
     fulfillmentMethod === "STORE_PICKUP"
       ? STORE_PICKUP_ORDER_STATUS_GRAPH
+      : deliveryProvider === "SELLER"
+        ? SELLER_DELIVERY_ORDER_STATUS_GRAPH
       : ORDER_STATUS_GRAPH;
 
   return isOrderStatus(status) ? (graph[status] ?? []) : [];
@@ -268,7 +296,11 @@ function deliveryRequestStatusTransitions(
 }
 
 function isOrderStatus(status: string): status is OrderStatus {
-  return status in ORDER_STATUS_GRAPH || status in STORE_PICKUP_ORDER_STATUS_GRAPH;
+  return (
+    status in ORDER_STATUS_GRAPH ||
+    status in STORE_PICKUP_ORDER_STATUS_GRAPH ||
+    status in SELLER_DELIVERY_ORDER_STATUS_GRAPH
+  );
 }
 
 function isDeliveryRequestStatus(

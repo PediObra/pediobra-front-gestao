@@ -12,6 +12,8 @@ import {
   Loader2,
   MapPinned,
   Save,
+  Store,
+  Truck,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -46,11 +48,17 @@ import { useTranslation } from "@/lib/i18n/language-store";
 import { cn } from "@/lib/utils";
 import type {
   MembershipRole,
+  SellerDeliveryProvider,
   SellerProductImportJob,
   UserWithRelations,
 } from "@/lib/api/types";
 
-type SellerDetailSection = "operations" | "receiving" | "imports" | "team";
+type SellerDetailSection =
+  | "operations"
+  | "receiving"
+  | "delivery"
+  | "imports"
+  | "team";
 
 interface TeamMember {
   userId: number;
@@ -148,6 +156,8 @@ export default function SellerDetailPage({
   const [clearLogo, setClearLogo] = useState(false);
   const [logoInputKey, setLogoInputKey] = useState(0);
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState("");
+  const [deliveryProvider, setDeliveryProvider] =
+    useState<SellerDeliveryProvider>("INTERNAL");
 
   useEffect(() => {
     if (seller) {
@@ -167,9 +177,15 @@ export default function SellerDetailPage({
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep form state in sync with API settings.
       setDeliveryRadiusKm(formatRadiusInput(radiusMeters));
     }
+
+    const provider = deliverySettingsQuery.data?.deliveryProvider;
+    if (provider) {
+      setDeliveryProvider(provider);
+    }
   }, [
     deliverySettingsQuery.data?.sellerId,
     deliverySettingsQuery.data?.maxDeliveryRadiusMeters,
+    deliverySettingsQuery.data?.deliveryProvider,
   ]);
 
   const mutation = useMutation({
@@ -240,12 +256,13 @@ export default function SellerDetailPage({
 
       return sellersService.updateDeliverySettings(sellerId, {
         maxDeliveryRadiusMeters: Math.round(parsedRadiusKm * 1000),
+        deliveryProvider,
       });
     },
     onSuccess: (settings) => {
       qc.setQueryData(queryKeys.sellers.deliverySettings(sellerId), settings);
       qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
-      toast.success("Raio de entrega atualizado.");
+      toast.success("Configurações de entrega atualizadas.");
     },
     onError: (err: unknown) => {
       const msg =
@@ -253,7 +270,7 @@ export default function SellerDetailPage({
           ? err.displayMessage
           : err instanceof Error
             ? err.message
-            : "Nao foi possivel salvar o raio de entrega.";
+            : "Nao foi possivel salvar a configuracao de entrega.";
       toast.error(msg);
     },
   });
@@ -263,6 +280,7 @@ export default function SellerDetailPage({
   }> = [
     { value: "operations", label: t("seller.operationalData") },
     { value: "receiving", label: t("seller.receiving") },
+    { value: "delivery", label: "Dados Entrega" },
     { value: "imports", label: "Dados Importação" },
     { value: "team", label: "Dados Equipe" },
   ];
@@ -601,21 +619,88 @@ export default function SellerDetailPage({
                   </CardFooter>
                 )}
               </Card>
+            </>
+          )}
 
-              <div className="w-full max-w-6xl">
-                <Card>
-                  <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1.5">
-                      <CardTitle>{t("seller.maxDeliveryRadius")}</CardTitle>
-                      <CardDescription>
-                        {canEdit
-                          ? "Defina ate quantos km esta loja atende pedidos de entrega."
-                          : "Voce nao tem permissao para alterar o raio de entrega."}
-                      </CardDescription>
-                    </div>
-                    <MapPinned className="size-5 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent className="grid gap-4 p-6 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
+          {activeSection === "delivery" && (
+            <div
+              id="seller-section-panel-delivery"
+              role="tabpanel"
+              aria-labelledby="seller-section-tab-delivery"
+              className="w-full max-w-6xl"
+            >
+              <Card>
+                <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle>Configuração de entrega</CardTitle>
+                    <CardDescription>
+                      {canEdit
+                        ? "Escolha quem entrega os pedidos e ate quantos km esta loja atende."
+                        : "Voce nao tem permissao para alterar a configuracao de entrega."}
+                    </CardDescription>
+                  </div>
+                  <MapPinned className="size-5 text-muted-foreground" />
+                </CardHeader>
+                <CardContent className="grid gap-5 p-6">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {[
+                      {
+                        value: "INTERNAL" as const,
+                        title: "Entrega pela plataforma",
+                        description:
+                          "Gera despacho para motorista e repasse separado do frete.",
+                        icon: Truck,
+                      },
+                      {
+                        value: "SELLER" as const,
+                        title: "Entrega própria da loja",
+                        description:
+                          "A loja assume a rota e recebe produto + frete no repasse.",
+                        icon: Store,
+                      },
+                    ].map((option) => {
+                      const Icon = option.icon;
+                      const selected = deliveryProvider === option.value;
+
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          disabled={!canEdit || deliverySettingsQuery.isLoading}
+                          onClick={() => setDeliveryProvider(option.value)}
+                          className={cn(
+                            "cursor-pointer rounded-md border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                            selected
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border bg-background hover:border-primary/50 hover:bg-muted/50",
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={cn(
+                                "flex size-9 shrink-0 items-center justify-center rounded-md border",
+                                selected
+                                  ? "border-primary/30 bg-primary text-primary-foreground"
+                                  : "border-border bg-muted text-muted-foreground",
+                              )}
+                            >
+                              <Icon className="size-4" />
+                            </span>
+                            <span className="space-y-1">
+                              <span className="block text-sm font-semibold">
+                                {option.title}
+                              </span>
+                              <span className="block text-xs leading-5 text-muted-foreground">
+                                {option.description}
+                              </span>
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
                     <div className="space-y-2">
                       <Label htmlFor="delivery-radius-km">
                         Raio máximo de entrega (km)
@@ -634,28 +719,28 @@ export default function SellerDetailPage({
                       somente quando o endereço selecionado fica dentro desse
                       raio.
                     </div>
-                  </CardContent>
-                  {canEdit && (
-                    <CardFooter className="justify-end">
-                      <Button
-                        onClick={() => deliverySettingsMutation.mutate()}
-                        disabled={
-                          deliverySettingsMutation.isPending ||
-                          deliverySettingsQuery.isLoading
-                        }
-                      >
-                        {deliverySettingsMutation.isPending ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Save className="size-4" />
-                        )}
-                        Salvar raio
-                      </Button>
-                    </CardFooter>
-                  )}
-                </Card>
-              </div>
-            </>
+                  </div>
+                </CardContent>
+                {canEdit && (
+                  <CardFooter className="justify-end">
+                    <Button
+                      onClick={() => deliverySettingsMutation.mutate()}
+                      disabled={
+                        deliverySettingsMutation.isPending ||
+                        deliverySettingsQuery.isLoading
+                      }
+                    >
+                      {deliverySettingsMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Save className="size-4" />
+                      )}
+                      Salvar entrega
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+            </div>
           )}
 
           {activeSection === "receiving" && (
