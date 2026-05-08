@@ -69,8 +69,16 @@ export default function SellerTeamMemberPage({
   const qc = useQueryClient();
   const sellerId = Number(id);
   const userId = Number(userIdParam);
-  const { user: authUser, canManageSellerStaff } = useAuth();
+  const {
+    user: authUser,
+    isAdmin,
+    canManageSellerStaff,
+    membershipFor,
+  } = useAuth();
   const canEditTeam = canManageSellerStaff(sellerId);
+  const actorMembership = membershipFor(sellerId);
+  const canManageOwnerRole =
+    isAdmin || actorMembership?.membershipRole === "OWNER";
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
 
   const sellerQuery = useQuery({
@@ -91,6 +99,9 @@ export default function SellerTeamMemberPage({
   );
   const isSelf = authUser?.id === userId;
   const isSelfOwner = isSelf && membership?.membershipRole === "OWNER";
+  const targetIsOwner = membership?.membershipRole === "OWNER";
+  const canEditMember =
+    canEditTeam && Boolean(membership) && (!targetIsOwner || canManageOwnerRole);
 
   const [jobTitle, setJobTitle] = useState("");
   const [membershipRole, setMembershipRole] =
@@ -106,9 +117,19 @@ export default function SellerTeamMemberPage({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Populate editable fields from the fetched membership.
     setJobTitle(membership.jobTitle ?? "");
     setMembershipRole(membership.membershipRole);
-    setCanEditSeller(membership.canEditSeller);
-    setCanManageSellerProducts(membership.canManageSellerProducts);
-    setCanManageSellerStaffValue(membership.canManageSellerStaff);
+    setCanEditSeller(
+      membership.membershipRole === "OWNER" ? true : membership.canEditSeller,
+    );
+    setCanManageSellerProducts(
+      membership.membershipRole === "OWNER"
+        ? true
+        : membership.canManageSellerProducts,
+    );
+    setCanManageSellerStaffValue(
+      membership.membershipRole === "OWNER"
+        ? true
+        : membership.canManageSellerStaff,
+    );
   }, [membership]);
 
   const updateMutation = useMutation({
@@ -120,9 +141,11 @@ export default function SellerTeamMemberPage({
       const payload: UpdateSellerUserAccessPayload = {
         jobTitle: membershipRole === "OWNER" ? null : jobTitle.trim() || null,
         membershipRole,
-        canEditSeller,
-        canManageSellerProducts,
-        canManageSellerStaff: canManageSellerStaffValue,
+        canEditSeller: membershipRole === "OWNER" ? true : canEditSeller,
+        canManageSellerProducts:
+          membershipRole === "OWNER" ? true : canManageSellerProducts,
+        canManageSellerStaff:
+          membershipRole === "OWNER" ? true : canManageSellerStaffValue,
       };
 
       return sellersService.updateUserAccess(sellerId, userId, payload);
@@ -160,14 +183,14 @@ export default function SellerTeamMemberPage({
   });
 
   const isLoading = sellerQuery.isLoading || memberQuery.isLoading;
-  const canSave = canEditTeam && Boolean(membership);
-  const canRemove = canEditTeam && Boolean(membership) && !isSelf;
+  const canSave = canEditMember;
+  const canRemove = canEditMember && !isSelf;
   const permissionOptions = [
     {
       id: "edit-store",
       title: "Editar Loja",
       description: "Alterar dados operacionais permitidos da loja.",
-      checked: canEditSeller,
+      checked: membershipRole === "OWNER" || canEditSeller,
       onToggle: () => setCanEditSeller((value) => !value),
       icon: Store,
     },
@@ -175,7 +198,7 @@ export default function SellerTeamMemberPage({
       id: "manage-offers",
       title: "Gerenciar Ofertas",
       description: "Criar, importar e editar produtos e ofertas.",
-      checked: canManageSellerProducts,
+      checked: membershipRole === "OWNER" || canManageSellerProducts,
       onToggle: () => setCanManageSellerProducts((value) => !value),
       icon: PackageCheck,
     },
@@ -183,7 +206,7 @@ export default function SellerTeamMemberPage({
       id: "manage-team",
       title: "Gerenciar Equipe",
       description: "Administrar acessos de outros colaboradores.",
-      checked: canManageSellerStaffValue,
+      checked: membershipRole === "OWNER" || canManageSellerStaffValue,
       onToggle: () => setCanManageSellerStaffValue((value) => !value),
       icon: UsersRound,
     },
@@ -234,6 +257,12 @@ export default function SellerTeamMemberPage({
                 permissões de equipe.
               </CardContent>
             )}
+            {canEditTeam && targetIsOwner && !canManageOwnerRole && (
+              <CardContent className="border-b border-border py-4 text-sm text-muted-foreground">
+                Apenas proprietários podem alterar o acesso de outro
+                proprietário.
+              </CardContent>
+            )}
             <CardContent className="grid gap-5 p-6">
               <div
                 className={cn(
@@ -245,18 +274,26 @@ export default function SellerTeamMemberPage({
                   <Label htmlFor="membership-role">Papel na loja</Label>
                   <Select
                     value={membershipRole}
-                    disabled={!canEditTeam || isSelfOwner}
-                    onValueChange={(value) =>
-                      setMembershipRole(value as MembershipRole)
-                    }
+                    disabled={!canEditMember || isSelfOwner}
+                    onValueChange={(value) => {
+                      const nextRole = value as MembershipRole;
+                      setMembershipRole(nextRole);
+                      if (nextRole === "OWNER") {
+                        setCanEditSeller(true);
+                        setCanManageSellerProducts(true);
+                        setCanManageSellerStaffValue(true);
+                      }
+                    }}
                   >
                     <SelectTrigger id="membership-role">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="OWNER">
-                        {membershipRoleLabel("OWNER")}
-                      </SelectItem>
+                      {(canManageOwnerRole || membershipRole === "OWNER") && (
+                        <SelectItem value="OWNER">
+                          {membershipRoleLabel("OWNER")}
+                        </SelectItem>
+                      )}
                       <SelectItem value="EMPLOYEE">
                         {membershipRoleLabel("EMPLOYEE")}
                       </SelectItem>
@@ -292,7 +329,7 @@ export default function SellerTeamMemberPage({
                       type="button"
                       role="switch"
                       aria-checked={option.checked}
-                      disabled={!canEditTeam}
+                      disabled={!canEditMember || membershipRole === "OWNER"}
                       onClick={option.onToggle}
                       className={cn(
                         "group flex min-h-32 cursor-pointer flex-col justify-between rounded-md border p-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60",

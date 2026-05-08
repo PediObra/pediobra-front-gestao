@@ -6,9 +6,12 @@ import { hydrateAuthStore, useAuthStore } from "@/lib/auth/store";
 import { authService } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { needsSellerOnboarding } from "@/lib/auth/permissions";
-
-const PUBLIC_PATHS = ["/login", "/register"];
-const SELLER_ONBOARDING_PATH = "/onboarding/seller";
+import {
+  SELLER_ONBOARDING_PATH,
+  isPublicAuthPath,
+  isSellerOnboardingPath,
+  isTeamInvitationPath,
+} from "@/lib/auth/routes";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -42,12 +45,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated) return;
-    const isPublic = PUBLIC_PATHS.some(
-      (p) => pathname === p || pathname.startsWith(`${p}/`),
-    );
-    const isSellerOnboarding =
-      pathname === SELLER_ONBOARDING_PATH ||
-      pathname.startsWith(`${SELLER_ONBOARDING_PATH}/`);
+    const isPublic = isPublicAuthPath(pathname);
+    const isSellerOnboarding = isSellerOnboardingPath(pathname);
+    const isTeamInvitation = isTeamInvitationPath(pathname);
 
     if (!accessToken && !isPublic) {
       router.replace("/login");
@@ -57,13 +57,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!accessToken || !user) return;
 
     if (needsSellerOnboarding(user)) {
-      if (!isSellerOnboarding) {
+      if (!isSellerOnboarding && !isTeamInvitation) {
         router.replace(SELLER_ONBOARDING_PATH);
       }
       return;
     }
 
-    if (isPublic || isSellerOnboarding) {
+    if ((isPublic && !isTeamInvitation) || isSellerOnboarding) {
       router.replace("/dashboard");
     }
   }, [hydrated, accessToken, user, pathname, router]);

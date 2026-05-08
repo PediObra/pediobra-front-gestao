@@ -3,9 +3,13 @@ import LoginPage from "./page";
 
 const mockReplace = jest.fn();
 const mockLogin = jest.fn();
+let mockNextPath: string | null = null;
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
+  useSearchParams: () => ({
+    get: (key: string) => (key === "next" ? mockNextPath : null),
+  }),
 }));
 
 jest.mock("@/hooks/use-auth", () => ({
@@ -22,6 +26,7 @@ jest.mock("sonner", () => ({
 describe("LoginPage", () => {
   beforeEach(() => {
     mockReplace.mockClear();
+    mockNextPath = null;
     mockLogin.mockResolvedValue({
       id: 10,
       name: "Lucas",
@@ -54,5 +59,27 @@ describe("LoginPage", () => {
       });
     });
     expect(mockReplace).toHaveBeenCalledWith("/onboarding/seller");
+  });
+
+  it("returns sellers without stores to a team invitation after login", async () => {
+    mockNextPath = "/team-invitations/invite-token";
+
+    render(<LoginPage />);
+
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "lucas@example.com" },
+    });
+    fireEvent.change(screen.getByLabelText("Senha"), {
+      target: { value: "secret123" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Entrar/i }));
+
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith({
+        email: "lucas@example.com",
+        password: "secret123",
+      });
+    });
+    expect(mockReplace).toHaveBeenCalledWith("/team-invitations/invite-token");
   });
 });

@@ -9,6 +9,7 @@ import type {
   Paginated,
   Seller,
   SellerDeliverySettings,
+  SellerMembershipAccess,
   SellerOperationalSettings,
   SellerProductImportJob,
   StripeConnectStatus,
@@ -30,6 +31,7 @@ const mockAuth = {
   isAdmin: false,
   canEditSeller: jest.fn(() => true),
   canManageSellerStaff: jest.fn(() => false),
+  membershipFor: jest.fn((): SellerMembershipAccess | undefined => undefined),
 };
 const pushMock = jest.fn();
 
@@ -54,6 +56,7 @@ jest.mock("@/lib/api/sellers", () => ({
     getOperationalSettings: jest.fn(),
     updateOperationalSettings: jest.fn(),
     updateAvailability: jest.fn(),
+    createTeamInvitation: jest.fn(),
   },
 }));
 
@@ -83,6 +86,7 @@ describe("SellerDetailPage", () => {
     mockAuth.isAdmin = false;
     mockAuth.canEditSeller.mockReturnValue(true);
     mockAuth.canManageSellerStaff.mockReturnValue(false);
+    mockAuth.membershipFor.mockReturnValue(undefined);
     jest.mocked(sellersService.getById).mockResolvedValue(makeSeller());
     jest.mocked(sellersService.update).mockResolvedValue(makeSeller());
     jest
@@ -105,6 +109,14 @@ describe("SellerDetailPage", () => {
     jest
       .mocked(sellersService.updateAvailability)
       .mockResolvedValue(makeOperationalSettings({ isOnline: false }));
+    jest.mocked(sellersService.createTeamInvitation).mockResolvedValue({
+      id: 900,
+      sellerId: 3,
+      email: "novo@sellers.pediobra.local",
+      membershipRole: "EMPLOYEE",
+      expiresAt: "2026-05-09T00:00:00.000Z",
+      devInviteUrl: "http://localhost:3001/team-invitations/dev-token",
+    });
     jest
       .mocked(sellerProductImportsService.list)
       .mockResolvedValue(paginated([]));
@@ -113,6 +125,7 @@ describe("SellerDetailPage", () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   it("keeps master data locked for seller users and does not send it on update", async () => {
@@ -243,6 +256,57 @@ describe("SellerDetailPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("hides receiving configuration for seller employees", async () => {
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Bancários" }));
+
+    expect(await screen.findByText("Conta Stripe")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /configurar recebimento/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("lets seller owners start receiving configuration", async () => {
+    mockAuth.membershipFor.mockReturnValue({
+      sellerId: 3,
+      membershipRole: "OWNER",
+      canEditSeller: true,
+      canManageSellerProducts: true,
+      canManageSellerStaff: true,
+    });
+    jest
+      .mocked(sellersService.createStripeConnectOnboardingLink)
+      .mockResolvedValue({
+        ...makeStripeConnectStatus(),
+        onboardingUrl: "https://stripe.test/onboarding",
+        expiresAt: 1778241600,
+      });
+    const openSpy = jest.spyOn(window, "open").mockImplementation(() => null);
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Bancários" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /configurar recebimento/i }),
+    );
+
+    await waitFor(() => {
+      expect(sellersService.createStripeConnectOnboardingLink).toHaveBeenCalledWith(
+        3,
+        expect.objectContaining({
+          returnUrl: expect.any(String),
+          refreshUrl: expect.any(String),
+        }),
+      );
+    });
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://stripe.test/onboarding",
+      "_blank",
+      "noopener,noreferrer",
+    );
+  });
+
   it("lets seller editors change availability and save operating hours", async () => {
     renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
 
@@ -346,6 +410,37 @@ describe("SellerDetailPage", () => {
     fireEvent.click(screen.getByText("Lucas Indaiatuba"));
 
     expect(pushMock).toHaveBeenCalledWith("/sellers/3/team/22");
+  });
+
+  it("lets team managers send seller team invitations", async () => {
+    mockAuth.canManageSellerStaff.mockReturnValue(true);
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Equipe" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: /adicionar membro/i }),
+    );
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "novo@sellers.pediobra.local" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /enviar convite/i }));
+
+    await waitFor(() => {
+      expect(sellersService.createTeamInvitation).toHaveBeenCalledWith(3, {
+        email: "novo@sellers.pediobra.local",
+        membershipRole: "EMPLOYEE",
+        jobTitle: null,
+        canEditSeller: false,
+        canManageSellerProducts: false,
+        canManageSellerStaff: false,
+      });
+    });
+    expect(
+      await screen.findByDisplayValue(
+        "http://localhost:3001/team-invitations/dev-token",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("does not show job title for owner team members", async () => {

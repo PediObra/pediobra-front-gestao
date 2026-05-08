@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -11,6 +11,10 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { ApiError } from "@/lib/api/client";
 import { needsSellerOnboarding } from "@/lib/auth/permissions";
+import {
+  getSafeAuthRedirect,
+  isTeamInvitationPath,
+} from "@/lib/auth/routes";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,8 +26,17 @@ type LoginForm = {
 };
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const t = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const loginSchema = z.object({
@@ -41,8 +54,17 @@ export default function LoginPage() {
     try {
       const user = await login(values);
       toast.success(t("login.success"));
+      const nextPath = getSafeAuthRedirect(searchParams.get("next"));
+      const canUseNextPath =
+        nextPath &&
+        (!needsSellerOnboarding(user) || isTeamInvitationPath(nextPath));
+
       router.replace(
-        needsSellerOnboarding(user) ? "/onboarding/seller" : "/dashboard",
+        canUseNextPath
+          ? nextPath
+          : needsSellerOnboarding(user)
+            ? "/onboarding/seller"
+            : "/dashboard",
       );
     } catch (err) {
       const msg =

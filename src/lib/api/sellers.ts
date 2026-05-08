@@ -7,8 +7,11 @@ import type {
   SellerDeliveryProvider,
   SellerOperatingHour,
   SellerOperationalSettings,
+  SellerTeamInvitationCreated,
+  SellerTeamInvitationPreview,
   StripeConnectOnboardingLinkResponse,
   StripeConnectStatus,
+  AuthResponse,
   UserWithRelations,
 } from "./types";
 
@@ -101,6 +104,20 @@ export interface UpdateSellerAvailabilityPayload {
   isOnline: boolean;
 }
 
+export interface CreateSellerTeamInvitationPayload {
+  email: string;
+  membershipRole: MembershipRole;
+  jobTitle?: string | null;
+  canEditSeller: boolean;
+  canManageSellerProducts: boolean;
+  canManageSellerStaff: boolean;
+}
+
+export interface RegisterSellerTeamInvitationPayload {
+  name: string;
+  password: string;
+}
+
 export const sellersService = {
   list: (params: ListSellersParams = {}) =>
     api.get<Paginated<Seller>>("/sellers", { query: params }),
@@ -173,5 +190,32 @@ export const sellersService = {
   removeUserAccess: (sellerId: number, userId: number) =>
     api.delete<UserWithRelations>(
       `/sellers/${sellerId}/users/${userId}/access`,
+    ),
+
+  createTeamInvitation: (
+    sellerId: number,
+    payload: CreateSellerTeamInvitationPayload,
+  ) =>
+    api.post<SellerTeamInvitationCreated>(
+      `/sellers/${sellerId}/team-invitations`,
+      payload,
+    ),
+
+  getTeamInvitation: (token: string) =>
+    api.get<SellerTeamInvitationPreview>(`/seller-team-invitations/${token}`, {
+      skipAuth: true,
+    }),
+
+  acceptTeamInvitation: (token: string) =>
+    api.post<AuthResponse>(`/seller-team-invitations/${token}/accept`),
+
+  registerTeamInvitation: (
+    token: string,
+    payload: RegisterSellerTeamInvitationPayload,
+  ) =>
+    api.post<AuthResponse>(
+      `/seller-team-invitations/${token}/register`,
+      payload,
+      { skipAuth: true },
     ),
 };

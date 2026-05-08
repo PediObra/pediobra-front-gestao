@@ -278,6 +278,29 @@ export interface SellerOperationalSettings {
   operatingHours: SellerOperatingHour[];
 }
 
+export interface SellerTeamInvitationPreview {
+  id: number;
+  email: string;
+  sellerId: number;
+  seller: Pick<Seller, "id" | "name" | "email"> | null;
+  membershipRole: MembershipRole;
+  jobTitle?: string | null;
+  canEditSeller: boolean;
+  canManageSellerProducts: boolean;
+  canManageSellerStaff: boolean;
+  expiresAt: string;
+  existingUser: boolean;
+}
+
+export interface SellerTeamInvitationCreated {
+  id: number;
+  sellerId: number;
+  email: string;
+  membershipRole: MembershipRole;
+  expiresAt: string;
+  devInviteUrl?: string;
+}
+
 export interface SellerDeliverySettings {
   sellerId: number;
   ruleId?: number | null;

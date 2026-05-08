@@ -17,7 +17,15 @@ jest.mock("react", () => {
 const pushMock = jest.fn();
 const mockAuth = {
   user: { id: 10 },
+  isAdmin: false,
   canManageSellerStaff: jest.fn(() => true),
+  membershipFor: jest.fn(() => ({
+    sellerId: 3,
+    membershipRole: "EMPLOYEE",
+    canEditSeller: false,
+    canManageSellerProducts: false,
+    canManageSellerStaff: true,
+  })),
 };
 
 jest.mock("next/navigation", () => ({
@@ -49,7 +57,15 @@ jest.mock("sonner", () => ({
 describe("SellerTeamMemberPage", () => {
   beforeEach(() => {
     mockAuth.user = { id: 10 };
+    mockAuth.isAdmin = false;
     mockAuth.canManageSellerStaff.mockReturnValue(true);
+    mockAuth.membershipFor.mockReturnValue({
+      sellerId: 3,
+      membershipRole: "EMPLOYEE",
+      canEditSeller: false,
+      canManageSellerProducts: false,
+      canManageSellerStaff: true,
+    });
     jest.mocked(sellersService.getById).mockResolvedValue(makeSeller());
     jest.mocked(sellersService.getUserAccess).mockResolvedValue(makeUser());
     jest.mocked(sellersService.updateUserAccess).mockResolvedValue(makeUser());
@@ -99,6 +115,13 @@ describe("SellerTeamMemberPage", () => {
 
   it("does not let the current owner remove their own owner role or access", async () => {
     mockAuth.user = { id: 22 };
+    mockAuth.membershipFor.mockReturnValue({
+      sellerId: 3,
+      membershipRole: "OWNER",
+      canEditSeller: true,
+      canManageSellerProducts: true,
+      canManageSellerStaff: true,
+    });
     jest.mocked(sellersService.getUserAccess).mockResolvedValue(
       makeUser({
         sellers: [
@@ -128,6 +151,53 @@ describe("SellerTeamMemberPage", () => {
     expect(
       screen.queryByRole("button", { name: /remover usuário da loja/i }),
     ).not.toBeInTheDocument();
+  });
+
+  it("does not offer owner promotion to staff managers", async () => {
+    renderWithQueryClient(<SellerTeamMemberPage params={resolvedParams()} />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Lucas Indaiatuba" }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("Papel na loja"));
+
+    expect(
+      screen.queryByRole("option", { name: "Proprietário" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not let staff managers edit or remove owners", async () => {
+    jest.mocked(sellersService.getUserAccess).mockResolvedValue(
+      makeUser({
+        sellers: [
+          {
+            sellerId: 3,
+            jobTitle: null,
+            membershipRole: "OWNER",
+            canEditSeller: true,
+            canManageSellerProducts: true,
+            canManageSellerStaff: true,
+            seller: makeSeller(),
+          },
+        ],
+      }),
+    );
+
+    renderWithQueryClient(<SellerTeamMemberPage params={resolvedParams()} />);
+
+    expect(
+      await screen.findByText(
+        "Apenas proprietários podem alterar o acesso de outro proprietário.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Papel na loja")).toBeDisabled();
+    expect(
+      screen.queryByRole("button", { name: /salvar acesso/i }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /remover usuário da loja/i }),
+    ).toBeDisabled();
   });
 });
 

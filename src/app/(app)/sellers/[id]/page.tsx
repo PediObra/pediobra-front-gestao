@@ -17,6 +17,7 @@ import {
   Store,
   Truck,
   Users,
+  UserPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { sellersService, type UpdateSellerPayload } from "@/lib/api/sellers";
@@ -44,6 +45,15 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -114,6 +124,7 @@ export default function SellerDetailPage({
     isLoading: authLoading,
     canEditSeller,
     canManageSellerStaff,
+    membershipFor,
   } = useAuth();
   const authReady = !authLoading && isAuthenticated;
 
@@ -142,6 +153,10 @@ export default function SellerDetailPage({
   const canEdit = canEditSeller(sellerId);
   const canEditTeam = canManageSellerStaff(sellerId);
   const canEditMasterData = canEdit && isAdmin;
+  const currentMembership = membershipFor(sellerId);
+  const isSellerOwner = currentMembership?.membershipRole === "OWNER";
+  const canInviteOwner = isAdmin || isSellerOwner;
+  const canConfigureReceiving = isSellerOwner;
   const [activeSection, setActiveSection] =
     useState<SellerDetailSection>("operations");
   const [importsPage, setImportsPage] = useState(1);
@@ -193,6 +208,17 @@ export default function SellerDetailPage({
   const [operatingHours, setOperatingHours] = useState<SellerOperatingHour[]>(
     () => buildDefaultOperatingHours(),
   );
+  const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteMembershipRole, setInviteMembershipRole] =
+    useState<MembershipRole>("EMPLOYEE");
+  const [inviteJobTitle, setInviteJobTitle] = useState("");
+  const [inviteCanEditSeller, setInviteCanEditSeller] = useState(false);
+  const [inviteCanManageSellerProducts, setInviteCanManageSellerProducts] =
+    useState(false);
+  const [inviteCanManageSellerStaff, setInviteCanManageSellerStaff] =
+    useState(false);
+  const [devInviteUrl, setDevInviteUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (seller) {
@@ -388,6 +414,41 @@ export default function SellerDetailPage({
       toast.error(msg);
     },
   });
+  const inviteMutation = useMutation({
+    mutationFn: () =>
+      sellersService.createTeamInvitation(sellerId, {
+        email: inviteEmail.trim(),
+        membershipRole: inviteMembershipRole,
+        jobTitle:
+          inviteMembershipRole === "OWNER"
+            ? null
+            : inviteJobTitle.trim() || null,
+        canEditSeller:
+          inviteMembershipRole === "OWNER" ? true : inviteCanEditSeller,
+        canManageSellerProducts:
+          inviteMembershipRole === "OWNER"
+            ? true
+            : inviteCanManageSellerProducts,
+        canManageSellerStaff:
+          inviteMembershipRole === "OWNER" ? true : inviteCanManageSellerStaff,
+      }),
+    onSuccess: (invitation) => {
+      qc.invalidateQueries({ queryKey: queryKeys.users.all() });
+      setDevInviteUrl(invitation.devInviteUrl ?? null);
+      toast.success("Convite enviado.");
+      if (!invitation.devInviteUrl) {
+        setInviteDialogOpen(false);
+        resetInvitationForm();
+      }
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : "Nao foi possivel enviar o convite.";
+      toast.error(msg);
+    },
+  });
   const sellerSections: Array<{
     value: SellerDetailSection;
     label: string;
@@ -553,6 +614,16 @@ export default function SellerDetailPage({
       part === "hour" ? `${value}:${time.minute}` : `${time.hour}:${value}`;
 
     updateOperatingHour(dayOfWeek, { [field]: nextTime });
+  }
+
+  function resetInvitationForm() {
+    setInviteEmail("");
+    setInviteMembershipRole("EMPLOYEE");
+    setInviteJobTitle("");
+    setInviteCanEditSeller(false);
+    setInviteCanManageSellerProducts(false);
+    setInviteCanManageSellerStaff(false);
+    setDevInviteUrl(null);
   }
 
   return (
@@ -1090,10 +1161,14 @@ export default function SellerDetailPage({
                 description="Status de recebimento e repasses da loja."
                 status={stripeConnectQuery.data}
                 blockedNotice="Esta loja nao aparece no catalogo dos clientes e nao aceita novos pedidos ate o recebimento ficar pronto."
-                actionLabel={canEdit ? "Configurar recebimento" : undefined}
+                actionLabel={
+                  canConfigureReceiving ? "Configurar recebimento" : undefined
+                }
                 actionLoading={stripeConnectMutation.isPending}
                 onAction={
-                  canEdit ? () => stripeConnectMutation.mutate() : undefined
+                  canConfigureReceiving
+                    ? () => stripeConnectMutation.mutate()
+                    : undefined
                 }
               />
             </div>
@@ -1163,6 +1238,183 @@ export default function SellerDetailPage({
                     </CardTitle>
                     <CardDescription>{t("team.description")}</CardDescription>
                   </div>
+                  {canEditTeam && (
+                    <Dialog
+                      open={inviteDialogOpen}
+                      onOpenChange={(open) => {
+                        setInviteDialogOpen(open);
+                        if (!open) resetInvitationForm();
+                      }}
+                    >
+                      <DialogTrigger asChild>
+                        <Button variant="outline">
+                          <UserPlus className="size-4" />
+                          Adicionar membro
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-xl">
+                        <DialogHeader>
+                          <DialogTitle>Convidar membro</DialogTitle>
+                          <DialogDescription>
+                            Envie um convite por email para vincular uma pessoa
+                            à equipe desta loja.
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="invite-email">Email</Label>
+                            <Input
+                              id="invite-email"
+                              type="email"
+                              autoComplete="email"
+                              value={inviteEmail}
+                              onChange={(event) =>
+                                setInviteEmail(event.target.value)
+                              }
+                            />
+                          </div>
+
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="space-y-2">
+                              <Label htmlFor="invite-role">Papel</Label>
+                              <Select
+                                value={inviteMembershipRole}
+                                onValueChange={(value) => {
+                                  const role = value as MembershipRole;
+                                  setInviteMembershipRole(role);
+                                  if (role === "OWNER") {
+                                    setInviteCanEditSeller(true);
+                                    setInviteCanManageSellerProducts(true);
+                                    setInviteCanManageSellerStaff(true);
+                                  }
+                                }}
+                              >
+                                <SelectTrigger id="invite-role">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="EMPLOYEE">
+                                    Funcionário
+                                  </SelectItem>
+                                  {canInviteOwner && (
+                                    <SelectItem value="OWNER">Owner</SelectItem>
+                                  )}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor="invite-job-title">Cargo</Label>
+                              <Input
+                                id="invite-job-title"
+                                disabled={inviteMembershipRole === "OWNER"}
+                                value={inviteJobTitle}
+                                onChange={(event) =>
+                                  setInviteJobTitle(event.target.value)
+                                }
+                              />
+                            </div>
+                          </div>
+
+                          {inviteMembershipRole === "EMPLOYEE" ? (
+                            <div className="grid gap-3 rounded-md border border-border p-3">
+                              <label className="flex items-start gap-2 text-sm">
+                                <Checkbox
+                                  checked={inviteCanEditSeller}
+                                  onCheckedChange={(checked) =>
+                                    setInviteCanEditSeller(checked === true)
+                                  }
+                                />
+                                <span>
+                                  <span className="block font-medium">
+                                    Editar loja
+                                  </span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    Alterar dados operacionais permitidos.
+                                  </span>
+                                </span>
+                              </label>
+                              <label className="flex items-start gap-2 text-sm">
+                                <Checkbox
+                                  checked={inviteCanManageSellerProducts}
+                                  onCheckedChange={(checked) =>
+                                    setInviteCanManageSellerProducts(
+                                      checked === true,
+                                    )
+                                  }
+                                />
+                                <span>
+                                  <span className="block font-medium">
+                                    Gerenciar ofertas
+                                  </span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    Criar, importar e editar produtos da loja.
+                                  </span>
+                                </span>
+                              </label>
+                              <label className="flex items-start gap-2 text-sm">
+                                <Checkbox
+                                  checked={inviteCanManageSellerStaff}
+                                  onCheckedChange={(checked) =>
+                                    setInviteCanManageSellerStaff(
+                                      checked === true,
+                                    )
+                                  }
+                                />
+                                <span>
+                                  <span className="block font-medium">
+                                    Gerenciar equipe
+                                  </span>
+                                  <span className="block text-xs text-muted-foreground">
+                                    Convidar e editar outros colaboradores.
+                                  </span>
+                                </span>
+                              </label>
+                            </div>
+                          ) : (
+                            <div className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
+                              Owners têm acesso completo à loja e podem
+                              convidar outros owners.
+                            </div>
+                          )}
+
+                          {devInviteUrl && (
+                            <div className="space-y-2 rounded-md border border-border bg-muted/40 p-3">
+                              <p className="text-sm font-medium">
+                                Link local do convite
+                              </p>
+                              <Input value={devInviteUrl} readOnly />
+                            </div>
+                          )}
+                        </div>
+
+                        <DialogFooter>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setInviteDialogOpen(false)}
+                          >
+                            Fechar
+                          </Button>
+                          <Button
+                            type="button"
+                            disabled={
+                              inviteMutation.isPending || !inviteEmail.trim()
+                            }
+                            onClick={() => inviteMutation.mutate()}
+                          >
+                            {inviteMutation.isPending ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <UserPlus className="size-4" />
+                            )}
+                            Enviar convite
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  )}
                 </CardHeader>
                 {!canEditTeam && (
                   <CardContent className="border-b border-border py-4 text-sm text-muted-foreground">
