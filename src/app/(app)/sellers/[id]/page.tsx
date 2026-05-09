@@ -26,6 +26,7 @@ import { usersService } from "@/lib/api/users";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import { formatDateTime, formatPhone } from "@/lib/formatters";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { useAuth } from "@/hooks/use-auth";
 import { PageHeader } from "@/components/layout/page-header";
 import { AddressAutocomplete } from "@/components/forms/address-autocomplete";
@@ -768,7 +769,7 @@ export default function SellerDetailPage({
                       <Label htmlFor="logo">{t("seller.logo")}</Label>
                       <ImageFilePreview
                         file={logoFile}
-                        src={clearLogo ? null : seller.logo}
+                        src={clearLogo ? null : resolveMediaUrl(seller.logo)}
                         alt={
                           logoFile
                             ? t("seller.newLogoAlt", { seller: seller.name })

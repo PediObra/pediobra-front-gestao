@@ -47,6 +47,7 @@ import {
   formatProductCategory,
 } from "@/components/products/product-category-select";
 import { useTranslation } from "@/lib/i18n/language-store";
+import { resolveMediaUrl } from "@/lib/media-url";
 
 export default function ProductDetailPage({
   params,
@@ -233,7 +234,7 @@ export default function ProductDetailPage({
                 ) : showExistingImages && primaryImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={primaryImage.url}
+                    src={resolveMediaUrl(primaryImage.url)}
                     alt={product.name}
                     className="size-full object-cover"
                   />
@@ -261,7 +262,7 @@ export default function ProductDetailPage({
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
-                        src={img.url}
+                        src={resolveMediaUrl(img.url)}
                         alt=""
                         className="size-full object-cover"
                       />

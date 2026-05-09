@@ -36,6 +36,7 @@ import {
 } from "@/lib/auth/permissions";
 import { formatOrderHistoryEntry } from "@/lib/status-history";
 import { useTranslation } from "@/lib/i18n/language-store";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { PageHeader } from "@/components/layout/page-header";
 import { MessageThreadCard } from "@/components/messages/message-thread-card";
 import {
@@ -426,7 +427,7 @@ export default function OrderDetailPage({
                       {primary ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={primary.url}
+                          src={resolveMediaUrl(primary.url)}
                           alt={product?.name ?? ""}
                           className="size-full object-cover"
                         />
@@ -547,7 +548,7 @@ export default function OrderDetailPage({
                   {order.evidences.map((e) => (
                     <a
                       key={e.id}
-                      href={e.imageUrl}
+                      href={resolveMediaUrl(e.imageUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="group block rounded-md border border-border overflow-hidden bg-muted"
@@ -555,7 +556,7 @@ export default function OrderDetailPage({
                       <div className="aspect-square overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={e.imageUrl}
+                          src={resolveMediaUrl(e.imageUrl)}
                           alt={evidenceTypeLabel(e.evidenceType)}
                           className="size-full object-cover group-hover:scale-105 transition-transform"
                         />

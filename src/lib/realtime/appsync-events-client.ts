@@ -47,8 +47,8 @@ export function createAppSyncEventsClient({
     if (stopped) return;
 
     socket = new WebSocket(realtimeEndpoint, [
-      getAuthProtocol(authorization),
       APPSYNC_PROTOCOL,
+      getAuthProtocol(authorization),
     ]);
 
     socket.onopen = () => {
@@ -165,13 +165,28 @@ export function isAppSyncRealtimeConfigured() {
 }
 
 export function getAppSyncRealtimeConfig() {
-  const realtimeEndpoint =
-    process.env.NEXT_PUBLIC_APPSYNC_EVENTS_REALTIME_ENDPOINT?.trim();
-  const httpEndpoint =
-    process.env.NEXT_PUBLIC_APPSYNC_EVENTS_HTTP_ENDPOINT?.trim();
+  const realtimeEndpoint = validEndpoint(
+    process.env.NEXT_PUBLIC_APPSYNC_EVENTS_REALTIME_ENDPOINT?.trim(),
+    ["ws:", "wss:"],
+  );
+  const httpEndpoint = validEndpoint(
+    process.env.NEXT_PUBLIC_APPSYNC_EVENTS_HTTP_ENDPOINT?.trim(),
+    ["http:", "https:"],
+  );
 
   if (!realtimeEndpoint || !httpEndpoint) return null;
   return { realtimeEndpoint, httpEndpoint };
+}
+
+function validEndpoint(value: string | undefined, protocols: string[]) {
+  if (!value) return null;
+
+  try {
+    const endpoint = new URL(value);
+    return protocols.includes(endpoint.protocol) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 function getAuthProtocol(authorization: Record<string, string>) {

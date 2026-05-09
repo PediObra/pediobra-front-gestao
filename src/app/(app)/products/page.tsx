@@ -38,6 +38,7 @@ import { productCategoriesService } from "@/lib/api/product-categories";
 import { productsService, type ListProductsParams } from "@/lib/api/products";
 import type { Product } from "@/lib/api/types";
 import { useTranslation } from "@/lib/i18n/language-store";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { queryKeys } from "@/lib/query-keys";
 
 type PresenceFilter = "all" | "yes" | "no";
@@ -183,7 +184,7 @@ export default function ProductsListPage() {
               {primary ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={primary.url}
+                  src={resolveMediaUrl(primary.url)}
                   alt={row.original.name}
                   className="size-full object-cover"
                 />

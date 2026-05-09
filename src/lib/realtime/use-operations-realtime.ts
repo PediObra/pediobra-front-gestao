@@ -99,6 +99,11 @@ export function useOperationsRealtime(enabled = true) {
           "AppSync realtime is selected but endpoints or channels are missing.",
         );
       }
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(
+          "AppSync realtime is selected but endpoints or channels are missing.",
+        );
+      }
 
       return;
     }
@@ -129,8 +134,12 @@ export function useOperationsRealtime(enabled = true) {
 }
 
 function getRealtimeProvider() {
-  const provider = process.env.NEXT_PUBLIC_REALTIME_PROVIDER?.trim();
-  if (provider) return provider;
+  const provider = process.env.NEXT_PUBLIC_REALTIME_PROVIDER?.trim().toLowerCase();
+  if (provider === "appsync" || provider === "socketio") return provider;
+  if (provider === "socket.io") return "socketio";
+  if (provider && process.env.NODE_ENV === "production") {
+    throw new Error(`Unsupported realtime provider: ${provider}`);
+  }
   return isAppSyncRealtimeConfigured() ? "appsync" : "socketio";
 }
 

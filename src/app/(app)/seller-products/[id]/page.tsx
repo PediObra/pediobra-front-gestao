@@ -18,6 +18,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { centsToBRL } from "@/lib/formatters";
 import { useTranslation } from "@/lib/i18n/language-store";
+import { resolveMediaUrl } from "@/lib/media-url";
 import { PageHeader } from "@/components/layout/page-header";
 import {
   Card,
@@ -194,7 +195,7 @@ export default function SellerProductDetailPage({
                 {primaryImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={primaryImage.url}
+                    src={resolveMediaUrl(primaryImage.url)}
                     alt={sp.product?.name ?? ""}
                     className="size-full object-cover"
                   />

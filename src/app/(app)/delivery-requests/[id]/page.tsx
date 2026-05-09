@@ -51,6 +51,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import { allowedDeliveryRequestStatusTransitions } from "@/lib/auth/permissions";
 import { formatDeliveryRequestHistoryEntry } from "@/lib/status-history";
+import { resolveMediaUrl } from "@/lib/media-url";
 import {
   centsToBRL,
   deliveryRequestStatusLabel,
@@ -532,7 +533,7 @@ export default function DeliveryRequestDetailPage() {
                   {deliveryRequest.evidences.map((e) => (
                     <a
                       key={e.id}
-                      href={e.imageUrl}
+                      href={resolveMediaUrl(e.imageUrl)}
                       target="_blank"
                       rel="noreferrer"
                       className="group block overflow-hidden rounded-md border border-border bg-muted"
@@ -540,7 +541,7 @@ export default function DeliveryRequestDetailPage() {
                       <div className="aspect-square overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={e.imageUrl}
+                          src={resolveMediaUrl(e.imageUrl)}
                           alt={evidenceTypeLabel(e.evidenceType)}
                           className="size-full object-cover transition-transform group-hover:scale-105"
                         />

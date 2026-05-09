@@ -88,7 +88,8 @@ async function buildSellerRequestBody(
     bucketKey: "sellers",
     prefix: "logos",
   });
-  const { logo, ...sellerPayload } = payload;
+  const sellerPayload = { ...payload };
+  delete sellerPayload.logo;
 
   return {
     ...sellerPayload,
