@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { Paginated, Product } from "./types";
+import { shouldUsePresignedUploads, uploadFilesToStorage } from "./uploads";
 
 export interface ListProductsParams {
   page?: number;
@@ -96,17 +97,46 @@ function buildProductFormData(
   return formData;
 }
 
+async function buildProductRequestBody(
+  payload: CreateProductPayload | UpdateProductPayload,
+) {
+  if (!shouldUsePresignedUploads() || !payload.images?.length) {
+    return buildProductFormData(payload);
+  }
+
+  const uploads = await uploadFilesToStorage(
+    payload.images.map((image) => image.file),
+    {
+      bucketKey: "products",
+      prefix: "products",
+    },
+  );
+  const { images, ...productPayload } = payload;
+
+  return {
+    ...productPayload,
+    uploadedImages: uploads.map((upload, index) => ({
+      objectName: upload.objectName,
+      position: images[index]?.position ?? index,
+      isPrimary: images[index]?.isPrimary,
+    })),
+  };
+}
+
 export const productsService = {
   list: (params: ListProductsParams = {}) =>
     api.get<Paginated<Product>>("/products", { query: params }),
 
   getById: (id: number) => api.get<Product>(`/products/${id}`),
 
-  create: (payload: CreateProductPayload) =>
-    api.post<Product>("/products", buildProductFormData(payload)),
+  create: async (payload: CreateProductPayload) =>
+    api.post<Product>("/products", await buildProductRequestBody(payload)),
 
-  update: (id: number, payload: UpdateProductPayload) =>
-    api.patch<Product>(`/products/${id}`, buildProductFormData(payload)),
+  update: async (id: number, payload: UpdateProductPayload) =>
+    api.patch<Product>(
+      `/products/${id}`,
+      await buildProductRequestBody(payload),
+    ),
 
   remove: (id: number) => api.delete<Product>(`/products/${id}`),
 };

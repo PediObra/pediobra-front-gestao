@@ -11,7 +11,7 @@ MVP do painel administrativo e de vendedores do **PediObra**, construído em Nex
 - React Hook Form + Zod
 - TanStack Table (server-side pagination)
 - Zustand (auth store, persistido em `localStorage`)
-- socket.io-client (eventos operacionais em tempo real)
+- AppSync Events em AWS, com socket.io-client como fallback local/dev
 - sonner (toasts)
 - lucide-react (ícones)
 
@@ -45,11 +45,22 @@ Conteúdo padrão:
 
 ```
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+NEXT_PUBLIC_REALTIME_PROVIDER=socketio
+NEXT_PUBLIC_APPSYNC_EVENTS_REALTIME_ENDPOINT=
+NEXT_PUBLIC_APPSYNC_EVENTS_HTTP_ENDPOINT=
 ```
 
 `NEXT_PUBLIC_API_URL` é opcional em dev local; quando ausente, a gestão usa
 `http://localhost:3000`. No workspace `public-test`, o script injeta a URL
 pública do roteador/ngrok automaticamente.
+
+Em produção AWS, use os outputs do stack `RealtimeEndpoint` e
+`RealtimeHttpEndpoint`, configure `NEXT_PUBLIC_REALTIME_PROVIDER=appsync` e
+preencha as duas variáveis `NEXT_PUBLIC_APPSYNC_EVENTS_*`. Sem essas variáveis,
+o painel continua usando Socket.IO para facilitar o desenvolvimento local.
+Se `NEXT_PUBLIC_REALTIME_PROVIDER=appsync` estiver definido explicitamente, o
+painel não faz fallback silencioso para Socket.IO; os endpoints precisam estar
+preenchidos. O infra repo também pode gerar estes valores com `pnpm client-env`.
 
 3. Rode backend e frontend juntos (na raiz):
 
@@ -123,7 +134,7 @@ src/
 ├── lib/
 │   ├── api/                      client.ts (fetch + Bearer + refresh on 401) + services
 │   ├── auth/                     store (Zustand), provider, permissions
-│   ├── realtime/                 socket de eventos operacionais
+│   ├── realtime/                 AppSync Events + fallback Socket.IO
 │   ├── formatters.ts
 │   ├── query-keys.ts
 │   └── utils.ts

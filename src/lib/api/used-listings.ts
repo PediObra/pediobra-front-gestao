@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { shouldUsePresignedUploads, uploadFilesToStorage } from "./uploads";
 import type {
   Paginated,
   UsedListing,
@@ -87,11 +88,23 @@ export const usedListingsService = {
       UsedListingInquiry | { listingId: number; selectedBuyerInquiryId: null }
     >(`/used-listings/${id}/buyer`, { inquiryId }),
 
-  uploadImages: (id: number, files: File[]) =>
-    api.post<UsedListing>(
+  uploadImages: async (id: number, files: File[]) => {
+    if (shouldUsePresignedUploads() && files.length > 0) {
+      const uploads = await uploadFilesToStorage(files, {
+        bucketKey: "usedListings",
+        prefix: `used-listings/${id}`,
+      });
+
+      return api.post<UsedListing>(`/used-listings/${id}/images`, {
+        imageObjectNames: uploads.map((upload) => upload.objectName),
+      });
+    }
+
+    return api.post<UsedListing>(
       `/used-listings/${id}/images`,
       buildImagesFormData(files),
-    ),
+    );
+  },
 
   removeImage: (id: number, imageId: number) =>
     api.delete<{ id: number; removed: boolean }>(

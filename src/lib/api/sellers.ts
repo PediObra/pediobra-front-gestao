@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { shouldUsePresignedUploads, uploadFileToStorage } from "./uploads";
 import type {
   MembershipRole,
   Paginated,
@@ -76,6 +77,25 @@ function buildSellerFormData(
   return formData;
 }
 
+async function buildSellerRequestBody(
+  payload: CreateSellerPayload | UpdateSellerPayload,
+) {
+  if (!shouldUsePresignedUploads() || !payload.logo) {
+    return buildSellerFormData(payload);
+  }
+
+  const upload = await uploadFileToStorage(payload.logo, {
+    bucketKey: "sellers",
+    prefix: "logos",
+  });
+  const { logo, ...sellerPayload } = payload;
+
+  return {
+    ...sellerPayload,
+    logoObjectName: upload.objectName,
+  };
+}
+
 export interface UpdateSellerUserAccessPayload {
   membershipRole: MembershipRole;
   jobTitle?: string | null;
@@ -124,11 +144,11 @@ export const sellersService = {
 
   getById: (id: number) => api.get<Seller>(`/sellers/${id}`),
 
-  create: (payload: CreateSellerPayload) =>
-    api.post<Seller>("/sellers", buildSellerFormData(payload)),
+  create: async (payload: CreateSellerPayload) =>
+    api.post<Seller>("/sellers", await buildSellerRequestBody(payload)),
 
-  update: (id: number, payload: UpdateSellerPayload) =>
-    api.patch<Seller>(`/sellers/${id}`, buildSellerFormData(payload)),
+  update: async (id: number, payload: UpdateSellerPayload) =>
+    api.patch<Seller>(`/sellers/${id}`, await buildSellerRequestBody(payload)),
 
   remove: (id: number) => api.delete<Seller>(`/sellers/${id}`),
 

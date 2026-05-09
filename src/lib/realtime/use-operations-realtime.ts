@@ -4,7 +4,13 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
 import { toast } from "sonner";
+import {
+  createAppSyncEventsClient,
+  getAppSyncRealtimeConfig,
+  isAppSyncRealtimeConfigured,
+} from "@/lib/realtime/appsync-events-client";
 import { getApiUrl } from "@/lib/api/client";
+import type { AuthUser } from "@/lib/api/types";
 import { getAuthSnapshot, useAuthStore } from "@/lib/auth/store";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -37,17 +43,13 @@ const TOASTED_OPERATION_EVENTS = new Set<(typeof OPERATION_EVENTS)[number]>([
 export function useOperationsRealtime(enabled = true) {
   const qc = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore(
     (state) => Boolean(state.accessToken) && Boolean(state.user),
   );
 
   useEffect(() => {
     if (!enabled || !isAuthenticated || !accessToken) return;
-
-    const socket = io(`${getApiUrl()}/realtime`, {
-      auth: { token: accessToken },
-      transports: ["websocket", "polling"],
-    });
 
     const refreshOperationData = (eventName: (typeof OPERATION_EVENTS)[number]) => {
       qc.invalidateQueries({ queryKey: queryKeys.operations.all() });
@@ -63,6 +65,48 @@ export function useOperationsRealtime(enabled = true) {
         });
       }
     };
+
+    const realtimeProvider = getRealtimeProvider();
+
+    if (realtimeProvider === "appsync") {
+      const config = getAppSyncRealtimeConfig();
+      const channels = getManagementRealtimeChannels(user);
+
+      if (config && channels.length) {
+        const client = createAppSyncEventsClient({
+          ...config,
+          token: accessToken,
+          channels,
+          handlers: Object.fromEntries(
+            OPERATION_EVENTS.map((eventName) => [
+              eventName,
+              () => refreshOperationData(eventName),
+            ]),
+          ),
+          onError: (message) => {
+            if (!getAuthSnapshot().accessToken) return;
+            if (process.env.NODE_ENV === "development") {
+              console.warn("AppSync realtime failed", message);
+            }
+          },
+        });
+
+        return () => client.disconnect();
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.warn(
+          "AppSync realtime is selected but endpoints or channels are missing.",
+        );
+      }
+
+      return;
+    }
+
+    const socket = io(`${getApiUrl()}/realtime`, {
+      auth: { token: accessToken },
+      transports: ["websocket", "polling"],
+    });
 
     for (const eventName of OPERATION_EVENTS) {
       socket.on(eventName, () => refreshOperationData(eventName));
@@ -81,5 +125,25 @@ export function useOperationsRealtime(enabled = true) {
       }
       socket.disconnect();
     };
-  }, [accessToken, enabled, isAuthenticated, qc]);
+  }, [accessToken, enabled, isAuthenticated, qc, user]);
+}
+
+function getRealtimeProvider() {
+  const provider = process.env.NEXT_PUBLIC_REALTIME_PROVIDER?.trim();
+  if (provider) return provider;
+  return isAppSyncRealtimeConfigured() ? "appsync" : "socketio";
+}
+
+function getManagementRealtimeChannels(user: AuthUser | null) {
+  if (!user) return [];
+
+  const channels = [`/users/${user.id}`];
+
+  if (user.roles.includes("ADMIN")) channels.push("/admins");
+
+  for (const membership of user.sellers) {
+    channels.push(`/sellers/${membership.seller.id}`);
+  }
+
+  return channels;
 }

@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type { CreateSellerPayload } from "./sellers";
 import type { Seller } from "./types";
+import { shouldUsePresignedUploads, uploadFileToStorage } from "./uploads";
 
 function appendOptional(formData: FormData, key: string, value: unknown) {
   if (value === undefined || value === null || value === "") return;
@@ -31,10 +32,27 @@ function buildSellerFormData(payload: CreateSellerPayload) {
   return formData;
 }
 
+async function buildSellerRequestBody(payload: CreateSellerPayload) {
+  if (!shouldUsePresignedUploads() || !payload.logo) {
+    return buildSellerFormData(payload);
+  }
+
+  const upload = await uploadFileToStorage(payload.logo, {
+    bucketKey: "sellers",
+    prefix: "logos",
+  });
+  const { logo, ...sellerPayload } = payload;
+
+  return {
+    ...sellerPayload,
+    logoObjectName: upload.objectName,
+  };
+}
+
 export const sellerOnboardingService = {
-  createSeller: (payload: CreateSellerPayload) =>
+  createSeller: async (payload: CreateSellerPayload) =>
     api.post<Seller>(
       "/seller-onboarding/seller",
-      buildSellerFormData(payload),
+      await buildSellerRequestBody(payload),
     ),
 };

@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { shouldUsePresignedUploads, uploadFileToStorage } from "./uploads";
 import type {
   EvidenceType,
   FulfillmentMethod,
@@ -69,6 +70,26 @@ function buildOrderEvidenceFormData(payload: CreateOrderEvidencePayload) {
   return formData;
 }
 
+async function buildOrderEvidencePayload(
+  id: number,
+  payload: CreateOrderEvidencePayload,
+) {
+  if (!shouldUsePresignedUploads()) {
+    return buildOrderEvidenceFormData(payload);
+  }
+
+  const upload = await uploadFileToStorage(payload.image, {
+    bucketKey: "orders",
+    prefix: `orders/${id}/evidences`,
+  });
+
+  return {
+    evidenceType: payload.evidenceType,
+    note: payload.note,
+    imageObjectName: upload.objectName,
+  };
+}
+
 export const ordersService = {
   list: (params: ListOrdersParams = {}) =>
     api.get<Paginated<Order>>("/orders", { query: params }),
@@ -95,9 +116,9 @@ export const ordersService = {
   confirmCustomerPickup: (id: number, payload: ConfirmOrderCodePayload) =>
     api.patch<Order>(`/orders/${id}/confirm-customer-pickup`, payload),
 
-  addEvidence: (id: number, payload: CreateOrderEvidencePayload) =>
+  addEvidence: async (id: number, payload: CreateOrderEvidencePayload) =>
     api.post<OrderEvidence>(
       `/orders/${id}/evidences`,
-      buildOrderEvidenceFormData(payload),
+      await buildOrderEvidencePayload(id, payload),
     ),
 };

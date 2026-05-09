@@ -1,4 +1,9 @@
 import { api } from "./client";
+import {
+  sha256File,
+  shouldUsePresignedUploads,
+  uploadFileToStorage,
+} from "./uploads";
 import type {
   CatalogImportMappingEntry,
   Paginated,
@@ -68,7 +73,25 @@ export const sellerProductImportsService = {
       payload,
     ),
 
-  create: (payload: CreateSellerProductImportPayload) => {
+  create: async (payload: CreateSellerProductImportPayload) => {
+    if (shouldUsePresignedUploads()) {
+      const [upload, checksum] = await Promise.all([
+        uploadFileToStorage(payload.file, {
+          bucketKey: "catalogImports",
+          prefix: `seller-product-imports/seller-${payload.sellerId}`,
+        }),
+        sha256File(payload.file),
+      ]);
+
+      return api.post<SellerProductImportJob>("/seller-product-imports", {
+        sellerId: payload.sellerId,
+        mapping: JSON.stringify(payload.mapping),
+        sourceObjectName: upload.objectName,
+        sourceOriginalFilename: payload.file.name,
+        sourceChecksum: checksum,
+      });
+    }
+
     const formData = new FormData();
     formData.set("sellerId", String(payload.sellerId));
     formData.set("mapping", JSON.stringify(payload.mapping));

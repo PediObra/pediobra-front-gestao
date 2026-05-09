@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { shouldUsePresignedUploads, uploadFileToStorage } from "./uploads";
 import type {
   DeliveryRequest,
   DeliveryRequestEvidence,
@@ -104,6 +105,26 @@ function buildDeliveryRequestEvidenceFormData(
   return formData;
 }
 
+async function buildDeliveryRequestEvidencePayload(
+  id: number,
+  payload: CreateDeliveryRequestEvidencePayload,
+) {
+  if (!shouldUsePresignedUploads()) {
+    return buildDeliveryRequestEvidenceFormData(payload);
+  }
+
+  const upload = await uploadFileToStorage(payload.image, {
+    bucketKey: "deliveries",
+    prefix: `delivery-requests/${id}/evidences`,
+  });
+
+  return {
+    evidenceType: payload.evidenceType,
+    note: payload.note,
+    imageObjectName: upload.objectName,
+  };
+}
+
 export const deliveryRequestsService = {
   quote: (payload: QuoteDeliveryRequestPayload) =>
     api.post<DeliveryRequestQuote>("/delivery-requests/quote", payload),
@@ -138,9 +159,12 @@ export const deliveryRequestsService = {
       payload,
     ),
 
-  addEvidence: (id: number, payload: CreateDeliveryRequestEvidencePayload) =>
+  addEvidence: async (
+    id: number,
+    payload: CreateDeliveryRequestEvidencePayload,
+  ) =>
     api.post<DeliveryRequestEvidence>(
       `/delivery-requests/${id}/evidences`,
-      buildDeliveryRequestEvidenceFormData(payload),
+      await buildDeliveryRequestEvidencePayload(id, payload),
     ),
 };
