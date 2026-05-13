@@ -476,6 +476,8 @@ export interface SellerProductImportJob {
   sourceFileKey?: string | null;
   sourceOriginalFilename?: string | null;
   sourceFileSizeBytes?: number | null;
+  sourceFileContentType?: string | null;
+  sourceFileFormat?: "CSV" | "TXT" | "TSV" | "XLS" | "XLSX" | null;
   sourceFileChecksum?: string | null;
   mappingSnapshot?: CatalogImportMappingEntry[] | null;
   stats?: Record<string, unknown> | null;

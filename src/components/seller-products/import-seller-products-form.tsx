@@ -74,6 +74,19 @@ const CANONICAL_FIELDS: Array<{
   },
 ];
 
+const CATALOG_IMPORT_ACCEPT = [
+  ".csv",
+  ".txt",
+  ".tsv",
+  ".xls",
+  ".xlsx",
+  "text/csv",
+  "text/plain",
+  "text/tab-separated-values",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+].join(",");
+
 export function ImportSellerProductsForm({
   sellers,
   initialSellerId,
@@ -131,7 +144,7 @@ export function ImportSellerProductsForm({
   const createMutation = useMutation({
     mutationFn: () => {
       if (!selectedSellerId || !file) {
-        throw new Error("Informe loja e arquivo CSV.");
+        throw new Error("Informe loja e arquivo de importacao.");
       }
       return sellerProductImportsService.create({
         sellerId: selectedSellerId,
@@ -167,7 +180,7 @@ export function ImportSellerProductsForm({
   return (
     <Card className="max-w-5xl">
       <CardHeader>
-        <CardTitle>Importar ofertas por CSV</CardTitle>
+        <CardTitle>Importar ofertas</CardTitle>
         <CardDescription>
           Envie o arquivo do ERP e informe quais colunas alimentam cada campo do
           PeDiObra. O ETL processa a carga antes da aplicacao.
@@ -200,12 +213,12 @@ export function ImportSellerProductsForm({
 
           <div>
             <div className="rounded-md border border-dashed border-border bg-muted/20 p-3">
-              <Label htmlFor="catalog-import-file">Arquivo CSV</Label>
+              <Label htmlFor="catalog-import-file">Arquivo do ERP</Label>
               <Input
                 ref={fileInputRef}
                 id="catalog-import-file"
                 type="file"
-                accept=".csv,text/csv"
+                accept={CATALOG_IMPORT_ACCEPT}
                 className="sr-only"
                 onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               />
@@ -226,7 +239,7 @@ export function ImportSellerProductsForm({
                 </div>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">
-                Use um arquivo `.csv` exportado pelo ERP da loja.
+                Aceitamos CSV, TXT, TSV, XLS e XLSX exportados pelo ERP da loja.
               </p>
             </div>
           </div>
@@ -236,8 +249,8 @@ export function ImportSellerProductsForm({
           <div>
             <div className="text-sm font-semibold">De-para de colunas</div>
             <p className="text-xs text-muted-foreground">
-              Informe o nome exato da coluna no CSV. O mapeamento fica salvo
-              para a proxima importacao desta loja.
+              Informe o nome exato da coluna no arquivo. O mapeamento fica
+              salvo para a proxima importacao desta loja.
             </p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">

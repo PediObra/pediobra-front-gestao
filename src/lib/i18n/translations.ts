@@ -263,7 +263,7 @@ export const translations = {
     "sellerProducts.unitAbbr": "un",
     "sellerProductImports.importCsv": "Importar Produtos",
     "sellerProductImports.title": "Importações de ofertas",
-    "sellerProductImports.dialogTitle": "Importar ofertas por CSV",
+    "sellerProductImports.dialogTitle": "Importar ofertas",
     "sellerProductImports.dialogDescription":
       "Envie o arquivo do ERP e informe quais colunas alimentam cada campo do PeDiObra.",
     "sellerProductImports.mapping": "De-para de colunas",
@@ -967,7 +967,7 @@ export const translations = {
     "sellerProducts.unitAbbr": "unit",
     "sellerProductImports.importCsv": "Import Products",
     "sellerProductImports.title": "Offer imports",
-    "sellerProductImports.dialogTitle": "Import offers by CSV",
+    "sellerProductImports.dialogTitle": "Import offers",
     "sellerProductImports.dialogDescription":
       "Upload the ERP file and map which columns feed each PeDiObra field.",
     "sellerProductImports.mapping": "Column mapping",
@@ -1671,7 +1671,7 @@ export const translations = {
     "sellerProducts.unitAbbr": "un",
     "sellerProductImports.importCsv": "Importar Productos",
     "sellerProductImports.title": "Importaciones de ofertas",
-    "sellerProductImports.dialogTitle": "Importar ofertas por CSV",
+    "sellerProductImports.dialogTitle": "Importar ofertas",
     "sellerProductImports.dialogDescription":
       "Sube el archivo del ERP e informa qué columnas alimentan cada campo de PeDiObra.",
     "sellerProductImports.mapping": "Mapeo de columnas",

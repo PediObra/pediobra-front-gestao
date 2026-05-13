@@ -72,10 +72,10 @@ describe("ImportSellerProductsForm", () => {
     });
     expect(screen.getByLabelText(/Preco/)).toHaveValue("preco");
 
-    const file = new File(["nome_produto,preco"], "ofertas.csv", {
-      type: "text/csv",
+    const file = new File(["planilha"], "ofertas.xlsx", {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
-    fireEvent.change(screen.getByLabelText("Arquivo CSV"), {
+    fireEvent.change(screen.getByLabelText("Arquivo do ERP"), {
       target: { files: [file] },
     });
     fireEvent.click(screen.getByRole("button", { name: /Criar importacao/i }));

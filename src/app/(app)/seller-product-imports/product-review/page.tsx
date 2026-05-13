@@ -140,7 +140,7 @@ export default function SellerProductImportReviewPage() {
     <div className="space-y-6">
       <PageHeader
         title="Revisão de produtos importados"
-        description="Aprove, vincule ou rejeite produtos novos enviados por lojas no CSV."
+        description="Aprove, vincule ou rejeite produtos novos enviados por lojas na importacao."
         actions={
           <Button asChild variant="outline">
             <Link href="/seller-products">
@@ -160,7 +160,7 @@ export default function SellerProductImportReviewPage() {
           <CardDescription>
             Aprovar cria um produto global verificado. Vincular usa um produto
             existente. As duas ações criam ou atualizam a oferta da loja que
-            importou o CSV.
+            importou o arquivo.
           </CardDescription>
         </CardHeader>
         <CardContent>

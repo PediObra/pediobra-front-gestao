@@ -130,7 +130,7 @@ export default function SellerOnboardingPage() {
             <p className="max-w-2xl text-sm text-muted-foreground">
               Para usar a gestão, precisamos vincular sua conta a uma loja. Ao
               concluir, você será o dono desta empresa e poderá cadastrar
-              produtos, importar CSV e gerenciar equipe.
+              produtos, importar ofertas e gerenciar equipe.
             </p>
           </div>
           <Button type="button" variant="outline" onClick={logout}>

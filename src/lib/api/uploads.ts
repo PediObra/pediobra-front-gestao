@@ -40,7 +40,14 @@ export function shouldUsePresignedUploads() {
 
 function contentTypeFor(file: File) {
   if (file.type) return file.type;
-  if (file.name.toLowerCase().endsWith(".csv")) return "text/csv";
+  const lowerName = file.name.toLowerCase();
+  if (lowerName.endsWith(".csv")) return "text/csv";
+  if (lowerName.endsWith(".txt")) return "text/plain";
+  if (lowerName.endsWith(".tsv")) return "text/tab-separated-values";
+  if (lowerName.endsWith(".xls")) return "application/vnd.ms-excel";
+  if (lowerName.endsWith(".xlsx")) {
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  }
   return "application/octet-stream";
 }
 

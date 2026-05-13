@@ -157,8 +157,9 @@ export default function SellerProductImportDetailPage({
                   </Badge>
                 </CardTitle>
                 <CardDescription>
-                  {job.sourceOriginalFilename ?? "Arquivo CSV"} · criado em{" "}
-                  {formatDateTime(job.createdAt)}
+                  {job.sourceOriginalFilename ?? "Arquivo de importação"}
+                  {job.sourceFileFormat ? ` · ${job.sourceFileFormat}` : ""} ·
+                  criado em {formatDateTime(job.createdAt)}
                 </CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3 text-sm md:grid-cols-2">

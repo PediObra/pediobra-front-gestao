@@ -52,7 +52,7 @@ export default function NewSellerProductImportPage({
       </div>
 
       <PageHeader
-        title="Importar ofertas por CSV"
+        title="Importar ofertas"
         description="Crie uma carga de ofertas para uma loja e acompanhe o processamento do ETL."
       />
 
