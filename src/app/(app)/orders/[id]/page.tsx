@@ -116,10 +116,7 @@ type StatusConfirmation = {
   type: "accept" | "reject" | "cancel";
 };
 
-type SellerRejectionReasonOption =
-  | "NO_STOCK"
-  | "NO_DELIVERY_DRIVERS"
-  | "OTHER";
+type SellerRejectionReasonOption = "NO_STOCK" | "NO_DELIVERY_DRIVERS" | "OTHER";
 
 type DirectSellerPaymentMethod = "CARD_POS" | "PIX_SELLER" | "CASH" | "OTHER";
 
@@ -163,15 +160,18 @@ export default function OrderDetailPage({
     !!order &&
     statusConfirmation?.type === "accept" &&
     fulfillmentLabelContext !== "STORE_PICKUP" &&
-    order.deliveryProvider === "UNDECIDED";
+    order.deliveryProvider === "UNDECIDED" &&
+    order.paymentStatus !== "AWAITING_DIRECT_PAYMENT";
   const internalDeliveryAvailabilityQuery = useQuery({
     queryKey: queryKeys.orders.internalDeliveryAvailability(orderId),
     queryFn: () => ordersService.getInternalDeliveryAvailability(orderId),
-    enabled:
-      Number.isFinite(orderId) && shouldLoadInternalDeliveryAvailability,
+    enabled: Number.isFinite(orderId) && shouldLoadInternalDeliveryAvailability,
   });
 
-  const transitions = allowedOrderStatusTransitions(user, statusPermissionOrder);
+  const transitions = allowedOrderStatusTransitions(
+    user,
+    statusPermissionOrder,
+  );
 
   const [pickupCode, setPickupCode] = useState("");
   const [deliveryCode, setDeliveryCode] = useState("");
@@ -472,6 +472,13 @@ export default function OrderDetailPage({
     statusConfirmation?.type === "accept" &&
     !isStorePickup &&
     isDeliveryProviderUndecided;
+  const shouldForceSellerDeliveryForDirectPayment =
+    shouldChooseDeliveryProvider && requiresDirectPaymentConfirmation;
+  const shouldShowDirectPaymentSellerDeliveryNotice =
+    statusConfirmation?.type === "accept" &&
+    !isStorePickup &&
+    requiresDirectPaymentConfirmation &&
+    (isSellerDelivery || isDeliveryProviderUndecided);
   const isInternalDeliveryAvailabilityPending =
     shouldChooseDeliveryProvider && internalDeliveryAvailabilityQuery.isPending;
   const isInternalDeliveryAvailable =
@@ -479,21 +486,27 @@ export default function OrderDetailPage({
     internalDeliveryAvailabilityQuery.isSuccess &&
     internalDeliveryAvailabilityQuery.data.available === true;
   const shouldDisableInternalDelivery =
-    shouldChooseDeliveryProvider && !isInternalDeliveryAvailable;
-  const selectedAcceptDeliveryProvider = shouldDisableInternalDelivery
-    ? "SELLER"
-    : acceptDeliveryProvider;
+    shouldChooseDeliveryProvider &&
+    !shouldForceSellerDeliveryForDirectPayment &&
+    !isInternalDeliveryAvailable;
+  const selectedAcceptDeliveryProvider =
+    shouldForceSellerDeliveryForDirectPayment || shouldDisableInternalDelivery
+      ? "SELLER"
+      : acceptDeliveryProvider;
   const shouldDisableConfirmStatusChange =
     sellerRejectionMutation.isPending ||
     statusMutation.isPending ||
-    (statusConfirmation?.type === "reject" &&
-      !sellerRejectionReason.trim()) ||
-    (shouldChooseDeliveryProvider && isInternalDeliveryAvailabilityPending);
+    (statusConfirmation?.type === "reject" && !sellerRejectionReason.trim()) ||
+    (shouldChooseDeliveryProvider &&
+      !shouldForceSellerDeliveryForDirectPayment &&
+      isInternalDeliveryAvailabilityPending);
 
   const requestStatusChange = (status: OrderStatus) => {
     if (order.status === "PENDING" && status === "CONFIRMED") {
       setAcceptDeliveryProvider(
-        orderDeliveryProvider === "SELLER" ? "SELLER" : "INTERNAL",
+        requiresDirectPaymentConfirmation || orderDeliveryProvider === "SELLER"
+          ? "SELLER"
+          : "INTERNAL",
       );
       setStatusConfirmation({ status, type: "accept" });
       return;
@@ -564,7 +577,9 @@ export default function OrderDetailPage({
             {order.sellerReassignmentStatus &&
               order.sellerReassignmentStatus !== "NONE" && (
                 <Badge variant="secondary">
-                  {sellerReassignmentStatusLabel(order.sellerReassignmentStatus)}
+                  {sellerReassignmentStatusLabel(
+                    order.sellerReassignmentStatus,
+                  )}
                 </Badge>
               )}
             <OrderStatusBadge
@@ -1100,30 +1115,30 @@ export default function OrderDetailPage({
             <CardContent className="space-y-3">
               {order.payments?.length ? (
                 <div className="space-y-2">
-                {order.payments.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex flex-col gap-3 border-b border-border pb-2 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <div className="text-sm font-medium">
-                        {p.provider ?? "—"} · {p.method ?? "—"}
+                  {order.payments.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex flex-col gap-3 border-b border-border pb-2 last:border-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <div>
+                        <div className="text-sm font-medium">
+                          {p.provider ?? "—"} · {p.method ?? "—"}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDateTime(p.createdAt)}
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {formatDateTime(p.createdAt)}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <PaymentStatusBadge status={p.status} />
+                        <span className="font-mono text-sm font-semibold">
+                          {centsToBRL(p.amountCents)}
+                        </span>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href="/payments">Pagamento/refund</Link>
+                        </Button>
                       </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <PaymentStatusBadge status={p.status} />
-                      <span className="font-mono text-sm font-semibold">
-                        {centsToBRL(p.amountCents)}
-                      </span>
-                      <Button asChild variant="ghost" size="sm">
-                        <Link href="/payments">Pagamento/refund</Link>
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground">
@@ -1250,40 +1265,39 @@ export default function OrderDetailPage({
           </Card>
 
           {isInternalDelivery && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Truck className="size-4" />
-                {t("order.driver")}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {order.assignedDriverProfile ? (
-                <div className="text-sm space-y-1">
-                  <div className="font-medium">
-                    {order.assignedDriverProfile.user?.name ??
-                      t("order.driverFallback", {
-                        id: order.assignedDriverProfile.id,
-                      })}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {formatPhone(order.assignedDriverProfile.phone)}
-                  </div>
-                  {order.assignedDriverProfile.vehicles?.[0] && (
-                    <div className="text-xs text-muted-foreground">
-                      {order.assignedDriverProfile.vehicles[0].model} ·{" "}
-                      {order.assignedDriverProfile.vehicles[0].plate}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Truck className="size-4" />
+                  {t("order.driver")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {order.assignedDriverProfile ? (
+                  <div className="text-sm space-y-1">
+                    <div className="font-medium">
+                      {order.assignedDriverProfile.user?.name ??
+                        t("order.driverFallback", {
+                          id: order.assignedDriverProfile.id,
+                        })}
                     </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {t("order.noDriver")}
-                </p>
-              )}
-
-            </CardContent>
-          </Card>
+                    <div className="text-xs text-muted-foreground">
+                      {formatPhone(order.assignedDriverProfile.phone)}
+                    </div>
+                    {order.assignedDriverProfile.vehicles?.[0] && (
+                      <div className="text-xs text-muted-foreground">
+                        {order.assignedDriverProfile.vehicles[0].model} ·{" "}
+                        {order.assignedDriverProfile.vehicles[0].plate}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t("order.noDriver")}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           )}
 
           {order.sellerReassignmentStatus &&
@@ -1335,7 +1349,6 @@ export default function OrderDetailPage({
               </CardContent>
             </Card>
           ) : null}
-
         </div>
       </div>
 
@@ -1349,7 +1362,9 @@ export default function OrderDetailPage({
           <DialogHeader className="space-y-2 pr-8">
             <DialogTitle>{confirmationCopy?.title}</DialogTitle>
             <DialogDescription>
-              {confirmationCopy?.description}
+              {shouldShowDirectPaymentSellerDeliveryNotice
+                ? t("order.acceptModalDirectPaymentDescription")
+                : confirmationCopy?.description}
             </DialogDescription>
           </DialogHeader>
           {statusConfirmation?.type === "reject" && (
@@ -1399,26 +1414,71 @@ export default function OrderDetailPage({
               )}
             </div>
           )}
+          {shouldShowDirectPaymentSellerDeliveryNotice && (
+            <div className="space-y-4">
+              <div className="rounded-md border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+                {t("order.acceptDirectSellerDeliveryNotice")}
+              </div>
+              {!shouldChooseDeliveryProvider && (
+                <div className="flex min-h-[148px] w-full flex-col items-center justify-start rounded-md border border-primary bg-primary/10 p-5 text-center">
+                  <span className="flex flex-col items-center gap-3">
+                    <span className="flex size-16 shrink-0 items-center justify-center rounded-lg border border-primary/30 bg-primary text-primary-foreground">
+                      <Store className="size-7" />
+                    </span>
+                    <span className="space-y-2">
+                      <span className="block text-base font-semibold leading-6">
+                        {t("order.acceptDeliveryProviderSeller")}
+                      </span>
+                      <span className="block max-w-[280px] text-[13px] leading-6 text-muted-foreground">
+                        {t(
+                          "order.acceptDeliveryProviderSellerDirectPaymentHint",
+                        )}
+                      </span>
+                    </span>
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           {shouldChooseDeliveryProvider && (
             <TooltipProvider delayDuration={0}>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div
+                className={cn(
+                  "grid gap-4",
+                  shouldForceSellerDeliveryForDirectPayment
+                    ? "sm:grid-cols-1"
+                    : "sm:grid-cols-2",
+                )}
+              >
                 {[
-                  {
-                    value: "INTERNAL" as const,
-                    title: t("order.acceptDeliveryProviderInternal"),
-                    description: t("order.acceptDeliveryProviderInternalHint"),
-                    disabled: shouldDisableInternalDelivery,
-                    disabledReason: shouldDisableInternalDelivery
-                      ? isInternalDeliveryAvailabilityPending
-                        ? t("order.acceptDeliveryProviderInternalChecking")
-                        : t("order.acceptDeliveryProviderInternalUnavailable")
-                      : undefined,
-                    icon: Truck,
-                  },
+                  ...(shouldForceSellerDeliveryForDirectPayment
+                    ? []
+                    : [
+                        {
+                          value: "INTERNAL" as const,
+                          title: t("order.acceptDeliveryProviderInternal"),
+                          description: t(
+                            "order.acceptDeliveryProviderInternalHint",
+                          ),
+                          disabled: shouldDisableInternalDelivery,
+                          disabledReason: shouldDisableInternalDelivery
+                            ? isInternalDeliveryAvailabilityPending
+                              ? t(
+                                  "order.acceptDeliveryProviderInternalChecking",
+                                )
+                              : t(
+                                  "order.acceptDeliveryProviderInternalUnavailable",
+                                )
+                            : undefined,
+                          icon: Truck,
+                        },
+                      ]),
                   {
                     value: "SELLER" as const,
                     title: t("order.acceptDeliveryProviderSeller"),
-                    description: t("order.acceptDeliveryProviderSellerHint"),
+                    description: shouldForceSellerDeliveryForDirectPayment
+                      ? t("order.acceptDeliveryProviderSellerDirectPaymentHint")
+                      : t("order.acceptDeliveryProviderSellerHint"),
                     disabled: false,
                     disabledReason: undefined,
                     icon: Store,
@@ -1473,9 +1533,7 @@ export default function OrderDetailPage({
                   return (
                     <Tooltip key={option.value}>
                       <TooltipTrigger asChild>
-                        <span className="block">
-                          {optionButton}
-                        </span>
+                        <span className="block">{optionButton}</span>
                       </TooltipTrigger>
                       <TooltipContent
                         side="top"
@@ -1548,10 +1606,7 @@ function DirectPaymentConfirmationFields({
           className="cursor-pointer"
         />
         <div className="space-y-1 leading-none">
-          <Label
-            htmlFor="direct-payment-received"
-            className="cursor-pointer"
-          >
+          <Label htmlFor="direct-payment-received" className="cursor-pointer">
             Pagamento recebido direto pela loja
           </Label>
           <p className="text-xs text-muted-foreground">

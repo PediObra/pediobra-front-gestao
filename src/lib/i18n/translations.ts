@@ -493,6 +493,8 @@ export const translations = {
     "order.acceptModalTitle": "Aceitar pedido?",
     "order.acceptModalDescription":
       "O pedido será confirmado e seguirá para o fluxo operacional da loja.",
+    "order.acceptModalDirectPaymentDescription":
+      "O pedido será confirmado com entrega própria da loja, porque o pagamento será recebido na entrega.",
     "order.rejectModalTitle": "Não aceitar pedido?",
     "order.rejectModalDescription":
       "O pedido será cancelado com o motivo padrão de recusa da loja.",
@@ -512,6 +514,10 @@ export const translations = {
     "order.acceptDeliveryProviderSeller": "Entrega própria da loja",
     "order.acceptDeliveryProviderSellerHint":
       "A loja assume a rota e recebe produto + frete no repasse.",
+    "order.acceptDeliveryProviderSellerDirectPaymentHint":
+      "A loja assume a rota e recebe o pagamento diretamente do cliente na entrega.",
+    "order.acceptDirectSellerDeliveryNotice":
+      "Este pedido será pago na entrega. Por isso, a entrega precisa ser feita pela própria loja.",
     "order.rejectDefaultReason": "Loja recusou o pedido",
     "order.rejectReasonPlaceholder": "Selecione o motivo",
     "order.rejectReasonNoStock": "Sem estoque no momento",
@@ -1221,6 +1227,8 @@ export const translations = {
     "order.acceptModalTitle": "Accept order?",
     "order.acceptModalDescription":
       "The order will be confirmed and move into the store operation flow.",
+    "order.acceptModalDirectPaymentDescription":
+      "The order will be confirmed with store delivery because payment will be collected on delivery.",
     "order.rejectModalTitle": "Do not accept order?",
     "order.rejectModalDescription":
       "The order will be cancelled with the store refusal default reason.",
@@ -1240,6 +1248,10 @@ export const translations = {
     "order.acceptDeliveryProviderSeller": "Store delivery",
     "order.acceptDeliveryProviderSellerHint":
       "The store handles the route and receives products + delivery fee.",
+    "order.acceptDeliveryProviderSellerDirectPaymentHint":
+      "The store handles the route and collects payment directly from the customer on delivery.",
+    "order.acceptDirectSellerDeliveryNotice":
+      "This order will be paid on delivery. Because of that, it must be delivered by the store.",
     "order.rejectDefaultReason": "Store declined the order",
     "order.rejectReasonPlaceholder": "Select the reason",
     "order.rejectReasonNoStock": "Out of stock right now",
@@ -1950,6 +1962,8 @@ export const translations = {
     "order.acceptModalTitle": "¿Aceptar pedido?",
     "order.acceptModalDescription":
       "El pedido será confirmado y seguirá al flujo operativo de la tienda.",
+    "order.acceptModalDirectPaymentDescription":
+      "El pedido será confirmado con entrega propia de la tienda porque el pago se recibirá en la entrega.",
     "order.rejectModalTitle": "¿No aceptar pedido?",
     "order.rejectModalDescription":
       "El pedido será cancelado con el motivo estándar de rechazo de la tienda.",
@@ -1969,6 +1983,10 @@ export const translations = {
     "order.acceptDeliveryProviderSeller": "Entrega propia de la tienda",
     "order.acceptDeliveryProviderSellerHint":
       "La tienda asume la ruta y recibe productos + flete en el repase.",
+    "order.acceptDeliveryProviderSellerDirectPaymentHint":
+      "La tienda asume la ruta y cobra el pago directamente al cliente en la entrega.",
+    "order.acceptDirectSellerDeliveryNotice":
+      "Este pedido se pagará en la entrega. Por eso, la entrega debe hacerla la propia tienda.",
     "order.rejectDefaultReason": "La tienda rechazó el pedido",
     "order.rejectReasonPlaceholder": "Selecciona el motivo",
     "order.rejectReasonNoStock": "Sin stock en este momento",

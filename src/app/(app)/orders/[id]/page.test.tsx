@@ -101,24 +101,30 @@ describe("OrderDetailPage status actions", () => {
     };
     mockOrder = makeOrder();
     jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
-    jest.mocked(ordersService.getInternalDeliveryAvailability).mockResolvedValue({
-      available: true,
-      driverCount: 1,
-      radiusMeters: 5000,
-      locationFreshnessSeconds: 120,
-    });
-    jest.mocked(ordersService.updateStatus).mockImplementation((_id, payload) =>
-      Promise.resolve({ ...mockOrder, status: payload.status } as Order),
-    );
+    jest
+      .mocked(ordersService.getInternalDeliveryAvailability)
+      .mockResolvedValue({
+        available: true,
+        driverCount: 1,
+        radiusMeters: 5000,
+        locationFreshnessSeconds: 120,
+      });
+    jest
+      .mocked(ordersService.updateStatus)
+      .mockImplementation((_id, payload) =>
+        Promise.resolve({ ...mockOrder, status: payload.status } as Order),
+      );
     jest.mocked(ordersService.rejectBySeller).mockImplementation(() =>
       Promise.resolve({
         outcome: "CANCELLED_NO_ALTERNATIVE",
         order: { ...mockOrder, status: "CANCELLED" } as Order,
       }),
     );
-    jest.mocked(ordersService.confirmDelivery).mockImplementation(() =>
-      Promise.resolve({ ...mockOrder, status: "DELIVERED" } as Order),
-    );
+    jest
+      .mocked(ordersService.confirmDelivery)
+      .mockImplementation(() =>
+        Promise.resolve({ ...mockOrder, status: "DELIVERED" } as Order),
+      );
   });
 
   afterEach(() => {
@@ -187,15 +193,94 @@ describe("OrderDetailPage status actions", () => {
     });
   });
 
+  it("forces store delivery in the acceptance modal when payment is collected on delivery", async () => {
+    mockOrder = makeOrder({
+      deliveryProvider: "UNDECIDED",
+      paymentStatus: "AWAITING_DIRECT_PAYMENT",
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aceitar pedido" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "O pedido será confirmado com entrega própria da loja, porque o pagamento será recebido na entrega.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Este pedido será pago na entrega. Por isso, a entrega precisa ser feita pela própria loja.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Entrega pelo sistema")).toBeNull();
+    expect(screen.getByText("Entrega própria da loja")).toBeInTheDocument();
+    expect(
+      ordersService.getInternalDeliveryAvailability,
+    ).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "CONFIRMED",
+        cancellationReason: undefined,
+        deliveryProvider: "SELLER",
+      });
+    });
+  });
+
+  it("explains store delivery when direct payment orders already use the seller provider", async () => {
+    mockOrder = makeOrder({
+      deliveryProvider: "SELLER",
+      paymentStatus: "AWAITING_DIRECT_PAYMENT",
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aceitar pedido" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "O pedido será confirmado com entrega própria da loja, porque o pagamento será recebido na entrega.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Este pedido será pago na entrega. Por isso, a entrega precisa ser feita pela própria loja.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Entrega pelo sistema")).toBeNull();
+    expect(screen.getByText("Entrega própria da loja")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "CONFIRMED",
+        cancellationReason: undefined,
+        deliveryProvider: undefined,
+      });
+    });
+  });
+
   it("blocks system delivery with a tooltip when no driver is available", async () => {
     mockOrder = makeOrder({ deliveryProvider: "UNDECIDED" });
     jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
-    jest.mocked(ordersService.getInternalDeliveryAvailability).mockResolvedValue({
-      available: false,
-      driverCount: 0,
-      radiusMeters: 5000,
-      locationFreshnessSeconds: 120,
-    });
+    jest
+      .mocked(ordersService.getInternalDeliveryAvailability)
+      .mockResolvedValue({
+        available: false,
+        driverCount: 0,
+        radiusMeters: 5000,
+        locationFreshnessSeconds: 120,
+      });
 
     renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
 
@@ -207,9 +292,9 @@ describe("OrderDetailPage status actions", () => {
       name: /Entrega pelo sistema/i,
     });
     await waitFor(() => {
-      expect(ordersService.getInternalDeliveryAvailability).toHaveBeenCalledWith(
-        1,
-      );
+      expect(
+        ordersService.getInternalDeliveryAvailability,
+      ).toHaveBeenCalledWith(1);
     });
     await waitFor(() => {
       expect(
@@ -255,9 +340,9 @@ describe("OrderDetailPage status actions", () => {
     );
 
     await waitFor(() => {
-      expect(ordersService.getInternalDeliveryAvailability).toHaveBeenCalledWith(
-        1,
-      );
+      expect(
+        ordersService.getInternalDeliveryAvailability,
+      ).toHaveBeenCalledWith(1);
     });
     await waitFor(() => {
       expect(
@@ -330,9 +415,7 @@ describe("OrderDetailPage status actions", () => {
         status: "READY_FOR_CUSTOMER_PICKUP",
       });
     });
-    expect(
-      screen.queryByRole("button", { name: "Em rota" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Em rota" })).toBeNull();
   });
 
   it("uses pickup wording in status tags for store pickup orders", async () => {
@@ -356,9 +439,7 @@ describe("OrderDetailPage status actions", () => {
   it("confirms first-step refusal with a selected refusal reason", async () => {
     renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Não aceitar" }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Não aceitar" }));
     expect(await screen.findByText("Não aceitar pedido?")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Confirmar recusa" }),
@@ -387,9 +468,7 @@ describe("OrderDetailPage status actions", () => {
   it("shows details only when the seller selects other refusal reason", async () => {
     renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
 
-    fireEvent.click(
-      await screen.findByRole("button", { name: "Não aceitar" }),
-    );
+    fireEvent.click(await screen.findByRole("button", { name: "Não aceitar" }));
 
     const reasonSelect = await screen.findByRole("combobox", {
       name: "Motivo",
@@ -498,9 +577,9 @@ describe("OrderDetailPage status actions", () => {
 
     renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
 
-    expect(await screen.findAllByText("Entrega feita pela loja")).not.toHaveLength(
-      0,
-    );
+    expect(
+      await screen.findAllByText("Entrega feita pela loja"),
+    ).not.toHaveLength(0);
     expect(screen.queryByText("Motorista")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Em rota" }));
@@ -567,7 +646,8 @@ describe("OrderDetailPage status actions", () => {
     const ready = screen.getByText("Pedido pronto para retirada");
 
     expect(
-      cancelled.compareDocumentPosition(ready) & Node.DOCUMENT_POSITION_FOLLOWING,
+      cancelled.compareDocumentPosition(ready) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });
 });
