@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
-import { toast } from "sonner";
 import {
   createAppSyncEventsClient,
   getAppSyncRealtimeConfig,
@@ -25,21 +24,6 @@ const OPERATION_EVENTS = [
   "messages.updated",
 ] as const;
 
-const EVENT_LABELS: Record<(typeof OPERATION_EVENTS)[number], string> = {
-  "operations.order.created": "Novo pedido recebido",
-  "operations.payment.updated": "Pagamento atualizado",
-  "operations.driver.assigned": "Motorista atribuído",
-  "operations.order.status.updated": "Pedido atualizado",
-  "operations.deliveryRequest.status.updated": "Entrega atualizada",
-  "operations.job.offer.created": "Oferta enviada ao motorista",
-  "operations.job.offer.expired": "Oferta expirada",
-  "messages.updated": "Nova mensagem",
-};
-const TOASTED_OPERATION_EVENTS = new Set<(typeof OPERATION_EVENTS)[number]>([
-  "operations.order.created",
-  "messages.updated",
-]);
-
 export function useOperationsRealtime(enabled = true) {
   const qc = useQueryClient();
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -51,19 +35,13 @@ export function useOperationsRealtime(enabled = true) {
   useEffect(() => {
     if (!enabled || !isAuthenticated || !accessToken) return;
 
-    const refreshOperationData = (eventName: (typeof OPERATION_EVENTS)[number]) => {
+    const refreshOperationData = () => {
       qc.invalidateQueries({ queryKey: queryKeys.operations.all() });
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
       qc.invalidateQueries({ queryKey: queryKeys.deliveryRequests.all() });
       qc.invalidateQueries({ queryKey: queryKeys.drivers.all() });
       qc.invalidateQueries({ queryKey: queryKeys.payments.all() });
       qc.invalidateQueries({ queryKey: queryKeys.messages.all() });
-
-      if (TOASTED_OPERATION_EVENTS.has(eventName)) {
-        toast.message(EVENT_LABELS[eventName], {
-          description: "Painel operacional atualizado em tempo real.",
-        });
-      }
     };
 
     const realtimeProvider = getRealtimeProvider();
@@ -80,7 +58,7 @@ export function useOperationsRealtime(enabled = true) {
           handlers: Object.fromEntries(
             OPERATION_EVENTS.map((eventName) => [
               eventName,
-              () => refreshOperationData(eventName),
+              refreshOperationData,
             ]),
           ),
           onError: (message) => {
@@ -114,7 +92,7 @@ export function useOperationsRealtime(enabled = true) {
     });
 
     for (const eventName of OPERATION_EVENTS) {
-      socket.on(eventName, () => refreshOperationData(eventName));
+      socket.on(eventName, refreshOperationData);
     }
 
     socket.on("connect_error", (error) => {

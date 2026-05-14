@@ -462,6 +462,9 @@ export default function OrderDetailPage({
     isStorePickup &&
     !isSellerReassignmentBlocked &&
     (isAdmin || canAccessSeller(user, order.sellerId));
+  const hasConfirmationAction =
+    canConfirmPickup || canConfirmCustomerPickup || canConfirmDelivery;
+  const hasOperationalActions = canChangeStatus || hasConfirmationAction;
   const confirmationCopy = statusConfirmation
     ? getStatusConfirmationCopy(statusConfirmation.type, t)
     : null;
@@ -577,6 +580,248 @@ export default function OrderDetailPage({
           </div>
         }
       />
+
+      {hasOperationalActions && (
+        <Card className="overflow-hidden border-primary/30 bg-primary/5 shadow-md shadow-primary/5">
+          <CardHeader className="border-b border-primary/10 bg-primary/10">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <CheckCircle2 className="size-5 text-primary" />
+                  Ações do pedido
+                </CardTitle>
+                <CardDescription>
+                  Próximo passo operacional para este pedido.
+                </CardDescription>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <OrderStatusBadge
+                  status={order.status}
+                  label={orderStatusLabelForFulfillment(
+                    order.status,
+                    fulfillmentLabelContext,
+                  )}
+                />
+                {order.paymentStatus && (
+                  <PaymentStatusBadge status={order.paymentStatus} />
+                )}
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="grid gap-5 p-5 md:grid-cols-2">
+            {canChangeStatus && (
+              <section
+                className={cn(
+                  "space-y-3 rounded-md border border-border bg-background/80 p-4",
+                  !hasConfirmationAction && "md:col-span-2",
+                )}
+              >
+                <h3 className="text-base font-semibold">
+                  {t("order.nextAction")}
+                </h3>
+                <div className="grid gap-3">
+                  {transitions.map((status) => (
+                    <Button
+                      key={status}
+                      size="lg"
+                      variant={statusButtonVariant(order.status, status)}
+                      className="min-h-12 w-full cursor-pointer text-base font-semibold"
+                      onClick={() => requestStatusChange(status)}
+                      disabled={
+                        statusMutation.isPending ||
+                        sellerRejectionMutation.isPending
+                      }
+                    >
+                      {statusMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : null}
+                      {statusButtonLabel(
+                        order.status,
+                        status,
+                        fulfillmentLabelContext,
+                        t,
+                      )}
+                    </Button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {canConfirmPickup && (
+              <section
+                className={cn(
+                  "space-y-3 rounded-md border border-border bg-background/80 p-4",
+                  canChangeStatus && "md:col-start-2",
+                  !canChangeStatus && "md:col-span-2",
+                )}
+              >
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold">
+                    {t("order.pickupConfirmation")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("order.pickupConfirmationDescription")}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="pickup-code">{t("order.pickupCode")}</Label>
+                  <Input
+                    id="pickup-code"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={pickupCode}
+                    onChange={handlePickupCodeChange}
+                    placeholder="0000"
+                  />
+                </div>
+                {requiresDirectPaymentConfirmation && (
+                  <DirectPaymentConfirmationFields
+                    received={directPaymentReceived}
+                    method={directPaymentMethod}
+                    reference={directPaymentReference}
+                    onReceivedChange={setDirectPaymentReceived}
+                    onMethodChange={setDirectPaymentMethod}
+                    onReferenceChange={setDirectPaymentReference}
+                  />
+                )}
+                <Button
+                  size="lg"
+                  className="min-h-11 w-full cursor-pointer"
+                  onClick={() => pickupMutation.mutate()}
+                  disabled={pickupCode.length !== 4 || pickupMutation.isPending}
+                >
+                  {pickupMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="size-4" />
+                  )}
+                  {t("order.confirmPickup")}
+                </Button>
+              </section>
+            )}
+
+            {canConfirmCustomerPickup && (
+              <section
+                className={cn(
+                  "space-y-3 rounded-md border border-border bg-background/80 p-4",
+                  canChangeStatus && "md:col-start-2",
+                  !canChangeStatus && "md:col-span-2",
+                )}
+              >
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold">
+                    {t("order.customerPickupConfirmation")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("order.customerPickupConfirmationDescription")}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="customer-pickup-code">
+                    {t("order.customerPickupCode")}
+                  </Label>
+                  <Input
+                    id="customer-pickup-code"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={customerPickupCode}
+                    onChange={handleCustomerPickupCodeChange}
+                    placeholder="0000"
+                  />
+                </div>
+                {requiresDirectPaymentConfirmation && (
+                  <DirectPaymentConfirmationFields
+                    received={directPaymentReceived}
+                    method={directPaymentMethod}
+                    reference={directPaymentReference}
+                    onReceivedChange={setDirectPaymentReceived}
+                    onMethodChange={setDirectPaymentMethod}
+                    onReferenceChange={setDirectPaymentReference}
+                  />
+                )}
+                <Button
+                  size="lg"
+                  className="min-h-11 w-full cursor-pointer"
+                  onClick={() => customerPickupMutation.mutate()}
+                  disabled={
+                    customerPickupCode.length !== 4 ||
+                    (requiresDirectPaymentConfirmation &&
+                      !directPaymentReceived) ||
+                    customerPickupMutation.isPending
+                  }
+                >
+                  {customerPickupMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="size-4" />
+                  )}
+                  {t("order.confirmCustomerPickup")}
+                </Button>
+              </section>
+            )}
+
+            {canConfirmDelivery && (
+              <section
+                className={cn(
+                  "space-y-3 rounded-md border border-border bg-background/80 p-4",
+                  canChangeStatus && "md:col-start-2",
+                  !canChangeStatus && "md:col-span-2",
+                )}
+              >
+                <div className="space-y-1">
+                  <h3 className="text-base font-semibold">
+                    {t("order.deliveryConfirmation")}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {t("order.sellerDeliveryConfirmationDescription")}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="delivery-code">
+                    {t("order.deliveryCode")}
+                  </Label>
+                  <Input
+                    id="delivery-code"
+                    inputMode="numeric"
+                    maxLength={4}
+                    value={deliveryCode}
+                    onChange={handleDeliveryCodeChange}
+                    placeholder="0000"
+                  />
+                </div>
+                {requiresDirectPaymentConfirmation && (
+                  <DirectPaymentConfirmationFields
+                    received={directPaymentReceived}
+                    method={directPaymentMethod}
+                    reference={directPaymentReference}
+                    onReceivedChange={setDirectPaymentReceived}
+                    onMethodChange={setDirectPaymentMethod}
+                    onReferenceChange={setDirectPaymentReference}
+                  />
+                )}
+                <Button
+                  size="lg"
+                  className="min-h-11 w-full cursor-pointer"
+                  onClick={() => deliveryMutation.mutate()}
+                  disabled={
+                    deliveryCode.length !== 4 ||
+                    (requiresDirectPaymentConfirmation &&
+                      !directPaymentReceived) ||
+                    deliveryMutation.isPending
+                  }
+                >
+                  {deliveryMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="size-4" />
+                  )}
+                  {t("order.confirmDelivery")}
+                </Button>
+              </section>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -1091,195 +1336,6 @@ export default function OrderDetailPage({
             </Card>
           ) : null}
 
-          {canChangeStatus && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("order.changeStatus")}</CardTitle>
-                <CardDescription>{t("order.allowedStatuses")}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid gap-2">
-                  {transitions.map((status) => (
-                    <Button
-                      key={status}
-                      size="sm"
-                      variant={statusButtonVariant(order.status, status)}
-                      onClick={() => requestStatusChange(status)}
-                      disabled={
-                        statusMutation.isPending ||
-                        sellerRejectionMutation.isPending
-                      }
-                    >
-                      {statusMutation.isPending ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : null}
-                      {statusButtonLabel(
-                        order.status,
-                        status,
-                        fulfillmentLabelContext,
-                        t,
-                      )}
-                    </Button>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {canConfirmPickup && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("order.pickupConfirmation")}</CardTitle>
-                <CardDescription>
-                  {t("order.pickupConfirmationDescription")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="pickup-code">{t("order.pickupCode")}</Label>
-                  <Input
-                    id="pickup-code"
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={pickupCode}
-                    onChange={handlePickupCodeChange}
-                    placeholder="0000"
-                  />
-                </div>
-                {requiresDirectPaymentConfirmation && (
-                  <DirectPaymentConfirmationFields
-                    received={directPaymentReceived}
-                    method={directPaymentMethod}
-                    reference={directPaymentReference}
-                    onReceivedChange={setDirectPaymentReceived}
-                    onMethodChange={setDirectPaymentMethod}
-                    onReferenceChange={setDirectPaymentReference}
-                  />
-                )}
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => pickupMutation.mutate()}
-                  disabled={pickupCode.length !== 4 || pickupMutation.isPending}
-                >
-                  {pickupMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="size-4" />
-                  )}
-                  {t("order.confirmPickup")}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {canConfirmCustomerPickup && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("order.customerPickupConfirmation")}</CardTitle>
-                <CardDescription>
-                  {t("order.customerPickupConfirmationDescription")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="customer-pickup-code">
-                    {t("order.customerPickupCode")}
-                  </Label>
-                  <Input
-                    id="customer-pickup-code"
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={customerPickupCode}
-                    onChange={handleCustomerPickupCodeChange}
-                    placeholder="0000"
-                  />
-                </div>
-                {requiresDirectPaymentConfirmation && (
-                  <DirectPaymentConfirmationFields
-                    received={directPaymentReceived}
-                    method={directPaymentMethod}
-                    reference={directPaymentReference}
-                    onReceivedChange={setDirectPaymentReceived}
-                    onMethodChange={setDirectPaymentMethod}
-                    onReferenceChange={setDirectPaymentReference}
-                  />
-                )}
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => customerPickupMutation.mutate()}
-                  disabled={
-                    customerPickupCode.length !== 4 ||
-                    (requiresDirectPaymentConfirmation &&
-                      !directPaymentReceived) ||
-                    customerPickupMutation.isPending
-                  }
-                >
-                  {customerPickupMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="size-4" />
-                  )}
-                  {t("order.confirmCustomerPickup")}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-
-          {canConfirmDelivery && (
-            <Card>
-              <CardHeader>
-                <CardTitle>{t("order.deliveryConfirmation")}</CardTitle>
-                <CardDescription>
-                  {t("order.sellerDeliveryConfirmationDescription")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="delivery-code">
-                    {t("order.deliveryCode")}
-                  </Label>
-                  <Input
-                    id="delivery-code"
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={deliveryCode}
-                    onChange={handleDeliveryCodeChange}
-                    placeholder="0000"
-                  />
-                </div>
-                {requiresDirectPaymentConfirmation && (
-                  <DirectPaymentConfirmationFields
-                    received={directPaymentReceived}
-                    method={directPaymentMethod}
-                    reference={directPaymentReference}
-                    onReceivedChange={setDirectPaymentReceived}
-                    onMethodChange={setDirectPaymentMethod}
-                    onReferenceChange={setDirectPaymentReference}
-                  />
-                )}
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => deliveryMutation.mutate()}
-                  disabled={
-                    deliveryCode.length !== 4 ||
-                    (requiresDirectPaymentConfirmation &&
-                      !directPaymentReceived) ||
-                    deliveryMutation.isPending
-                  }
-                >
-                  {deliveryMutation.isPending ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="size-4" />
-                  )}
-                  {t("order.confirmDelivery")}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
 
@@ -1489,9 +1545,13 @@ function DirectPaymentConfirmationFields({
           id="direct-payment-received"
           checked={received}
           onCheckedChange={(checked) => onReceivedChange(checked === true)}
+          className="cursor-pointer"
         />
         <div className="space-y-1 leading-none">
-          <Label htmlFor="direct-payment-received">
+          <Label
+            htmlFor="direct-payment-received"
+            className="cursor-pointer"
+          >
             Pagamento recebido direto pela loja
           </Label>
           <p className="text-xs text-muted-foreground">
@@ -1509,14 +1569,22 @@ function DirectPaymentConfirmationFields({
               onMethodChange(value as DirectSellerPaymentMethod)
             }
           >
-            <SelectTrigger>
+            <SelectTrigger className="cursor-pointer">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="CARD_POS">Cartao na maquininha</SelectItem>
-              <SelectItem value="PIX_SELLER">Pix da loja</SelectItem>
-              <SelectItem value="CASH">Dinheiro</SelectItem>
-              <SelectItem value="OTHER">Outro</SelectItem>
+              <SelectItem value="CARD_POS" className="cursor-pointer">
+                Cartao na maquininha
+              </SelectItem>
+              <SelectItem value="PIX_SELLER" className="cursor-pointer">
+                Pix da loja
+              </SelectItem>
+              <SelectItem value="CASH" className="cursor-pointer">
+                Dinheiro
+              </SelectItem>
+              <SelectItem value="OTHER" className="cursor-pointer">
+                Outro
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
