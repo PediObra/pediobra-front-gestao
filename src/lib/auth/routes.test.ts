@@ -23,6 +23,11 @@ describe("auth route helpers", () => {
     expect(isPublicAuthPath("/blog")).toBe(false);
   });
 
+  it("treats seller storefront pages as public content", () => {
+    expect(isPublicContentPath("/lojas/deposito-indaiatuba")).toBe(true);
+    expect(isPublicAuthPath("/lojas/deposito-indaiatuba")).toBe(false);
+  });
+
   it("accepts only internal redirect paths", () => {
     expect(getSafeAuthRedirect("/team-invitations/token")).toBe(
       "/team-invitations/token",

@@ -8,6 +8,7 @@ import type {
   SellerDeliveryProvider,
   SellerOperatingHour,
   SellerOperationalSettings,
+  SellerStorefront,
   SellerTeamInvitationCreated,
   SellerTeamInvitationPreview,
   StripeConnectOnboardingLinkResponse,
@@ -125,6 +126,23 @@ export interface UpdateSellerAvailabilityPayload {
   isOnline: boolean;
 }
 
+export interface UpdateSellerStorefrontPayload {
+  enabled?: boolean;
+  slug?: string;
+  publicName?: string;
+  description?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  allowedFulfillmentMethods?: Array<"DELIVERY" | "STORE_PICKUP">;
+  allowedPaymentProviders?: Array<
+    "STRIPE" | "DIRECT_SELLER" | "EXTERNAL_PAYMENT_LINK"
+  >;
+  externalPaymentLinkUrl?: string | null;
+  externalPaymentInstructions?: string | null;
+}
+
 export interface CreateSellerTeamInvitationPayload {
   email: string;
   membershipRole: MembershipRole;
@@ -185,6 +203,12 @@ export const sellersService = {
       `/sellers/${id}/availability`,
       payload,
     ),
+
+  getStorefront: (id: number) =>
+    api.get<SellerStorefront>(`/sellers/${id}/storefront`),
+
+  updateStorefront: (id: number, payload: UpdateSellerStorefrontPayload) =>
+    api.patch<SellerStorefront>(`/sellers/${id}/storefront`, payload),
 
   createStripeConnectOnboardingLink: (
     id: number,

@@ -1,5 +1,5 @@
 const PUBLIC_PATHS = ["/login", "/register", "/team-invitations"] as const;
-const PUBLIC_CONTENT_PATHS = ["/blog"] as const;
+const PUBLIC_CONTENT_PATHS = ["/blog", "/lojas"] as const;
 export const SELLER_ONBOARDING_PATH = "/onboarding/seller";
 export const TEAM_INVITATIONS_PATH = "/team-invitations";
 

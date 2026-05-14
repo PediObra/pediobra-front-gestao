@@ -105,6 +105,11 @@ export type PaymentStatus =
   | "REFUNDED"
   | "CANCELLED";
 
+export type PaymentProvider =
+  | "STRIPE"
+  | "DIRECT_SELLER"
+  | "EXTERNAL_PAYMENT_LINK";
+
 export type StripeConnectOnboardingStatus =
   | "NOT_STARTED"
   | "PENDING_ONBOARDING"
@@ -334,6 +339,26 @@ export interface Seller {
   active?: boolean;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface SellerStorefront {
+  id: number | null;
+  sellerId: number;
+  slug: string;
+  enabled: boolean;
+  publicName: string;
+  description?: string | null;
+  primaryColor?: string | null;
+  secondaryColor?: string | null;
+  seoTitle?: string | null;
+  seoDescription?: string | null;
+  allowedFulfillmentMethods: FulfillmentMethod[];
+  allowedPaymentProviders: PaymentProvider[];
+  externalPaymentLinkUrl?: string | null;
+  externalPaymentInstructions?: string | null;
+  seller?: Seller | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
 }
 
 export type SellerDayOfWeek =
@@ -859,6 +884,9 @@ export interface Order {
   clientUserId: number;
   sellerId: number;
   customerAddressId?: number | null;
+  source?: "APP" | "STOREFRONT";
+  storefrontId?: number | null;
+  publicToken?: string | null;
   assignedDriverProfileId?: number | null;
   status: OrderStatus;
   fulfillmentMethod?: FulfillmentMethod;

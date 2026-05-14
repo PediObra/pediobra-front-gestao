@@ -8,8 +8,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import {
   ArrowLeft,
   CalendarClock,
+  ExternalLink,
   FileClock,
   FileUp,
+  Globe2,
   Loader2,
   MapPinned,
   Power,
@@ -41,6 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/data-table/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -77,6 +80,7 @@ type SellerDetailSection =
   | "operations"
   | "receiving"
   | "delivery"
+  | "storefront"
   | "imports"
   | "team";
 
@@ -125,6 +129,10 @@ export default function SellerDetailPage({
     membershipFor,
   } = useAuth();
   const authReady = !authLoading && isAuthenticated;
+  const [activeSection, setActiveSection] =
+    useState<SellerDetailSection>("operations");
+  const [importsPage, setImportsPage] = useState(1);
+  const [teamPage, setTeamPage] = useState(1);
 
   const query = useQuery({
     queryKey: queryKeys.sellers.byId(sellerId),
@@ -146,6 +154,15 @@ export default function SellerDetailPage({
     queryFn: () => sellersService.getOperationalSettings(sellerId),
     enabled: Number.isFinite(sellerId) && authReady && Boolean(query.data),
   });
+  const storefrontQuery = useQuery({
+    queryKey: queryKeys.sellers.storefront(sellerId),
+    queryFn: () => sellersService.getStorefront(sellerId),
+    enabled:
+      Number.isFinite(sellerId) &&
+      authReady &&
+      Boolean(query.data) &&
+      activeSection === "storefront",
+  });
 
   const seller = query.data;
   const canEdit = canEditSeller(sellerId);
@@ -155,10 +172,6 @@ export default function SellerDetailPage({
   const isSellerOwner = currentMembership?.membershipRole === "OWNER";
   const canInviteOwner = isAdmin || isSellerOwner;
   const canConfigureReceiving = isSellerOwner;
-  const [activeSection, setActiveSection] =
-    useState<SellerDetailSection>("operations");
-  const [importsPage, setImportsPage] = useState(1);
-  const [teamPage, setTeamPage] = useState(1);
   const importsParams = {
     page: importsPage,
     limit: 10,
@@ -200,6 +213,15 @@ export default function SellerDetailPage({
   const [clearLogo, setClearLogo] = useState(false);
   const [logoInputKey, setLogoInputKey] = useState(0);
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState("");
+  const [storefrontEnabled, setStorefrontEnabled] = useState(false);
+  const [storefrontSlug, setStorefrontSlug] = useState("");
+  const [storefrontPublicName, setStorefrontPublicName] = useState("");
+  const [storefrontDescription, setStorefrontDescription] = useState("");
+  const [storefrontSeoTitle, setStorefrontSeoTitle] = useState("");
+  const [storefrontSeoDescription, setStorefrontSeoDescription] = useState("");
+  const [storefrontDeliveryEnabled, setStorefrontDeliveryEnabled] =
+    useState(true);
+  const [storefrontPickupEnabled, setStorefrontPickupEnabled] = useState(true);
   const [autoOnlineEnabled, setAutoOnlineEnabled] = useState(false);
   const [operatingHours, setOperatingHours] = useState<SellerOperatingHour[]>(
     () => buildDefaultOperatingHours(),
@@ -247,6 +269,25 @@ export default function SellerDetailPage({
     setAutoOnlineEnabled(settings.autoOnlineEnabled);
     setOperatingHours(mergeOperatingHours(settings.operatingHours));
   }, [operationalSettingsQuery.data?.sellerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const storefront = storefrontQuery.data;
+    if (!storefront) return;
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Populate storefront form fields from the fetched settings.
+    setStorefrontEnabled(storefront.enabled);
+    setStorefrontSlug(storefront.slug);
+    setStorefrontPublicName(storefront.publicName);
+    setStorefrontDescription(storefront.description ?? "");
+    setStorefrontSeoTitle(storefront.seoTitle ?? "");
+    setStorefrontSeoDescription(storefront.seoDescription ?? "");
+    setStorefrontDeliveryEnabled(
+      storefront.allowedFulfillmentMethods.includes("DELIVERY"),
+    );
+    setStorefrontPickupEnabled(
+      storefront.allowedFulfillmentMethods.includes("STORE_PICKUP"),
+    );
+  }, [storefrontQuery.data?.sellerId, storefrontQuery.data?.slug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isOperationalScheduleComplete = useMemo(
     () => isCompleteOperatingSchedule(operatingHours),
@@ -404,6 +445,46 @@ export default function SellerDetailPage({
       toast.error(msg);
     },
   });
+  const storefrontMutation = useMutation({
+    mutationFn: () => {
+      const allowedFulfillmentMethods = [
+        storefrontDeliveryEnabled ? "DELIVERY" : null,
+        storefrontPickupEnabled ? "STORE_PICKUP" : null,
+      ].filter(Boolean) as Array<"DELIVERY" | "STORE_PICKUP">;
+
+      if (!storefrontSlug.trim()) {
+        throw new Error("Informe o slug publico da loja.");
+      }
+
+      if (allowedFulfillmentMethods.length === 0) {
+        throw new Error("Escolha pelo menos entrega ou retirada.");
+      }
+
+      return sellersService.updateStorefront(sellerId, {
+        enabled: storefrontEnabled,
+        slug: storefrontSlug,
+        publicName: storefrontPublicName || seller?.name,
+        description: storefrontDescription || null,
+        seoTitle: storefrontSeoTitle || null,
+        seoDescription: storefrontSeoDescription || null,
+        allowedFulfillmentMethods,
+        allowedPaymentProviders: ["DIRECT_SELLER"],
+      });
+    },
+    onSuccess: (storefront) => {
+      qc.setQueryData(queryKeys.sellers.storefront(sellerId), storefront);
+      toast.success("Site da loja atualizado.");
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : "Nao foi possivel salvar o site da loja.";
+      toast.error(msg);
+    },
+  });
   const inviteMutation = useMutation({
     mutationFn: () =>
       sellersService.createTeamInvitation(sellerId, {
@@ -446,6 +527,7 @@ export default function SellerDetailPage({
     { value: "operations", label: t("seller.operationalData") },
     { value: "receiving", label: t("seller.receiving") },
     { value: "delivery", label: "Dados Entrega" },
+    { value: "storefront", label: "Dados Site" },
     { value: "imports", label: "Dados Importação" },
     { value: "team", label: "Dados Equipe" },
   ];
@@ -1074,6 +1156,196 @@ export default function SellerDetailPage({
                         <Save className="size-4" />
                       )}
                       Salvar entrega
+                    </Button>
+                  </CardFooter>
+                )}
+              </Card>
+            </div>
+          )}
+
+          {activeSection === "storefront" && (
+            <div
+              id="seller-section-panel-storefront"
+              role="tabpanel"
+              aria-labelledby="seller-section-tab-storefront"
+              className="w-full max-w-6xl"
+            >
+              <Card>
+                <CardHeader className="gap-4 border-b border-border sm:flex-row sm:items-start sm:justify-between">
+                  <div className="space-y-1.5">
+                    <CardTitle className="flex items-center gap-2">
+                      <Globe2 className="size-5 text-muted-foreground" />
+                      Site da loja
+                    </CardTitle>
+                    <CardDescription>
+                      Configure a vitrine pública com produtos desta loja e
+                      pagamento direto.
+                    </CardDescription>
+                  </div>
+                  {storefrontSlug && (
+                    <Button asChild variant="outline">
+                      <Link href={`/lojas/${storefrontSlug}`} target="_blank">
+                        <ExternalLink className="size-4" />
+                        Abrir site
+                      </Link>
+                    </Button>
+                  )}
+                </CardHeader>
+                <CardContent className="grid gap-6 p-6">
+                  {storefrontQuery.isLoading ? (
+                    <Skeleton className="h-72 w-full" />
+                  ) : (
+                    <>
+                      <div className="rounded-md border border-border p-4">
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                          <div className="space-y-1">
+                            <p className="text-sm font-semibold">
+                              Publicar vitrine
+                            </p>
+                            <p className="text-xs leading-5 text-muted-foreground">
+                              Quando ativo, clientes conseguem acessar a URL
+                              pública da loja.
+                            </p>
+                          </div>
+                          <Switch
+                            checked={storefrontEnabled}
+                            disabled={!canEdit || storefrontQuery.isLoading}
+                            onCheckedChange={setStorefrontEnabled}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="storefront-public-name">
+                            Nome público
+                          </Label>
+                          <Input
+                            id="storefront-public-name"
+                            disabled={!canEdit}
+                            value={storefrontPublicName}
+                            onChange={(event) =>
+                              setStorefrontPublicName(event.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="storefront-slug">Slug</Label>
+                          <Input
+                            id="storefront-slug"
+                            disabled={!canEdit}
+                            value={storefrontSlug}
+                            onChange={(event) =>
+                              setStorefrontSlug(event.target.value)
+                            }
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            URL: /lojas/{storefrontSlug || "sua-loja"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="storefront-description">Descrição</Label>
+                        <Textarea
+                          id="storefront-description"
+                          disabled={!canEdit}
+                          value={storefrontDescription}
+                          onChange={(event) =>
+                            setStorefrontDescription(event.target.value)
+                          }
+                        />
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-4 text-sm">
+                          <Checkbox
+                            checked={storefrontDeliveryEnabled}
+                            disabled={!canEdit}
+                            onCheckedChange={(checked) =>
+                              setStorefrontDeliveryEnabled(checked === true)
+                            }
+                          />
+                          <span>
+                            <span className="block font-semibold">
+                              Entrega pela loja
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              Usa endereço Google, latitude/longitude e raio de
+                              entrega configurado.
+                            </span>
+                          </span>
+                        </label>
+                        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-4 text-sm">
+                          <Checkbox
+                            checked={storefrontPickupEnabled}
+                            disabled={!canEdit}
+                            onCheckedChange={(checked) =>
+                              setStorefrontPickupEnabled(checked === true)
+                            }
+                          />
+                          <span>
+                            <span className="block font-semibold">
+                              Retirada na loja
+                            </span>
+                            <span className="block text-xs text-muted-foreground">
+                              O cliente retira no endereço cadastrado da loja.
+                            </span>
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                        O MVP da vitrine usa pagamento direto pela loja. Stripe
+                        e link externo ficam separados para ativação futura.
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="storefront-seo-title">
+                            Título SEO
+                          </Label>
+                          <Input
+                            id="storefront-seo-title"
+                            disabled={!canEdit}
+                            value={storefrontSeoTitle}
+                            onChange={(event) =>
+                              setStorefrontSeoTitle(event.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="storefront-seo-description">
+                            Descrição SEO
+                          </Label>
+                          <Input
+                            id="storefront-seo-description"
+                            disabled={!canEdit}
+                            value={storefrontSeoDescription}
+                            onChange={(event) =>
+                              setStorefrontSeoDescription(event.target.value)
+                            }
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </CardContent>
+                {canEdit && (
+                  <CardFooter className="justify-end">
+                    <Button
+                      onClick={() => storefrontMutation.mutate()}
+                      disabled={
+                        storefrontMutation.isPending ||
+                        storefrontQuery.isLoading
+                      }
+                    >
+                      {storefrontMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Save className="size-4" />
+                      )}
+                      Salvar site da loja
                     </Button>
                   </CardFooter>
                 )}

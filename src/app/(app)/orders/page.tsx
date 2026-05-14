@@ -123,6 +123,11 @@ export default function OrdersListPage() {
             <div className="text-xs text-muted-foreground">
               {formatDateTime(row.original.createdAt)}
             </div>
+            {row.original.source === "STOREFRONT" && (
+              <Badge variant="outline" className="mt-1">
+                Site da loja
+              </Badge>
+            )}
           </div>
         ),
       },

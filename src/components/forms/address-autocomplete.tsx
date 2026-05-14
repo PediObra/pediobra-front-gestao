@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { CheckCircle2, MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { geoService, type PlaceSuggestion } from "@/lib/api/geo";
+import {
+  geoService,
+  type PlaceSuggestion,
+  type ResolvedPlace,
+} from "@/lib/api/geo";
 import {
   calculateDistanceMeters,
   formatDistanceShort,
@@ -22,6 +26,17 @@ type AddressAutocompleteProps = {
   selectedPlaceId?: string;
   disabled?: boolean;
   referencePoint?: GeoPoint | null;
+  geoApi?: {
+    autocomplete: (
+      query: string,
+      sessionToken: string,
+    ) => Promise<PlaceSuggestion[]>;
+    resolve: (
+      placeId: string,
+      sessionToken: string,
+    ) => Promise<ResolvedPlace>;
+  };
+  queryKeyPrefix?: string;
   onChange: (value: string) => void;
   onSelect: (place: PlaceSuggestion) => void;
 };
@@ -34,6 +49,8 @@ export function AddressAutocomplete({
   selectedPlaceId,
   disabled,
   referencePoint,
+  geoApi = geoService,
+  queryKeyPrefix = "geo",
   onChange,
   onSelect,
 }: AddressAutocompleteProps) {
@@ -52,8 +69,8 @@ export function AddressAutocomplete({
   }, [value]);
 
   const suggestionsQ = useQuery({
-    queryKey: ["geo-autocomplete", searchValue, sessionToken],
-    queryFn: () => geoService.autocomplete(searchValue, sessionToken),
+    queryKey: [queryKeyPrefix, "autocomplete", searchValue, sessionToken],
+    queryFn: () => geoApi.autocomplete(searchValue, sessionToken),
     enabled: open && canSearch,
     staleTime: 60_000,
   });
@@ -62,8 +79,8 @@ export function AddressAutocomplete({
   const shouldResolveDistance = hasGeoPoint(referencePoint);
   const suggestionPlaceQueries = useQueries({
     queries: visibleSuggestions.map((item) => ({
-      queryKey: ["geo-resolve", item.placeId, sessionToken],
-      queryFn: () => geoService.resolve(item.placeId, sessionToken),
+      queryKey: [queryKeyPrefix, "resolve", item.placeId, sessionToken],
+      queryFn: () => geoApi.resolve(item.placeId, sessionToken),
       enabled: open && canSearch && shouldResolveDistance,
       staleTime: 5 * 60_000,
     })),

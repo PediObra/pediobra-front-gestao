@@ -565,6 +565,9 @@ export default function OrderDetailPage({
         })}
         actions={
           <div className="flex items-center gap-2">
+            {order.source === "STOREFRONT" && (
+              <Badge variant="outline">Site da loja</Badge>
+            )}
             {!isStorePickup && (
               <Badge variant={isSellerDelivery ? "secondary" : "outline"}>
                 {shouldShowDeliveryProvider

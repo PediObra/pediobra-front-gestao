@@ -37,6 +37,7 @@ export const queryKeys = {
       ["sellers", "deliverySettings", id] as const,
     operationalSettings: (id: number) =>
       ["sellers", "operationalSettings", id] as const,
+    storefront: (id: number) => ["sellers", "storefront", id] as const,
   },
   products: {
     all: () => ["products"] as const,
