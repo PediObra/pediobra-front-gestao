@@ -28,7 +28,8 @@ import {
   formatDateTime,
   formatOrderCode,
   formatPhone,
-  orderStatusLabel,
+  orderFulfillmentLabelContext,
+  orderStatusLabelForFulfillment,
   paymentStatusLabel,
 } from "@/lib/formatters";
 import {
@@ -152,10 +153,16 @@ export default function OrderDetailPage({
   const [sellerRejectionDetails, setSellerRejectionDetails] = useState("");
   const [acceptDeliveryProvider, setAcceptDeliveryProvider] =
     useState<SellerDeliveryProvider>("INTERNAL");
+  const fulfillmentLabelContext = order
+    ? orderFulfillmentLabelContext(order)
+    : undefined;
+  const statusPermissionOrder = order
+    ? { ...order, fulfillmentMethod: fulfillmentLabelContext }
+    : { sellerId: 0, status: "" };
   const shouldLoadInternalDeliveryAvailability =
     !!order &&
     statusConfirmation?.type === "accept" &&
-    order.fulfillmentMethod !== "STORE_PICKUP" &&
+    fulfillmentLabelContext !== "STORE_PICKUP" &&
     order.deliveryProvider === "UNDECIDED";
   const internalDeliveryAvailabilityQuery = useQuery({
     queryKey: queryKeys.orders.internalDeliveryAvailability(orderId),
@@ -164,10 +171,7 @@ export default function OrderDetailPage({
       Number.isFinite(orderId) && shouldLoadInternalDeliveryAvailability,
   });
 
-  const transitions = allowedOrderStatusTransitions(
-    user,
-    order ?? { sellerId: 0, status: "" },
-  );
+  const transitions = allowedOrderStatusTransitions(user, statusPermissionOrder);
 
   const [pickupCode, setPickupCode] = useState("");
   const [deliveryCode, setDeliveryCode] = useState("");
@@ -430,7 +434,7 @@ export default function OrderDetailPage({
   }
 
   const canChangeStatus = transitions.length > 0;
-  const isStorePickup = order.fulfillmentMethod === "STORE_PICKUP";
+  const isStorePickup = fulfillmentLabelContext === "STORE_PICKUP";
   const orderDeliveryProvider = order.deliveryProvider ?? "INTERNAL";
   const isDeliveryProviderUndecided = orderDeliveryProvider === "UNDECIDED";
   const isSellerDelivery = orderDeliveryProvider === "SELLER";
@@ -560,7 +564,13 @@ export default function OrderDetailPage({
                   {sellerReassignmentStatusLabel(order.sellerReassignmentStatus)}
                 </Badge>
               )}
-            <OrderStatusBadge status={order.status} />
+            <OrderStatusBadge
+              status={order.status}
+              label={orderStatusLabelForFulfillment(
+                order.status,
+                fulfillmentLabelContext,
+              )}
+            />
             {order.paymentStatus && (
               <PaymentStatusBadge status={order.paymentStatus} />
             )}
@@ -670,7 +680,13 @@ export default function OrderDetailPage({
                             <p className="text-sm font-medium text-foreground">
                               {event.title}
                             </p>
-                            <OrderStatusBadge status={event.status} />
+                            <OrderStatusBadge
+                              status={event.status}
+                              label={orderStatusLabelForFulfillment(
+                                event.status,
+                                fulfillmentLabelContext,
+                              )}
+                            />
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span className="text-xs text-muted-foreground">
@@ -1097,7 +1113,12 @@ export default function OrderDetailPage({
                       {statusMutation.isPending ? (
                         <Loader2 className="size-4 animate-spin" />
                       ) : null}
-                      {statusButtonLabel(order.status, status, t)}
+                      {statusButtonLabel(
+                        order.status,
+                        status,
+                        fulfillmentLabelContext,
+                        t,
+                      )}
                     </Button>
                   ))}
                 </div>
@@ -1516,6 +1537,7 @@ function DirectPaymentConfirmationFields({
 function statusButtonLabel(
   currentStatus: string,
   nextStatus: OrderStatus,
+  fulfillmentMethod: string | null | undefined,
   t: ReturnType<typeof useTranslation>,
 ) {
   if (currentStatus === "PENDING" && nextStatus === "CONFIRMED") {
@@ -1528,7 +1550,7 @@ function statusButtonLabel(
 
   if (nextStatus === "CANCELLED") return t("order.cancelOrder");
 
-  return orderStatusLabel(nextStatus);
+  return orderStatusLabelForFulfillment(nextStatus, fulfillmentMethod);
 }
 
 function statusButtonVariant(currentStatus: string, nextStatus: OrderStatus) {

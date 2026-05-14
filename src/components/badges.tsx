@@ -34,12 +34,18 @@ const ORDER_STATUS_VARIANT: Record<OrderStatus, BadgeVariant> = {
   CANCELLED: "destructive",
 };
 
-export function OrderStatusBadge({ status }: { status: OrderStatus }) {
+export function OrderStatusBadge({
+  status,
+  label,
+}: {
+  status: OrderStatus;
+  label?: string;
+}) {
   useLanguageStore((state) => state.language);
 
   return (
     <Badge variant={ORDER_STATUS_VARIANT[status]}>
-      {orderStatusLabel(status)}
+      {label ?? orderStatusLabel(status)}
     </Badge>
   );
 }

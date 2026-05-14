@@ -309,6 +309,50 @@ describe("OrderDetailPage status actions", () => {
     });
   });
 
+  it("uses pickup wording for store pickup status actions", async () => {
+    mockOrder = makeOrder({
+      status: "PREPARING",
+      fulfillmentMethod: "STORE_PICKUP",
+      deliveryProvider: "NONE",
+      deliveryAddress: null,
+      deliveryFeeCents: 0,
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Pronto para retirada" }),
+    );
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "READY_FOR_CUSTOMER_PICKUP",
+      });
+    });
+    expect(
+      screen.queryByRole("button", { name: "Em rota" }),
+    ).toBeNull();
+  });
+
+  it("uses pickup wording in status tags for store pickup orders", async () => {
+    mockOrder = makeOrder({
+      status: "READY_FOR_CUSTOMER_PICKUP",
+      fulfillmentMethod: "STORE_PICKUP",
+      deliveryProvider: "NONE",
+      deliveryAddress: null,
+      deliveryFeeCents: 0,
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    expect(await screen.findAllByText("Pronto para retirada")).not.toHaveLength(
+      0,
+    );
+    expect(screen.queryByText("Em rota")).toBeNull();
+  });
+
   it("confirms first-step refusal with a selected refusal reason", async () => {
     renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
 

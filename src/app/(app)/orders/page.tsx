@@ -30,7 +30,9 @@ import {
   centsToBRL,
   formatDateTime,
   formatOrderCode,
+  orderFulfillmentLabelContext,
   orderStatusLabel,
+  orderStatusLabelForFulfillment,
 } from "@/lib/formatters";
 import {
   dateInputToNextDayIso,
@@ -147,7 +149,15 @@ export default function OrdersListPage() {
       {
         accessorKey: "status",
         header: t("common.status"),
-        cell: ({ row }) => <OrderStatusBadge status={row.original.status} />,
+        cell: ({ row }) => (
+          <OrderStatusBadge
+            status={row.original.status}
+            label={orderStatusLabelForFulfillment(
+              row.original.status,
+              orderFulfillmentLabelContext(row.original),
+            )}
+          />
+        ),
       },
       {
         id: "payment",

@@ -132,6 +132,37 @@ export function orderStatusLabel(status: OrderStatus) {
   return translate(`status.order.${status}` as Parameters<typeof translate>[0]);
 }
 
+export function orderStatusLabelForFulfillment(
+  status: OrderStatus,
+  fulfillmentMethod?: string | null,
+) {
+  if (fulfillmentMethod === "STORE_PICKUP") {
+    if (status === "READY_FOR_CUSTOMER_PICKUP") {
+      return translate("status.order.storePickup.READY_FOR_CUSTOMER_PICKUP");
+    }
+
+    if (status === "OUT_FOR_DELIVERY") {
+      return translate("status.order.storePickup.OUT_FOR_DELIVERY");
+    }
+
+    if (status === "CUSTOMER_PICKED_UP") {
+      return translate("status.order.storePickup.CUSTOMER_PICKED_UP");
+    }
+  }
+
+  return orderStatusLabel(status);
+}
+
+export function orderFulfillmentLabelContext(order: {
+  fulfillmentMethod?: string | null;
+  deliveryProvider?: string | null;
+}) {
+  return order.fulfillmentMethod === "STORE_PICKUP" ||
+    order.deliveryProvider === "NONE"
+    ? "STORE_PICKUP"
+    : order.fulfillmentMethod;
+}
+
 export function deliveryRequestStatusLabel(status: DeliveryRequestStatus) {
   return translate(
     `status.deliveryRequest.${status}` as Parameters<typeof translate>[0],
