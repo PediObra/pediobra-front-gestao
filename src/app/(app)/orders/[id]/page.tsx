@@ -1159,11 +1159,15 @@ export default function OrderDetailPage({
                   return (
                     <Tooltip key={option.value}>
                       <TooltipTrigger asChild>
-                        <span className="block" title={option.disabledReason}>
+                        <span className="block">
                           {optionButton}
                         </span>
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-64 text-center">
+                      <TooltipContent
+                        side="top"
+                        align="center"
+                        className="max-w-64 text-center"
+                      >
                         {option.disabledReason}
                       </TooltipContent>
                     </Tooltip>

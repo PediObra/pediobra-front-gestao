@@ -220,12 +220,7 @@ describe("OrderDetailPage status actions", () => {
       screen.getByRole("button", { name: /Entrega própria da loja/i }),
     ).toHaveAttribute("aria-pressed", "true");
 
-    expect(
-      systemDeliveryButton.parentElement,
-    ).toHaveAttribute(
-      "title",
-      "Nenhum entregador online na área agora. Aceite com entrega própria da loja.",
-    );
+    expect(systemDeliveryButton.parentElement).not.toHaveAttribute("title");
 
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
 
