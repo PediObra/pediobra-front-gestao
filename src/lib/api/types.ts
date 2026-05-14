@@ -23,6 +23,20 @@ export type SellerDeliveryProvider = Extract<
   "INTERNAL" | "SELLER"
 >;
 
+export type SellerReassignmentStatus =
+  | "NONE"
+  | "FINDING_SELLER"
+  | "AWAITING_CUSTOMER_APPROVAL"
+  | "AWAITING_PAYMENT_REAUTH";
+
+export type OrderSellerAttemptStatus =
+  | "PENDING"
+  | "REJECTED"
+  | "AWAITING_CUSTOMER_APPROVAL"
+  | "ACCEPTED"
+  | "EXPIRED"
+  | "SKIPPED";
+
 export type MessageTargetType =
   | "ORDER"
   | "DELIVERY_REQUEST"
@@ -610,6 +624,24 @@ export interface OrderEvidence {
   uploadedByUserId?: number | null;
 }
 
+export interface OrderSellerAttempt {
+  id: number;
+  orderId: number;
+  sellerId: number;
+  sequence: number;
+  status: OrderSellerAttemptStatus;
+  rejectionReason?: string | null;
+  rejectionDetails?: string | null;
+  rejectedByUserId?: number | null;
+  productTotalCents: number;
+  deliveryFeeCents: number;
+  totalCents: number;
+  createdAt: string;
+  updatedAt?: string;
+  seller?: Seller | null;
+  rejectedByUser?: User | null;
+}
+
 export interface DeliveryRequestEvidence {
   id: number;
   deliveryRequestId: number;
@@ -768,6 +800,9 @@ export interface Order {
   fulfillmentMethod?: FulfillmentMethod;
   deliveryProvider?: DeliveryProvider;
   paymentStatus?: PaymentStatus | null;
+  sellerReassignmentStatus?: SellerReassignmentStatus;
+  pendingReassignmentExpiresAt?: string | null;
+  pendingReassignmentSnapshot?: unknown;
   deliveryAddress?: string | null;
   deliveryCep?: string | null;
   pickupAddress?: string | null;
@@ -797,6 +832,7 @@ export interface Order {
   items?: OrderItem[];
   evidences?: OrderEvidence[];
   statusHistory?: OrderStatusHistoryEntry[];
+  sellerAttempts?: OrderSellerAttempt[];
   payments?: Payment[];
 }
 

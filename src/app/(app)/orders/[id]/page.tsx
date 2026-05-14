@@ -113,6 +113,17 @@ type StatusConfirmation = {
   type: "accept" | "reject" | "cancel";
 };
 
+type SellerRejectionReasonOption =
+  | "NO_STOCK"
+  | "NO_DELIVERY_DRIVERS"
+  | "OTHER";
+
+const SELLER_REJECTION_REASON_OPTIONS: SellerRejectionReasonOption[] = [
+  "NO_STOCK",
+  "NO_DELIVERY_DRIVERS",
+  "OTHER",
+];
+
 export default function OrderDetailPage({
   params,
 }: {
@@ -133,6 +144,8 @@ export default function OrderDetailPage({
   const order = query.data;
   const [statusConfirmation, setStatusConfirmation] =
     useState<StatusConfirmation | null>(null);
+  const [sellerRejectionReason, setSellerRejectionReason] = useState("");
+  const [sellerRejectionDetails, setSellerRejectionDetails] = useState("");
   const [acceptDeliveryProvider, setAcceptDeliveryProvider] =
     useState<SellerDeliveryProvider>("INTERNAL");
   const shouldLoadInternalDeliveryAvailability =
@@ -169,6 +182,45 @@ export default function OrderDetailPage({
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
       toast.success(t("order.statusUpdated"));
       setStatusConfirmation(null);
+    },
+    onError: (err: unknown) => {
+      const msg =
+        err instanceof ApiError
+          ? err.displayMessage
+          : err instanceof Error
+            ? err.message
+            : t("order.statusUpdateFailed");
+      toast.error(msg);
+    },
+  });
+
+  const sellerRejectionMutation = useMutation({
+    mutationFn: () =>
+      ordersService.rejectBySeller(orderId, {
+        reason: sellerRejectionReasonLabel(
+          sellerRejectionReason as SellerRejectionReasonOption,
+          t,
+        ),
+        details:
+          sellerRejectionReason === "OTHER"
+            ? sellerRejectionDetails.trim() || undefined
+            : undefined,
+      }),
+    onSuccess: (response) => {
+      if (response.order) {
+        qc.setQueryData(queryKeys.orders.byId(orderId), response.order);
+      }
+      qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
+      const message =
+        response.outcome === "REASSIGNED"
+          ? "Pedido enviado para outra loja disponível."
+          : response.outcome === "AWAITING_CUSTOMER_APPROVAL"
+            ? "Pedido aguardando aprovação do comprador para troca de loja."
+            : "Pedido cancelado: nenhuma loja alternativa disponível.";
+      toast.success(message);
+      setStatusConfirmation(null);
+      setSellerRejectionReason("");
+      setSellerRejectionDetails("");
     },
     onError: (err: unknown) => {
       const msg =
@@ -354,19 +406,25 @@ export default function OrderDetailPage({
   const isSellerDelivery = orderDeliveryProvider === "SELLER";
   const isInternalDelivery =
     !isStorePickup && orderDeliveryProvider === "INTERNAL";
+  const isSellerReassignmentBlocked =
+    !!order.sellerReassignmentStatus &&
+    order.sellerReassignmentStatus !== "NONE";
   const shouldShowDeliveryProvider =
     !isStorePickup && !isDeliveryProviderUndecided;
   const canConfirmPickup =
     order.status === "READY_FOR_PICKUP" &&
     isInternalDelivery &&
+    !isSellerReassignmentBlocked &&
     (isAdmin || canAccessSeller(user, order.sellerId));
   const canConfirmDelivery =
     order.status === "OUT_FOR_DELIVERY" &&
     isSellerDelivery &&
+    !isSellerReassignmentBlocked &&
     (isAdmin || canAccessSeller(user, order.sellerId));
   const canConfirmCustomerPickup =
     order.status === "READY_FOR_CUSTOMER_PICKUP" &&
     isStorePickup &&
+    !isSellerReassignmentBlocked &&
     (isAdmin || canAccessSeller(user, order.sellerId));
   const confirmationCopy = statusConfirmation
     ? getStatusConfirmationCopy(statusConfirmation.type, t)
@@ -391,7 +449,10 @@ export default function OrderDetailPage({
     ? "SELLER"
     : acceptDeliveryProvider;
   const shouldDisableConfirmStatusChange =
+    sellerRejectionMutation.isPending ||
     statusMutation.isPending ||
+    (statusConfirmation?.type === "reject" &&
+      !sellerRejectionReason.trim()) ||
     (shouldChooseDeliveryProvider && isInternalDeliveryAvailabilityPending);
 
   const requestStatusChange = (status: OrderStatus) => {
@@ -404,6 +465,8 @@ export default function OrderDetailPage({
     }
 
     if (order.status === "PENDING" && status === "CANCELLED") {
+      setSellerRejectionReason("");
+      setSellerRejectionDetails("");
       setStatusConfirmation({ status, type: "reject" });
       return;
     }
@@ -418,6 +481,11 @@ export default function OrderDetailPage({
 
   const confirmStatusChange = () => {
     if (!statusConfirmation) return;
+
+    if (statusConfirmation.type === "reject") {
+      sellerRejectionMutation.mutate();
+      return;
+    }
 
     statusMutation.mutate({
       status: statusConfirmation.status,
@@ -458,6 +526,12 @@ export default function OrderDetailPage({
                   : t("order.deliveryProviderUndecided")}
               </Badge>
             )}
+            {order.sellerReassignmentStatus &&
+              order.sellerReassignmentStatus !== "NONE" && (
+                <Badge variant="secondary">
+                  {sellerReassignmentStatusLabel(order.sellerReassignmentStatus)}
+                </Badge>
+              )}
             <OrderStatusBadge status={order.status} />
             {order.paymentStatus && (
               <PaymentStatusBadge status={order.paymentStatus} />
@@ -923,6 +997,56 @@ export default function OrderDetailPage({
           </Card>
           )}
 
+          {order.sellerReassignmentStatus &&
+            order.sellerReassignmentStatus !== "NONE" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Troca de loja</CardTitle>
+                  <CardDescription>
+                    {sellerReassignmentStatusDescription(
+                      order.sellerReassignmentStatus,
+                      order.pendingReassignmentExpiresAt,
+                    )}
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            )}
+
+          {order.sellerAttempts?.length ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Tentativas de loja</CardTitle>
+                <CardDescription>
+                  Histórico de lojas consultadas para este pedido.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[...order.sellerAttempts]
+                  .sort((a, b) => a.sequence - b.sequence)
+                  .map((attempt) => (
+                    <div
+                      key={attempt.id}
+                      className="space-y-1 border-b border-border pb-3 text-sm last:border-0 last:pb-0"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">
+                          {attempt.seller?.name ?? `#${attempt.sellerId}`}
+                        </span>
+                        <Badge variant="outline">
+                          {sellerAttemptStatusLabel(attempt.status)}
+                        </Badge>
+                      </div>
+                      {attempt.rejectionReason && (
+                        <p className="text-xs text-muted-foreground">
+                          {attempt.rejectionReason}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          ) : null}
+
           {canChangeStatus && (
             <Card>
               <CardHeader>
@@ -937,7 +1061,10 @@ export default function OrderDetailPage({
                       size="sm"
                       variant={statusButtonVariant(order.status, status)}
                       onClick={() => requestStatusChange(status)}
-                      disabled={statusMutation.isPending}
+                      disabled={
+                        statusMutation.isPending ||
+                        sellerRejectionMutation.isPending
+                      }
                     >
                       {statusMutation.isPending ? (
                         <Loader2 className="size-4 animate-spin" />
@@ -1085,6 +1212,53 @@ export default function OrderDetailPage({
               {confirmationCopy?.description}
             </DialogDescription>
           </DialogHeader>
+          {statusConfirmation?.type === "reject" && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="seller-rejection-reason">
+                  {t("order.reason")}
+                </Label>
+                <Select
+                  value={sellerRejectionReason}
+                  onValueChange={(value) => {
+                    setSellerRejectionReason(value);
+                    if (value !== "OTHER") {
+                      setSellerRejectionDetails("");
+                    }
+                  }}
+                >
+                  <SelectTrigger id="seller-rejection-reason">
+                    <SelectValue
+                      placeholder={t("order.rejectReasonPlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SELLER_REJECTION_REASON_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {sellerRejectionReasonLabel(option, t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {sellerRejectionReason === "OTHER" && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="seller-rejection-details">
+                    {t("order.detailsOptional")}
+                  </Label>
+                  <Textarea
+                    id="seller-rejection-details"
+                    rows={3}
+                    value={sellerRejectionDetails}
+                    onChange={(event) =>
+                      setSellerRejectionDetails(event.target.value)
+                    }
+                    placeholder={t("order.rejectReasonOtherPlaceholder")}
+                  />
+                </div>
+              )}
+            </div>
+          )}
           {shouldChooseDeliveryProvider && (
             <TooltipProvider delayDuration={0}>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -1180,7 +1354,9 @@ export default function OrderDetailPage({
             <Button
               variant="ghost"
               onClick={() => setStatusConfirmation(null)}
-              disabled={statusMutation.isPending}
+              disabled={
+                statusMutation.isPending || sellerRejectionMutation.isPending
+              }
               className="cursor-pointer"
             >
               {t("common.cancel")}
@@ -1195,7 +1371,7 @@ export default function OrderDetailPage({
               disabled={shouldDisableConfirmStatusChange}
               className="cursor-pointer"
             >
-              {statusMutation.isPending ? (
+              {statusMutation.isPending || sellerRejectionMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
               ) : null}
               {confirmationCopy?.confirmLabel}
@@ -1231,6 +1407,59 @@ function statusButtonVariant(currentStatus: string, nextStatus: OrderStatus) {
     return "default";
   }
   return "outline";
+}
+
+function sellerReassignmentStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    FINDING_SELLER: "Buscando loja",
+    AWAITING_CUSTOMER_APPROVAL: "Aguardando comprador",
+    AWAITING_PAYMENT_REAUTH: "Aguardando pagamento",
+  };
+
+  return labels[status] ?? status;
+}
+
+function sellerReassignmentStatusDescription(
+  status: string,
+  expiresAt?: string | null,
+) {
+  if (status === "AWAITING_CUSTOMER_APPROVAL") {
+    return expiresAt
+      ? `Comprador precisa aprovar a nova loja até ${formatDateTime(expiresAt)}.`
+      : "Comprador precisa aprovar a nova loja.";
+  }
+
+  if (status === "AWAITING_PAYMENT_REAUTH") {
+    return "Comprador aprovou a troca e precisa reautorizar o pagamento.";
+  }
+
+  return "Pedido em troca de loja.";
+}
+
+function sellerAttemptStatusLabel(status: string) {
+  const labels: Record<string, string> = {
+    PENDING: "Pendente",
+    REJECTED: "Recusada",
+    AWAITING_CUSTOMER_APPROVAL: "Aguardando cliente",
+    ACCEPTED: "Aceita",
+    EXPIRED: "Expirada",
+    SKIPPED: "Ignorada",
+  };
+
+  return labels[status] ?? status;
+}
+
+function sellerRejectionReasonLabel(
+  reason: SellerRejectionReasonOption,
+  t: ReturnType<typeof useTranslation>,
+) {
+  const labels: Record<SellerRejectionReasonOption, string> = {
+    NO_STOCK: t("order.rejectReasonNoStock"),
+    NO_DELIVERY_DRIVERS: t("order.rejectReasonNoDeliveryDrivers"),
+    OTHER: t("order.rejectReasonOther"),
+  };
+
+  return labels[reason];
 }
 
 function getStatusConfirmationCopy(

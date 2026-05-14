@@ -511,6 +511,13 @@ export const translations = {
     "order.acceptDeliveryProviderSellerHint":
       "A loja assume a rota e recebe produto + frete no repasse.",
     "order.rejectDefaultReason": "Loja recusou o pedido",
+    "order.rejectReasonPlaceholder": "Selecione o motivo",
+    "order.rejectReasonNoStock": "Sem estoque no momento",
+    "order.rejectReasonNoDeliveryDrivers":
+      "Sem entregadores disponíveis no momento",
+    "order.rejectReasonOther": "Outros",
+    "order.rejectReasonOtherPlaceholder":
+      "Descreva o motivo da recusa para o histórico do pedido.",
     "order.cancelDefaultReason": "Pedido cancelado pela loja",
     "order.pickupConfirmation": "Confirmação de retirada",
     "order.pickupConfirmationDescription":
@@ -1225,6 +1232,12 @@ export const translations = {
     "order.acceptDeliveryProviderSellerHint":
       "The store handles the route and receives products + delivery fee.",
     "order.rejectDefaultReason": "Store declined the order",
+    "order.rejectReasonPlaceholder": "Select the reason",
+    "order.rejectReasonNoStock": "Out of stock right now",
+    "order.rejectReasonNoDeliveryDrivers": "No delivery staff available now",
+    "order.rejectReasonOther": "Other",
+    "order.rejectReasonOtherPlaceholder":
+      "Describe the refusal reason for the order history.",
     "order.cancelDefaultReason": "Order cancelled by the store",
     "order.pickupConfirmation": "Pickup confirmation",
     "order.pickupConfirmationDescription":
@@ -1942,6 +1955,13 @@ export const translations = {
     "order.acceptDeliveryProviderSellerHint":
       "La tienda asume la ruta y recibe productos + flete en el repase.",
     "order.rejectDefaultReason": "La tienda rechazó el pedido",
+    "order.rejectReasonPlaceholder": "Selecciona el motivo",
+    "order.rejectReasonNoStock": "Sin stock en este momento",
+    "order.rejectReasonNoDeliveryDrivers":
+      "Sin repartidores disponibles en este momento",
+    "order.rejectReasonOther": "Otros",
+    "order.rejectReasonOtherPlaceholder":
+      "Describe el motivo del rechazo para el historial del pedido.",
     "order.cancelDefaultReason": "Pedido cancelado por la tienda",
     "order.pickupConfirmation": "Confirmación de recogida",
     "order.pickupConfirmationDescription":

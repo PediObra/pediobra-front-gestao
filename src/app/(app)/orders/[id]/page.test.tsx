@@ -64,6 +64,7 @@ jest.mock("@/lib/api/orders", () => ({
     getById: jest.fn(),
     getInternalDeliveryAvailability: jest.fn(),
     updateStatus: jest.fn(),
+    rejectBySeller: jest.fn(),
     assignDriver: jest.fn(),
     confirmPickup: jest.fn(),
     confirmDelivery: jest.fn(),
@@ -93,6 +94,7 @@ jest.mock("sonner", () => ({
 
 describe("OrderDetailPage status actions", () => {
   beforeEach(() => {
+    window.HTMLElement.prototype.scrollIntoView = jest.fn();
     mockAuth = {
       user: mockUser,
       isAdmin: false,
@@ -107,6 +109,12 @@ describe("OrderDetailPage status actions", () => {
     });
     jest.mocked(ordersService.updateStatus).mockImplementation((_id, payload) =>
       Promise.resolve({ ...mockOrder, status: payload.status } as Order),
+    );
+    jest.mocked(ordersService.rejectBySeller).mockImplementation(() =>
+      Promise.resolve({
+        outcome: "CANCELLED_NO_ALTERNATIVE",
+        order: { ...mockOrder, status: "CANCELLED" } as Order,
+      }),
     );
     jest.mocked(ordersService.confirmDelivery).mockImplementation(() =>
       Promise.resolve({ ...mockOrder, status: "DELIVERED" } as Order),
@@ -301,20 +309,61 @@ describe("OrderDetailPage status actions", () => {
     });
   });
 
-  it("confirms first-step refusal with the default refusal reason", async () => {
+  it("confirms first-step refusal with a selected refusal reason", async () => {
     renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Não aceitar" }),
     );
     expect(await screen.findByText("Não aceitar pedido?")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirmar recusa" }),
+    ).toBeDisabled();
+
+    const reasonSelect = screen.getByRole("combobox", { name: "Motivo" });
+    reasonSelect.focus();
+    fireEvent.keyDown(reasonSelect, { key: "ArrowDown" });
+    fireEvent.click(
+      await screen.findByRole("option", {
+        name: "Sem estoque no momento",
+      }),
+    );
+    expect(screen.queryByLabelText("Detalhes (opcional)")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Confirmar recusa" }));
 
     await waitFor(() => {
-      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
-        status: "CANCELLED",
-        cancellationReason: "Loja recusou o pedido",
+      expect(ordersService.rejectBySeller).toHaveBeenCalledWith(1, {
+        reason: "Sem estoque no momento",
+        details: undefined,
+      });
+    });
+  });
+
+  it("shows details only when the seller selects other refusal reason", async () => {
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Não aceitar" }),
+    );
+
+    const reasonSelect = await screen.findByRole("combobox", {
+      name: "Motivo",
+    });
+    reasonSelect.focus();
+    fireEvent.keyDown(reasonSelect, { key: "ArrowDown" });
+    fireEvent.click(await screen.findByRole("option", { name: "Outros" }));
+
+    const details = await screen.findByLabelText("Detalhes (opcional)");
+    fireEvent.change(details, {
+      target: { value: "Equipe indisponível para separar pedido grande." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar recusa" }));
+
+    await waitFor(() => {
+      expect(ordersService.rejectBySeller).toHaveBeenCalledWith(1, {
+        reason: "Outros",
+        details: "Equipe indisponível para separar pedido grande.",
       });
     });
   });

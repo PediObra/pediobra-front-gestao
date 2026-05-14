@@ -49,6 +49,25 @@ export interface UpdateOrderStatusPayload {
   deliveryProvider?: SellerDeliveryProvider;
 }
 
+export interface RejectOrderBySellerPayload {
+  reason: string;
+  details?: string;
+}
+
+export interface RejectOrderBySellerResponse {
+  outcome:
+    | "REASSIGNED"
+    | "AWAITING_CUSTOMER_APPROVAL"
+    | "CANCELLED_NO_ALTERNATIVE";
+  order: Order | null;
+  approval?: {
+    expiresAt: string;
+    oldTotalCents: number;
+    newTotalCents: number;
+    deltaCents: number;
+  };
+}
+
 export interface AssignDriverPayload {
   driverProfileId: number;
 }
@@ -111,6 +130,18 @@ export const ordersService = {
 
   updateStatus: (id: number, payload: UpdateOrderStatusPayload) =>
     api.patch<Order>(`/orders/${id}/status`, payload),
+
+  rejectBySeller: (id: number, payload: RejectOrderBySellerPayload) =>
+    api.post<RejectOrderBySellerResponse>(
+      `/orders/${id}/seller-rejections`,
+      payload,
+    ),
+
+  approveReassignment: (id: number) =>
+    api.post<Order>(`/orders/${id}/reassignment/approve`),
+
+  cancelReassignment: (id: number) =>
+    api.post<Order>(`/orders/${id}/reassignment/cancel`),
 
   assignDriver: (id: number, payload: AssignDriverPayload) =>
     api.patch<Order>(`/orders/${id}/assign-driver`, payload),

@@ -167,8 +167,16 @@ export function allowedOrderStatusTransitions(
     paymentStatus?: string | null;
     fulfillmentMethod?: string | null;
     deliveryProvider?: DeliveryProvider | null;
+    sellerReassignmentStatus?: string | null;
   },
 ) {
+  if (
+    order.sellerReassignmentStatus &&
+    order.sellerReassignmentStatus !== "NONE"
+  ) {
+    return [] as const;
+  }
+
   const isSellerDelivery = order.deliveryProvider === "SELLER";
   const graphTransitions = orderStatusTransitions(
     order.status,
