@@ -140,6 +140,7 @@ export function deliveryRequestStatusLabel(status: DeliveryRequestStatus) {
 
 export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   PENDING: "Pendente",
+  AWAITING_DIRECT_PAYMENT: "Aguardando pagamento direto",
   AUTHORIZED: "Autorizado",
   PAID: "Pago",
   FAILED: "Falhou",

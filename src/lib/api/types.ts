@@ -98,6 +98,7 @@ export type UsedListingInquiryStatus = "OPEN" | "ARCHIVED" | "BLOCKED";
 
 export type PaymentStatus =
   | "PENDING"
+  | "AWAITING_DIRECT_PAYMENT"
   | "AUTHORIZED"
   | "PAID"
   | "FAILED"

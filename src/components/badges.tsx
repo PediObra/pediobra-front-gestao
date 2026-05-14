@@ -73,6 +73,7 @@ export function DeliveryRequestStatusBadge({
 
 const PAYMENT_STATUS_VARIANT: Record<PaymentStatus, BadgeVariant> = {
   PENDING: "muted",
+  AWAITING_DIRECT_PAYMENT: "warning",
   AUTHORIZED: "default",
   PAID: "success",
   FAILED: "destructive",

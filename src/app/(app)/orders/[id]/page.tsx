@@ -54,6 +54,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ImageFilePreview } from "@/components/forms/image-file-preview";
 import {
   Dialog,
@@ -94,6 +95,7 @@ const EVIDENCE_TYPES: EvidenceType[] = [
 
 const MOCK_PAYMENT_STATUSES: PaymentStatus[] = [
   "PENDING",
+  "AWAITING_DIRECT_PAYMENT",
   "AUTHORIZED",
   "PAID",
   "FAILED",
@@ -117,6 +119,8 @@ type SellerRejectionReasonOption =
   | "NO_STOCK"
   | "NO_DELIVERY_DRIVERS"
   | "OTHER";
+
+type DirectSellerPaymentMethod = "CARD_POS" | "PIX_SELLER" | "CASH" | "OTHER";
 
 const SELLER_REJECTION_REASON_OPTIONS: SellerRejectionReasonOption[] = [
   "NO_STOCK",
@@ -168,6 +172,10 @@ export default function OrderDetailPage({
   const [pickupCode, setPickupCode] = useState("");
   const [deliveryCode, setDeliveryCode] = useState("");
   const [customerPickupCode, setCustomerPickupCode] = useState("");
+  const [directPaymentReceived, setDirectPaymentReceived] = useState(false);
+  const [directPaymentMethod, setDirectPaymentMethod] =
+    useState<DirectSellerPaymentMethod>("CARD_POS");
+  const [directPaymentReference, setDirectPaymentReference] = useState("");
   const [evType, setEvType] = useState<EvidenceType>("GENERAL");
   const [evFile, setEvFile] = useState<File | null>(null);
   const [evNote, setEvNote] = useState("");
@@ -257,12 +265,22 @@ export default function OrderDetailPage({
     mutationFn: () =>
       ordersService.confirmCustomerPickup(orderId, {
         code: customerPickupCode.trim(),
+        ...(order?.paymentStatus === "AWAITING_DIRECT_PAYMENT"
+          ? {
+              directPaymentReceived,
+              directPaymentMethod,
+              directPaymentReference:
+                directPaymentReference.trim() || undefined,
+            }
+          : {}),
       }),
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.orders.byId(orderId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
       toast.success(t("order.customerPickupConfirmed"));
       setCustomerPickupCode("");
+      setDirectPaymentReceived(false);
+      setDirectPaymentReference("");
     },
     onError: (err: unknown) => {
       const msg =
@@ -277,12 +295,24 @@ export default function OrderDetailPage({
 
   const deliveryMutation = useMutation({
     mutationFn: () =>
-      ordersService.confirmDelivery(orderId, { code: deliveryCode.trim() }),
+      ordersService.confirmDelivery(orderId, {
+        code: deliveryCode.trim(),
+        ...(order?.paymentStatus === "AWAITING_DIRECT_PAYMENT"
+          ? {
+              directPaymentReceived,
+              directPaymentMethod,
+              directPaymentReference:
+                directPaymentReference.trim() || undefined,
+            }
+          : {}),
+      }),
     onSuccess: (updated) => {
       qc.setQueryData(queryKeys.orders.byId(orderId), updated);
       qc.invalidateQueries({ queryKey: queryKeys.orders.all() });
       toast.success(t("order.deliveryConfirmed"));
       setDeliveryCode("");
+      setDirectPaymentReceived(false);
+      setDirectPaymentReference("");
     },
     onError: (err: unknown) => {
       const msg =
@@ -409,6 +439,8 @@ export default function OrderDetailPage({
   const isSellerReassignmentBlocked =
     !!order.sellerReassignmentStatus &&
     order.sellerReassignmentStatus !== "NONE";
+  const requiresDirectPaymentConfirmation =
+    order.paymentStatus === "AWAITING_DIRECT_PAYMENT";
   const shouldShowDeliveryProvider =
     !isStorePickup && !isDeliveryProviderUndecided;
   const canConfirmPickup =
@@ -439,10 +471,6 @@ export default function OrderDetailPage({
     shouldChooseDeliveryProvider &&
     internalDeliveryAvailabilityQuery.isSuccess &&
     internalDeliveryAvailabilityQuery.data.available === true;
-  const isInternalDeliveryUnavailable =
-    shouldChooseDeliveryProvider &&
-    !isInternalDeliveryAvailabilityPending &&
-    !isInternalDeliveryAvailable;
   const shouldDisableInternalDelivery =
     shouldChooseDeliveryProvider && !isInternalDeliveryAvailable;
   const selectedAcceptDeliveryProvider = shouldDisableInternalDelivery
@@ -1097,6 +1125,16 @@ export default function OrderDetailPage({
                     placeholder="0000"
                   />
                 </div>
+                {requiresDirectPaymentConfirmation && (
+                  <DirectPaymentConfirmationFields
+                    received={directPaymentReceived}
+                    method={directPaymentMethod}
+                    reference={directPaymentReference}
+                    onReceivedChange={setDirectPaymentReceived}
+                    onMethodChange={setDirectPaymentMethod}
+                    onReferenceChange={setDirectPaymentReference}
+                  />
+                )}
                 <Button
                   size="sm"
                   className="w-full"
@@ -1136,12 +1174,24 @@ export default function OrderDetailPage({
                     placeholder="0000"
                   />
                 </div>
+                {requiresDirectPaymentConfirmation && (
+                  <DirectPaymentConfirmationFields
+                    received={directPaymentReceived}
+                    method={directPaymentMethod}
+                    reference={directPaymentReference}
+                    onReceivedChange={setDirectPaymentReceived}
+                    onMethodChange={setDirectPaymentMethod}
+                    onReferenceChange={setDirectPaymentReference}
+                  />
+                )}
                 <Button
                   size="sm"
                   className="w-full"
                   onClick={() => customerPickupMutation.mutate()}
                   disabled={
                     customerPickupCode.length !== 4 ||
+                    (requiresDirectPaymentConfirmation &&
+                      !directPaymentReceived) ||
                     customerPickupMutation.isPending
                   }
                 >
@@ -1178,12 +1228,25 @@ export default function OrderDetailPage({
                     placeholder="0000"
                   />
                 </div>
+                {requiresDirectPaymentConfirmation && (
+                  <DirectPaymentConfirmationFields
+                    received={directPaymentReceived}
+                    method={directPaymentMethod}
+                    reference={directPaymentReference}
+                    onReceivedChange={setDirectPaymentReceived}
+                    onMethodChange={setDirectPaymentMethod}
+                    onReferenceChange={setDirectPaymentReference}
+                  />
+                )}
                 <Button
                   size="sm"
                   className="w-full"
                   onClick={() => deliveryMutation.mutate()}
                   disabled={
-                    deliveryCode.length !== 4 || deliveryMutation.isPending
+                    deliveryCode.length !== 4 ||
+                    (requiresDirectPaymentConfirmation &&
+                      !directPaymentReceived) ||
+                    deliveryMutation.isPending
                   }
                 >
                   {deliveryMutation.isPending ? (
@@ -1379,6 +1442,73 @@ export default function OrderDetailPage({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function DirectPaymentConfirmationFields({
+  received,
+  method,
+  reference,
+  onReceivedChange,
+  onMethodChange,
+  onReferenceChange,
+}: {
+  received: boolean;
+  method: DirectSellerPaymentMethod;
+  reference: string;
+  onReceivedChange: (value: boolean) => void;
+  onMethodChange: (value: DirectSellerPaymentMethod) => void;
+  onReferenceChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border border-amber-300/70 bg-amber-50/80 p-3 dark:border-amber-900/60 dark:bg-amber-950/20">
+      <div className="flex items-start gap-3">
+        <Checkbox
+          id="direct-payment-received"
+          checked={received}
+          onCheckedChange={(checked) => onReceivedChange(checked === true)}
+        />
+        <div className="space-y-1 leading-none">
+          <Label htmlFor="direct-payment-received">
+            Pagamento recebido direto pela loja
+          </Label>
+          <p className="text-xs text-muted-foreground">
+            Confirme somente depois de receber na maquininha, Pix, dinheiro ou
+            outro meio combinado com o cliente.
+          </p>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Meio recebido</Label>
+          <Select
+            value={method}
+            onValueChange={(value) =>
+              onMethodChange(value as DirectSellerPaymentMethod)
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="CARD_POS">Cartao na maquininha</SelectItem>
+              <SelectItem value="PIX_SELLER">Pix da loja</SelectItem>
+              <SelectItem value="CASH">Dinheiro</SelectItem>
+              <SelectItem value="OTHER">Outro</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="direct-payment-reference">Referencia opcional</Label>
+          <Input
+            id="direct-payment-reference"
+            value={reference}
+            onChange={(event) => onReferenceChange(event.target.value)}
+            placeholder="NSU, Pix ou observacao"
+          />
+        </div>
+      </div>
     </div>
   );
 }

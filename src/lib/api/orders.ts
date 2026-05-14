@@ -74,6 +74,9 @@ export interface AssignDriverPayload {
 
 export interface ConfirmOrderCodePayload {
   code: string;
+  directPaymentReceived?: boolean;
+  directPaymentMethod?: "CARD_POS" | "PIX_SELLER" | "CASH" | "OTHER";
+  directPaymentReference?: string;
 }
 
 export interface CreateOrderEvidencePayload {

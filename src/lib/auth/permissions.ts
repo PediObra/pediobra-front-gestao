@@ -183,15 +183,24 @@ export function allowedOrderStatusTransitions(
     order.fulfillmentMethod,
     order.deliveryProvider,
   );
+  const paymentStatus = order.paymentStatus ?? "";
+  const isPlatformPaymentReleased = ["PAID", "AUTHORIZED"].includes(
+    paymentStatus,
+  );
+  const isAwaitingDirectSellerPayment =
+    paymentStatus === "AWAITING_DIRECT_PAYMENT";
   const filterPaymentLockedDispatch = (statuses: readonly OrderStatus[]) =>
-    ["PAID", "AUTHORIZED"].includes(order.paymentStatus ?? "")
-      ? statuses
-      : statuses.filter(
-          (status) =>
-            status !== "READY_FOR_PICKUP" &&
-            status !== "READY_FOR_CUSTOMER_PICKUP" &&
-            !(isSellerDelivery && status === "OUT_FOR_DELIVERY"),
-        );
+    statuses.filter((status) => {
+      if (isPlatformPaymentReleased) return true;
+      if (status === "READY_FOR_PICKUP") return false;
+      if (status === "READY_FOR_CUSTOMER_PICKUP") {
+        return isAwaitingDirectSellerPayment;
+      }
+      if (isSellerDelivery && status === "OUT_FOR_DELIVERY") {
+        return isAwaitingDirectSellerPayment;
+      }
+      return true;
+    });
   const filterCodeProtectedStatuses = (statuses: readonly OrderStatus[]) =>
     statuses.filter(
       (status) => !ORDER_CODE_PROTECTED_STATUSES.includes(status),
