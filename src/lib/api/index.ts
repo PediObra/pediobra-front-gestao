@@ -14,4 +14,6 @@ export * from "./operations";
 export * from "./addresses";
 export * from "./geo";
 export * from "./messages";
+export * from "./blog-posts";
+export * from "./blog-posts-admin";
 export * from "./client";

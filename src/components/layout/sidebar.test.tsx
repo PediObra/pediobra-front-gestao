@@ -45,6 +45,10 @@ describe("MobileSidebar", () => {
     expect(
       within(nav).getByRole("link", { name: /Importações pendentes/ }),
     ).toHaveAttribute("href", "/seller-product-imports/product-review");
+    expect(within(nav).getByRole("link", { name: /Blog/ })).toHaveAttribute(
+      "href",
+      "/blog-posts",
+    );
     expect(within(nav).getByRole("link", { name: /Pedidos/ })).toHaveAttribute(
       "aria-current",
       "page",
@@ -93,6 +97,7 @@ describe("MobileSidebar", () => {
     expect(within(nav).queryByRole("link", { name: /Motoristas/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Usuários/ })).toBeNull();
     expect(within(nav).queryByRole("link", { name: /Pagamentos/ })).toBeNull();
+    expect(within(nav).queryByRole("link", { name: /Blog/ })).toBeNull();
     expect(
       within(nav).queryByRole("link", { name: /Importações pendentes/ }),
     ).toBeNull();

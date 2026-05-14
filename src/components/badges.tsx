@@ -8,6 +8,7 @@ import {
 } from "@/lib/formatters";
 import { useLanguageStore } from "@/lib/i18n/language-store";
 import type {
+  BlogPostStatus,
   DriverStatus,
   DeliveryRequestStatus,
   MembershipRole,
@@ -85,6 +86,34 @@ export function PaymentStatusBadge({ status }: { status: PaymentStatus }) {
   return (
     <Badge variant={PAYMENT_STATUS_VARIANT[status]}>
       {paymentStatusLabel(status)}
+    </Badge>
+  );
+}
+
+const BLOG_STATUS_VARIANT: Record<BlogPostStatus, BadgeVariant> = {
+  DRAFT: "muted",
+  PUBLISHED: "success",
+  SCHEDULED: "warning",
+  ARCHIVED: "destructive",
+};
+
+const BLOG_STATUS_LABEL: Record<BlogPostStatus, string> = {
+  DRAFT: "Rascunho",
+  PUBLISHED: "Publicado",
+  SCHEDULED: "Agendado",
+  ARCHIVED: "Arquivado",
+};
+
+export function BlogStatusBadge({
+  status,
+  label,
+}: {
+  status: BlogPostStatus;
+  label?: string;
+}) {
+  return (
+    <Badge variant={BLOG_STATUS_VARIANT[status]}>
+      {label ?? BLOG_STATUS_LABEL[status] ?? status}
     </Badge>
   );
 }

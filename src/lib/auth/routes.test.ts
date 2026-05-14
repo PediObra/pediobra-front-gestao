@@ -1,6 +1,7 @@
 import {
   getSafeAuthRedirect,
   isPublicAuthPath,
+  isPublicContentPath,
   isSellerOnboardingPath,
   isTeamInvitationPath,
 } from "./routes";
@@ -14,6 +15,12 @@ describe("auth route helpers", () => {
   it("keeps onboarding and invitation route checks separate", () => {
     expect(isSellerOnboardingPath("/onboarding/seller")).toBe(true);
     expect(isSellerOnboardingPath("/team-invitations/token")).toBe(false);
+  });
+
+  it("treats blog pages as public content, not auth pages", () => {
+    expect(isPublicContentPath("/blog")).toBe(true);
+    expect(isPublicContentPath("/blog/guia-cimento")).toBe(true);
+    expect(isPublicAuthPath("/blog")).toBe(false);
   });
 
   it("accepts only internal redirect paths", () => {

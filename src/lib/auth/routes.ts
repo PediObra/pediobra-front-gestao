@@ -1,4 +1,5 @@
 const PUBLIC_PATHS = ["/login", "/register", "/team-invitations"] as const;
+const PUBLIC_CONTENT_PATHS = ["/blog"] as const;
 export const SELLER_ONBOARDING_PATH = "/onboarding/seller";
 export const TEAM_INVITATIONS_PATH = "/team-invitations";
 
@@ -8,6 +9,10 @@ function isPathWithin(pathname: string | null | undefined, basePath: string) {
 
 export function isPublicAuthPath(pathname: string | null | undefined) {
   return PUBLIC_PATHS.some((path) => isPathWithin(pathname, path));
+}
+
+export function isPublicContentPath(pathname: string | null | undefined) {
+  return PUBLIC_CONTENT_PATHS.some((path) => isPathWithin(pathname, path));
 }
 
 export function isSellerOnboardingPath(pathname: string | null | undefined) {

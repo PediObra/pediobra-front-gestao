@@ -15,6 +15,7 @@ import type {
   ListUsedListingInquiriesParams,
   ListUsedListingsParams,
 } from "@/lib/api";
+import type { ListAdminBlogPostsParams } from "@/lib/api/blog-posts-admin";
 
 export const queryKeys = {
   auth: {
@@ -45,6 +46,13 @@ export const queryKeys = {
   productCategories: {
     all: () => ["productCategories"] as const,
     tree: () => ["productCategories", "tree"] as const,
+  },
+  blogPosts: {
+    all: () => ["blogPosts"] as const,
+    list: (params: ListAdminBlogPostsParams) =>
+      ["blogPosts", "list", params] as const,
+    byId: (id: number) => ["blogPosts", "byId", id] as const,
+    tags: () => ["blogPosts", "tags"] as const,
   },
   sellerProducts: {
     all: () => ["sellerProducts"] as const,

@@ -9,6 +9,7 @@ import { needsSellerOnboarding } from "@/lib/auth/permissions";
 import {
   SELLER_ONBOARDING_PATH,
   isPublicAuthPath,
+  isPublicContentPath,
   isSellerOnboardingPath,
   isTeamInvitationPath,
 } from "@/lib/auth/routes";
@@ -46,13 +47,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!hydrated) return;
     const isPublic = isPublicAuthPath(pathname);
+    const isPublicContent = isPublicContentPath(pathname);
     const isSellerOnboarding = isSellerOnboardingPath(pathname);
     const isTeamInvitation = isTeamInvitationPath(pathname);
 
-    if (!accessToken && !isPublic) {
+    if (!accessToken && !isPublic && !isPublicContent) {
       router.replace("/login");
       return;
     }
+
+    if (isPublicContent) return;
 
     if (!accessToken || !user) return;
 

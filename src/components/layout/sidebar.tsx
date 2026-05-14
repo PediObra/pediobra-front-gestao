@@ -13,6 +13,7 @@ import {
   ClipboardList,
   FileSearch,
   Menu,
+  Newspaper,
   Recycle,
   Route,
   RadioTower,
@@ -47,6 +48,7 @@ type NavItem = {
     | "nav.drivers"
     | "nav.users"
     | "nav.payments"
+    | "nav.blog"
     | "nav.operations";
   href: string | ((ctx: NavContext) => string);
   activePrefixes?: string[];
@@ -114,6 +116,12 @@ const NAV_ITEMS: NavItem[] = [
     labelKey: "nav.payments",
     href: "/payments",
     icon: Receipt,
+    show: ({ isAdmin }) => isAdmin,
+  },
+  {
+    labelKey: "nav.blog",
+    href: "/blog-posts",
+    icon: Newspaper,
     show: ({ isAdmin }) => isAdmin,
   },
   {

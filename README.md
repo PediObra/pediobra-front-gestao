@@ -44,6 +44,9 @@ cp frontend/.env.example frontend/.env.local
 Conteúdo padrão:
 
 ```
+NEXT_PUBLIC_API_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3001
+NEXT_PUBLIC_MEDIA_URL=http://localhost:9000
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 NEXT_PUBLIC_REALTIME_PROVIDER=socketio
 NEXT_PUBLIC_APPSYNC_EVENTS_REALTIME_ENDPOINT=
@@ -53,6 +56,8 @@ NEXT_PUBLIC_APPSYNC_EVENTS_HTTP_ENDPOINT=
 `NEXT_PUBLIC_API_URL` é opcional em dev local; quando ausente, a gestão usa
 `http://localhost:3000`. No workspace `public-test`, o script injeta a URL
 pública do roteador/ngrok automaticamente.
+`NEXT_PUBLIC_SITE_URL` alimenta canônicos/sitemap/RSS do blog público, e
+`NEXT_PUBLIC_MEDIA_URL` libera imagens remotas no Next Image.
 
 Em produção AWS, use os outputs do stack `RealtimeEndpoint` e
 `RealtimeHttpEndpoint`, configure `NEXT_PUBLIC_REALTIME_PROVIDER=appsync` e
