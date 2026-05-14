@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PediObra - Painel de gestao",
-    short_name: "PediObra",
+    name: "ObraFlow - Painel de gestao",
+    short_name: "ObraFlow",
     description:
       "Painel administrativo para gestao de entregas de materiais de construcao.",
     start_url: "/",

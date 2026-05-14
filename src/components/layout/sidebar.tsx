@@ -19,7 +19,7 @@ import {
   RadioTower,
 } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
-import { PediObraLogo } from "@/components/brand/pediobra-logo";
+import { ObraFlowLogo } from "@/components/brand/obraflow-logo";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -132,7 +132,7 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
-const SIDEBAR_COLLAPSED_STORAGE_KEY = "pediobra:sidebar-collapsed";
+const SIDEBAR_COLLAPSED_STORAGE_KEY = "obraflow:sidebar-collapsed";
 const sidebarCollapsedListeners = new Set<() => void>();
 
 function getActiveMatchScore(pathname: string, activePrefixes: string[]) {
@@ -206,7 +206,7 @@ export function SidebarBrand({
 }) {
   return (
     <div className={cn("flex min-w-0 items-center gap-2.5", className)}>
-      <PediObraLogo />
+      <ObraFlowLogo />
       <span
         className={cn(
           "truncate font-semibold tracking-tight",
@@ -214,7 +214,7 @@ export function SidebarBrand({
           labelClassName,
         )}
       >
-        PediObra
+        ObraFlow
       </span>
     </div>
   );

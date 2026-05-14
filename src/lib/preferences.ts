@@ -1,8 +1,8 @@
 export type Locale = "pt-BR" | "en-US";
 export type ThemePreference = "light" | "dark" | "system";
 
-export const LOCALE_PREFERENCE_KEY = "pediobra-locale";
-export const THEME_PREFERENCE_KEY = "pediobra-blog-theme";
+export const LOCALE_PREFERENCE_KEY = "obraflow-locale";
+export const THEME_PREFERENCE_KEY = "obraflow-blog-theme";
 export const PREFERENCE_MAX_AGE_SECONDS = 31_536_000;
 
 export function parseLocale(value: string | null | undefined): Locale | null {

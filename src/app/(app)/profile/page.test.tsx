@@ -9,7 +9,7 @@ const mockSetUser = jest.fn();
 let mockUser: AuthUser = {
   id: 1,
   name: "Lucas Indaiatuba",
-  email: "lucas.indaiatuba@pediobra.local",
+  email: "lucas.indaiatuba@obraflow.local",
   roles: ["SELLER"],
   sellers: [],
   driverProfiles: [],
@@ -43,7 +43,7 @@ describe("ProfilePage", () => {
     mockUser = {
       id: 1,
       name: "Lucas Indaiatuba",
-      email: "lucas.indaiatuba@pediobra.local",
+      email: "lucas.indaiatuba@obraflow.local",
       roles: ["SELLER"],
       sellers: [],
       driverProfiles: [],
@@ -52,7 +52,7 @@ describe("ProfilePage", () => {
     jest.mocked(usersService.update).mockResolvedValue({
       id: 1,
       name: "Lucas Atualizado",
-      email: "lucas.indaiatuba@pediobra.local",
+      email: "lucas.indaiatuba@obraflow.local",
       roles: [],
       sellers: [],
       createdAt: "2026-05-01T00:00:00.000Z",
@@ -68,7 +68,7 @@ describe("ProfilePage", () => {
 
     const emailInput = screen.getByLabelText("Email");
 
-    expect(emailInput).toHaveValue("lucas.indaiatuba@pediobra.local");
+    expect(emailInput).toHaveValue("lucas.indaiatuba@obraflow.local");
     expect(emailInput).toBeDisabled();
     expect(
       screen.getByText(/não pode ser alterado pelo perfil/i),

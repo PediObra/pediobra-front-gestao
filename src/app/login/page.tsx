@@ -85,7 +85,7 @@ function LoginPageContent() {
           <div className="size-10 rounded-md bg-primary flex items-center justify-center">
             <HardHat className="size-6 text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">PediObra</span>
+          <span className="text-lg font-semibold tracking-tight">ObraFlow</span>
         </div>
         <div className="relative space-y-4 max-w-md">
           <h1 className="text-3xl font-semibold leading-tight">
@@ -107,7 +107,7 @@ function LoginPageContent() {
               <HardHat className="size-6 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold tracking-tight">
-              PediObra
+              ObraFlow
             </span>
           </div>
 
@@ -131,7 +131,7 @@ function LoginPageContent() {
                 id="email"
                 type="email"
                 autoComplete="email"
-                placeholder="master@pediobra.local"
+                placeholder="master@obraflow.local"
                 {...form.register("email")}
               />
               {form.formState.errors.email && (
@@ -174,9 +174,9 @@ function LoginPageContent() {
             <p className="font-medium text-foreground">
               {t("login.seedCredentials")}
             </p>
-            <p>master@pediobra.local / 123456 (ADMIN)</p>
-            <p>marina.centro@pediobra.local / 123456 (SELLER OWNER)</p>
-            <p>carlos.estoque@pediobra.local / 123456 (SELLER EMPLOYEE)</p>
+            <p>master@obraflow.local / 123456 (ADMIN)</p>
+            <p>marina.centro@obraflow.local / 123456 (SELLER OWNER)</p>
+            <p>carlos.estoque@obraflow.local / 123456 (SELLER EMPLOYEE)</p>
           </div>
         </div>
       </div>

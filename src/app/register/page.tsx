@@ -155,7 +155,7 @@ export default function RegisterPage() {
               <HardHat className="size-6 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold tracking-tight">
-              PediObra
+              ObraFlow
             </span>
           </div>
           <div className="space-y-2">

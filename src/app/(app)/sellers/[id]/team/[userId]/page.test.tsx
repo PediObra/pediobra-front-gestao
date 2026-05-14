@@ -205,7 +205,7 @@ function makeSeller(overrides: Partial<Seller> = {}): Seller {
   return {
     id: 3,
     name: "Deposito Indaiatuba Local",
-    email: "indaiatuba@sellers.pediobra.local",
+    email: "indaiatuba@sellers.obraflow.local",
     address: "Rua A, 10",
     cep: "13348000",
     phone: "19940000003",
@@ -220,7 +220,7 @@ function makeUser(
   return {
     id: 22,
     name: "Lucas Indaiatuba",
-    email: "lucas@sellers.pediobra.local",
+    email: "lucas@sellers.obraflow.local",
     createdAt: "2026-05-07T12:00:00.000Z",
     roles: [{ id: 2, name: "SELLER" }],
     sellers: [

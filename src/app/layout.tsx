@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PediObra — Painel de gestão",
+  title: "ObraFlow — Painel de gestão",
   description:
     "Painel administrativo para gestão de entregas de materiais de construção.",
 };

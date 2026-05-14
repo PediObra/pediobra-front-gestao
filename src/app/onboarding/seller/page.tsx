@@ -143,7 +143,7 @@ export default function SellerOnboardingPage() {
           <CardHeader>
             <CardTitle>Dados da empresa</CardTitle>
             <CardDescription>
-              Use os dados operacionais da loja que vai vender no PediObra.
+              Use os dados operacionais da loja que vai vender no ObraFlow.
             </CardDescription>
           </CardHeader>
           <CardContent>

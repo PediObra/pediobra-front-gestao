@@ -30,7 +30,7 @@ export const useLanguageStore = create<LanguageState>()(
       setLanguage: (language) => set({ language }),
     }),
     {
-      name: "pediobra-language",
+      name: "obraflow-language",
       storage: createJSONStorage(() => localStorage),
     },
   ),

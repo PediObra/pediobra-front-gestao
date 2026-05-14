@@ -56,7 +56,7 @@ describe("shouldUseUnoptimizedBlogImage", () => {
 
   it("keeps remote production media optimized", () => {
     expect(
-      shouldUseUnoptimizedBlogImage("https://media.pediobra.com.br/image.png"),
+      shouldUseUnoptimizedBlogImage("https://media.obraflow.com.br/image.png"),
     ).toBe(false);
   });
 });

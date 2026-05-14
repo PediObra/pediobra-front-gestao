@@ -60,7 +60,7 @@ jest.mock("sonner", () => ({
 const seller = {
   id: 20,
   name: "Deposito Indaiatuba Local",
-  email: "indaiatuba@pediobra.local",
+  email: "indaiatuba@obraflow.local",
   address: "Rua Teste",
   cep: "13300000",
   phone: "11999999999",
@@ -198,7 +198,7 @@ function buildSellerAuth() {
   const user = {
     id: 10,
     name: "Lucas Indaiatuba",
-    email: "lucas@pediobra.local",
+    email: "lucas@obraflow.local",
     roles: ["SELLER"],
     sellers: [
       {

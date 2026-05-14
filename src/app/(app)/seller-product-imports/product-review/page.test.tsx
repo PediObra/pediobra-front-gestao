@@ -73,7 +73,7 @@ describe("SellerProductImportReviewPage", () => {
           id: 77,
           categoryId: null,
           name: "Martelo Global",
-          brand: "PediObra",
+          brand: "ObraFlow",
           unit: "UN",
           size: "500g",
         },

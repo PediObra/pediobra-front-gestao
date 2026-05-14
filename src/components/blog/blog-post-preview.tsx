@@ -201,7 +201,7 @@ export function BlogPostPreview({
                   {t("blogCms.preview.publishedBy")}
                 </p>
                 <p className="mt-3 text-lg font-semibold">
-                  {authorName || "PediObra"}
+                  {authorName || "ObraFlow"}
                 </p>
                 <dl className="mt-5 space-y-3 text-sm text-[#65594b] dark:text-muted-foreground">
                   <div>

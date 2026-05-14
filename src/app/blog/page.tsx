@@ -38,7 +38,7 @@ type BlogPageProps = {
 
 const PAGE_SIZE = 12;
 const BLOG_DESCRIPTION =
-  "Guias práticos da PediObra sobre materiais de construção, entrega, planejamento de obra, compra inteligente e redução de desperdício.";
+  "Guias práticos da ObraFlow sobre materiais de construção, entrega, planejamento de obra, compra inteligente e redução de desperdício.";
 
 export async function generateMetadata({
   searchParams,
@@ -46,7 +46,7 @@ export async function generateMetadata({
   const params = await searchParams;
   const page = parsePage(params.page);
   const hasFilter = Boolean(params.search || params.tag);
-  const title = page > 1 ? `Blog PediObra - Página ${page}` : "Blog PediObra";
+  const title = page > 1 ? `Blog ObraFlow - Página ${page}` : "Blog ObraFlow";
   const canonicalPath = page > 1 ? `/blog?page=${page}` : "/blog";
 
   return {
@@ -55,7 +55,7 @@ export async function generateMetadata({
     keywords: [
       "blog de construção",
       "materiais de construção",
-      "PediObra",
+      "ObraFlow",
       "planejamento de obra",
       "entrega de materiais",
       "orçamento de obra",
@@ -78,7 +78,7 @@ export async function generateMetadata({
           url: absoluteUrl("/blog/opengraph-image"),
           width: 1200,
           height: 630,
-          alt: "Blog PediObra com guias sobre construção e materiais de obra",
+          alt: "Blog ObraFlow com guias sobre construção e materiais de obra",
         },
       ],
     },
@@ -212,7 +212,7 @@ function BlogIndexJsonLd({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Blog",
-    name: "Blog PediObra",
+    name: "Blog ObraFlow",
     description: BLOG_DESCRIPTION,
     url: absoluteUrl("/blog"),
     inLanguage: locale,

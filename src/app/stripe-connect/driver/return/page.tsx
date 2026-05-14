@@ -13,7 +13,7 @@ function parseRedirectUrl(value: string | string[] | undefined) {
 
   try {
     const url = new URL(rawValue);
-    const allowedProtocols = new Set(["exp:", "exps:", "pediobra-driver:"]);
+    const allowedProtocols = new Set(["exp:", "exps:", "obraflow-driver:"]);
     return allowedProtocols.has(url.protocol) ? rawValue : null;
   } catch {
     return null;

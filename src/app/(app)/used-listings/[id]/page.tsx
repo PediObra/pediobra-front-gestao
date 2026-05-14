@@ -555,7 +555,7 @@ export default function UsedListingDetailPage({
               <CardHeader>
                 <CardTitle>{t("usedListings.privatePickup")}</CardTitle>
                 <CardDescription>
-                  Visível apenas para gestão autorizada e usado pelo PeDiObra na
+                  Visível apenas para gestão autorizada e usado pelo ObraFlow na
                   entrega.
                 </CardDescription>
               </CardHeader>

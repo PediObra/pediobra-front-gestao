@@ -112,7 +112,7 @@ describe("SellerDetailPage", () => {
     jest.mocked(sellersService.createTeamInvitation).mockResolvedValue({
       id: 900,
       sellerId: 3,
-      email: "novo@sellers.pediobra.local",
+      email: "novo@sellers.obraflow.local",
       membershipRole: "EMPLOYEE",
       expiresAt: "2026-05-09T00:00:00.000Z",
       devInviteUrl: "http://localhost:3001/team-invitations/dev-token",
@@ -384,7 +384,7 @@ describe("SellerDetailPage", () => {
           makeTeamUser({
             id: 22,
             name: "Lucas Indaiatuba",
-            email: "lucas@sellers.pediobra.local",
+            email: "lucas@sellers.obraflow.local",
           }),
         ],
         { page: 1, limit: 10, total: 1, totalPages: 1 },
@@ -397,7 +397,7 @@ describe("SellerDetailPage", () => {
 
     expect(await screen.findByText("Lucas Indaiatuba")).toBeInTheDocument();
     expect(
-      screen.getByText("lucas@sellers.pediobra.local"),
+      screen.getByText("lucas@sellers.obraflow.local"),
     ).toBeInTheDocument();
     expect(screen.getByText("Vendas")).toBeInTheDocument();
     expect(usersService.list).toHaveBeenCalledWith({
@@ -421,13 +421,13 @@ describe("SellerDetailPage", () => {
       await screen.findByRole("button", { name: /adicionar membro/i }),
     );
     fireEvent.change(screen.getByLabelText("Email"), {
-      target: { value: "novo@sellers.pediobra.local" },
+      target: { value: "novo@sellers.obraflow.local" },
     });
     fireEvent.click(screen.getByRole("button", { name: /enviar convite/i }));
 
     await waitFor(() => {
       expect(sellersService.createTeamInvitation).toHaveBeenCalledWith(3, {
-        email: "novo@sellers.pediobra.local",
+        email: "novo@sellers.obraflow.local",
         membershipRole: "EMPLOYEE",
         jobTitle: null,
         canEditSeller: false,
@@ -476,7 +476,7 @@ function makeSeller(overrides: Partial<Seller> = {}): Seller {
   return {
     id: 3,
     name: "Deposito Indaiatuba Local",
-    email: "indaiatuba@sellers.pediobra.local",
+    email: "indaiatuba@sellers.obraflow.local",
     address: "Estrada Doutor Rafael Elias Jose Aun, 300",
     cep: "13348000",
     phone: "19940000003",
@@ -568,7 +568,7 @@ function makeTeamUser(
   return {
     id: 10,
     name: "Colaborador",
-    email: "colaborador@sellers.pediobra.local",
+    email: "colaborador@sellers.obraflow.local",
     createdAt: "2026-05-07T12:00:00.000Z",
     roles: [{ id: 2, name: "SELLER" }],
     sellers: [

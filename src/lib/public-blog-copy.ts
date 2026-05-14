@@ -7,10 +7,10 @@ import {
 
 const publicBlogCopy = {
   "pt-BR": {
-    brand: "PediObra Blog",
-    backToSite: "Voltar ao PediObra",
+    brand: "ObraFlow Blog",
+    backToSite: "Voltar ao ObraFlow",
     heroEyebrow: "Guias para comprar melhor e tocar obra sem desperdício",
-    heroTitle: "Blog PediObra",
+    heroTitle: "Blog ObraFlow",
     heroDescription:
       "Conteúdo prático sobre materiais de construção, entrega, orçamento, planejamento de obra e decisões de compra para quem quer construir com menos atraso e mais clareza.",
     articlesStat: "Artigos",
@@ -53,10 +53,10 @@ const publicBlogCopy = {
     allArticles: "Todos os artigos",
   },
   "en-US": {
-    brand: "PediObra Blog",
-    backToSite: "Back to PediObra",
+    brand: "ObraFlow Blog",
+    backToSite: "Back to ObraFlow",
     heroEyebrow: "Guides to buy better and run jobs with less waste",
-    heroTitle: "PediObra Blog",
+    heroTitle: "ObraFlow Blog",
     heroDescription:
       "Practical content about building materials, delivery, budgeting, job planning, and purchase decisions for teams that want fewer delays and clearer execution.",
     articlesStat: "Articles",

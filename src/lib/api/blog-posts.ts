@@ -154,7 +154,7 @@ export function getBlogPostKeywords(post: BlogPost) {
       ...post.tags.map((tag) => tag.name),
       "material de construção",
       "obra",
-      "PediObra",
+      "ObraFlow",
     ]),
   ];
 }

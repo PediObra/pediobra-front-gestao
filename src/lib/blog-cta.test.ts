@@ -20,9 +20,9 @@ describe("blog CTA helpers", () => {
   });
 
   it("accepts public URLs, internal paths, mail, and phone CTA hrefs", () => {
-    expect(isValidBlogCtaHref("https://instagram.com/pediobra")).toBe(true);
+    expect(isValidBlogCtaHref("https://instagram.com/obraflow")).toBe(true);
     expect(isValidBlogCtaHref("/blog/materiais")).toBe(true);
-    expect(isValidBlogCtaHref("mailto:contato@pediobra.com")).toBe(true);
+    expect(isValidBlogCtaHref("mailto:contato@obraflow.com")).toBe(true);
     expect(isValidBlogCtaHref("tel:+5511999999999")).toBe(true);
     expect(isValidBlogCtaHref("javascript:alert(1)")).toBe(false);
     expect(isValidBlogCtaHref("//evil.test")).toBe(false);

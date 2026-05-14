@@ -20,7 +20,7 @@ const sellers = [
   {
     id: 20,
     name: "Loja Centro",
-    email: "centro@pediobra.local",
+    email: "centro@obraflow.local",
     address: "Rua A",
     cep: "00000000",
     phone: "11999999999",
@@ -28,7 +28,7 @@ const sellers = [
   {
     id: 21,
     name: "Loja Norte",
-    email: "norte@pediobra.local",
+    email: "norte@obraflow.local",
     address: "Rua B",
     cep: "00000000",
     phone: "11999999999",
@@ -370,7 +370,7 @@ function buildAuth() {
   const user = {
     id: 1,
     name: "Lucas Indaiatuba",
-    email: "lucas@pediobra.local",
+    email: "lucas@obraflow.local",
     roles: ["SELLER"],
     sellers: sellers.map((seller) => ({
       sellerId: seller.id,

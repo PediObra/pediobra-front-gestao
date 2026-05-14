@@ -131,7 +131,7 @@ describe("MobileSidebar", () => {
       screen.getByRole("button", { name: "Expandir navegação" }),
     ).toBeInTheDocument();
     expect(
-      window.localStorage.getItem("pediobra:sidebar-collapsed"),
+      window.localStorage.getItem("obraflow:sidebar-collapsed"),
     ).toBe("true");
   });
 });

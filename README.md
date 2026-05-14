@@ -1,6 +1,6 @@
-# PediObra — Frontend (Painel Admin + Seller)
+# ObraFlow — Frontend (Painel Admin + Seller)
 
-MVP do painel administrativo e de vendedores do **PediObra**, construído em Next.js 16 (App Router) + TypeScript + Tailwind v4 + shadcn/ui, consumindo a API NestJS em `backend/`.
+MVP do painel administrativo e de vendedores do **ObraFlow**, construído em Next.js 16 (App Router) + TypeScript + Tailwind v4 + shadcn/ui, consumindo a API NestJS em `backend/`.
 
 ## Stack
 
@@ -85,7 +85,7 @@ O painel abre em `http://localhost:3001`.
 
 O backend possui um seed com usuários de exemplo. O master admin é:
 
-- **E-mail**: `master@pediobra.local`
+- **E-mail**: `master@obraflow.local`
 - **Senha**: `123456`
 
 Outros papéis disponíveis no seed (verificar `backend/src/database/seed.ts` para a lista completa):

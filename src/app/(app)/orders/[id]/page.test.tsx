@@ -17,7 +17,7 @@ jest.mock("react", () => {
 const mockUser: AuthUser = {
   id: 1,
   name: "Lucas Indaiatuba",
-  email: "lucas@pediobra.local",
+  email: "lucas@obraflow.local",
   roles: ["SELLER"],
   sellers: [
     {
@@ -30,7 +30,7 @@ const mockUser: AuthUser = {
       seller: {
         id: 20,
         name: "Deposito Indaiatuba Local",
-        email: "deposito@pediobra.local",
+        email: "deposito@obraflow.local",
         address: "Rua A",
         cep: "00000000",
         phone: "11999999999",
@@ -43,7 +43,7 @@ const mockAdminUser: AuthUser = {
   ...mockUser,
   id: 99,
   name: "Master",
-  email: "master@pediobra.local",
+  email: "master@obraflow.local",
   roles: ["ADMIN"],
   sellers: [],
 };
@@ -593,13 +593,13 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
     clientUser: {
       id: 10,
       name: "Ana Souza",
-      email: "ana@pediobra.local",
+      email: "ana@obraflow.local",
       createdAt: "2026-05-01T12:00:00.000Z",
     },
     seller: {
       id: 20,
       name: "Deposito Indaiatuba Local",
-      email: "deposito@pediobra.local",
+      email: "deposito@obraflow.local",
       address: "Rua A",
       cep: "00000000",
       phone: "11999999999",

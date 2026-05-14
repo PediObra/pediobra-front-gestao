@@ -94,7 +94,7 @@ export default function SellerTeamInvitationPage({
           <div className="flex size-10 items-center justify-center rounded-md bg-primary">
             <HardHat className="size-6 text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">PediObra</span>
+          <span className="text-lg font-semibold tracking-tight">ObraFlow</span>
         </div>
 
         {invitationQuery.isLoading ? (

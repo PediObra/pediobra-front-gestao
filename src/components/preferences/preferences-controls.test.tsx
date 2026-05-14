@@ -15,8 +15,8 @@ describe("PreferencesControls", () => {
   });
 
   it("renders from provider initial values before reading browser preferences", () => {
-    window.localStorage.setItem("pediobra-theme", "dark");
-    window.localStorage.setItem("pediobra-locale", "en-US");
+    window.localStorage.setItem("obraflow-theme", "dark");
+    window.localStorage.setItem("obraflow-locale", "en-US");
 
     const markup = renderToString(
       <ThemeProvider initialTheme="system">

@@ -39,7 +39,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
           color: "#f2c77d",
         }}
       >
-        <span>PediObra Blog</span>
+        <span>ObraFlow Blog</span>
         <span>{post?.readingTimeMinutes ?? 1} min</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
@@ -59,7 +59,7 @@ export default async function Image({ params }: { params: { slug: string } }) {
             letterSpacing: -2,
           }}
         >
-          {post?.title ?? "Artigo PediObra"}
+          {post?.title ?? "Artigo ObraFlow"}
         </h1>
       </div>
       <p style={{ margin: 0, maxWidth: 880, fontSize: 28, lineHeight: 1.35 }}>

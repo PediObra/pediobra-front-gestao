@@ -36,7 +36,7 @@ export const useAuthStore = create<AuthState>()(
       markHydrated: () => set({ hydrated: true }),
     }),
     {
-      name: "pediobra-auth",
+      name: "obraflow-auth",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         accessToken: state.accessToken,

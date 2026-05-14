@@ -183,7 +183,7 @@ export function ImportSellerProductsForm({
         <CardTitle>Importar ofertas</CardTitle>
         <CardDescription>
           Envie o arquivo do ERP e informe quais colunas alimentam cada campo do
-          PeDiObra. O ETL processa a carga antes da aplicacao.
+          ObraFlow. O ETL processa a carga antes da aplicacao.
         </CardDescription>
       </CardHeader>
 

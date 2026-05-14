@@ -49,7 +49,7 @@ const drivers = [
     user: {
       id: 10,
       name: "Ana Driver",
-      email: "ana.driver@pediobra.local",
+      email: "ana.driver@obraflow.local",
       createdAt: "2026-05-01T12:00:00.000Z",
     },
     vehicles: [],
@@ -127,8 +127,8 @@ describe("DriversListPage", () => {
 function buildAuth({ isAdmin }: { isAdmin: boolean }) {
   const user = {
     id: 1,
-    name: "Admin PediObra",
-    email: "admin@pediobra.local",
+    name: "Admin ObraFlow",
+    email: "admin@obraflow.local",
     roles: [isAdmin ? "ADMIN" : "SELLER"],
     sellers: [],
     driverProfiles: [],

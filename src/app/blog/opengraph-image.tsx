@@ -33,7 +33,7 @@ export default function Image() {
           color: "#7b5b25",
         }}
       >
-        <span>PediObra Blog</span>
+        <span>ObraFlow Blog</span>
         <span>PT-BR</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>

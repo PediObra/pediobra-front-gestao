@@ -29,7 +29,7 @@ const sellers: Seller[] = [
   {
     id: 3,
     name: "Deposito Indaiatuba Local",
-    email: "indaiatuba@sellers.pediobra.local",
+    email: "indaiatuba@sellers.obraflow.local",
     address: "Estrada Doutor Rafael Elias Jose Aun, 300",
     cep: "13348000",
     phone: "19940000003",

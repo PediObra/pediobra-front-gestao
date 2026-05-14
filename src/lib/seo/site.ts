@@ -1,9 +1,9 @@
-export const SITE_NAME = "PediObra";
+export const SITE_NAME = "ObraFlow";
 export const SITE_LOCALE = "pt_BR";
 export const SITE_LANGUAGE = "pt-BR";
 export const SITE_TWITTER_CARD = "summary_large_image";
 
-const DEFAULT_SITE_URL = "https://pediobra.com.br";
+const DEFAULT_SITE_URL = "https://obraflow.com.br";
 
 export function getSiteUrl() {
   const configuredUrl = process.env.NEXT_PUBLIC_SITE_URL ?? DEFAULT_SITE_URL;
