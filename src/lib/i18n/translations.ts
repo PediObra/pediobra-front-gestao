@@ -503,6 +503,10 @@ export const translations = {
     "order.acceptDeliveryProviderInternal": "Entrega pelo sistema",
     "order.acceptDeliveryProviderInternalHint":
       "Cria despacho para motorista após a loja preparar o pedido.",
+    "order.acceptDeliveryProviderInternalChecking":
+      "Verificando entregadores online na área...",
+    "order.acceptDeliveryProviderInternalUnavailable":
+      "Nenhum entregador online na área agora. Aceite com entrega própria da loja.",
     "order.acceptDeliveryProviderSeller": "Entrega própria da loja",
     "order.acceptDeliveryProviderSellerHint":
       "A loja assume a rota e recebe produto + frete no repasse.",
@@ -1213,6 +1217,10 @@ export const translations = {
     "order.acceptDeliveryProviderInternal": "System delivery",
     "order.acceptDeliveryProviderInternalHint":
       "Creates driver dispatch after the store prepares the order.",
+    "order.acceptDeliveryProviderInternalChecking":
+      "Checking online drivers in the area...",
+    "order.acceptDeliveryProviderInternalUnavailable":
+      "No online driver is available in the area right now. Accept with store delivery instead.",
     "order.acceptDeliveryProviderSeller": "Store delivery",
     "order.acceptDeliveryProviderSellerHint":
       "The store handles the route and receives products + delivery fee.",
@@ -1926,6 +1934,10 @@ export const translations = {
     "order.acceptDeliveryProviderInternal": "Entrega por el sistema",
     "order.acceptDeliveryProviderInternalHint":
       "Crea despacho para repartidor después de que la tienda prepare el pedido.",
+    "order.acceptDeliveryProviderInternalChecking":
+      "Verificando repartidores online en el área...",
+    "order.acceptDeliveryProviderInternalUnavailable":
+      "No hay repartidores online en el área ahora. Acepta con entrega propia de la tienda.",
     "order.acceptDeliveryProviderSeller": "Entrega propia de la tienda",
     "order.acceptDeliveryProviderSellerHint":
       "La tienda asume la ruta y recibe productos + flete en el repase.",

@@ -800,6 +800,13 @@ export interface Order {
   payments?: Payment[];
 }
 
+export interface InternalDeliveryAvailability {
+  available: boolean;
+  driverCount: number;
+  radiusMeters: number;
+  locationFreshnessSeconds: number;
+}
+
 // ---- Payments ----
 
 export interface Payment {

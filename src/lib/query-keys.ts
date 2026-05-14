@@ -76,6 +76,8 @@ export const queryKeys = {
     list: (params: ListOrdersParams) => ["orders", "list", params] as const,
     stats: (params: ListOrdersParams) => ["orders", "stats", params] as const,
     byId: (id: number) => ["orders", "byId", id] as const,
+    internalDeliveryAvailability: (id: number) =>
+      ["orders", "internalDeliveryAvailability", id] as const,
   },
   deliveryRequests: {
     all: () => ["deliveryRequests"] as const,

@@ -62,6 +62,7 @@ jest.mock("@/hooks/use-auth", () => ({
 jest.mock("@/lib/api/orders", () => ({
   ordersService: {
     getById: jest.fn(),
+    getInternalDeliveryAvailability: jest.fn(),
     updateStatus: jest.fn(),
     assignDriver: jest.fn(),
     confirmPickup: jest.fn(),
@@ -98,6 +99,12 @@ describe("OrderDetailPage status actions", () => {
     };
     mockOrder = makeOrder();
     jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+    jest.mocked(ordersService.getInternalDeliveryAvailability).mockResolvedValue({
+      available: true,
+      driverCount: 1,
+      radiusMeters: 5000,
+      locationFreshnessSeconds: 120,
+    });
     jest.mocked(ordersService.updateStatus).mockImplementation((_id, payload) =>
       Promise.resolve({ ...mockOrder, status: payload.status } as Order),
     );
@@ -135,6 +142,11 @@ describe("OrderDetailPage status actions", () => {
     expect(screen.getByText("Entrega pelo sistema")).toBeInTheDocument();
     expect(screen.getByText("Entrega própria da loja")).toBeInTheDocument();
 
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Confirmar aceite" }),
+      ).not.toBeDisabled();
+    });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
 
     await waitFor(() => {
@@ -156,6 +168,106 @@ describe("OrderDetailPage status actions", () => {
       await screen.findByRole("button", { name: "Aceitar pedido" }),
     );
     fireEvent.click(await screen.findByText("Entrega própria da loja"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "CONFIRMED",
+        cancellationReason: undefined,
+        deliveryProvider: "SELLER",
+      });
+    });
+  });
+
+  it("blocks system delivery with a tooltip when no driver is available", async () => {
+    mockOrder = makeOrder({ deliveryProvider: "UNDECIDED" });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+    jest.mocked(ordersService.getInternalDeliveryAvailability).mockResolvedValue({
+      available: false,
+      driverCount: 0,
+      radiusMeters: 5000,
+      locationFreshnessSeconds: 120,
+    });
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aceitar pedido" }),
+    );
+
+    await screen.findByRole("button", {
+      name: /Entrega pelo sistema/i,
+    });
+    await waitFor(() => {
+      expect(ordersService.getInternalDeliveryAvailability).toHaveBeenCalledWith(
+        1,
+      );
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Entrega pelo sistema/i }),
+      ).toBeDisabled();
+    });
+    const systemDeliveryButton = screen.getByRole("button", {
+      name: /Entrega pelo sistema/i,
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "Confirmar aceite" }),
+      ).not.toBeDisabled();
+    });
+    expect(
+      screen.getByRole("button", { name: /Entrega própria da loja/i }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    expect(
+      systemDeliveryButton.parentElement,
+    ).toHaveAttribute(
+      "title",
+      "Nenhum entregador online na área agora. Aceite com entrega própria da loja.",
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "CONFIRMED",
+        cancellationReason: undefined,
+        deliveryProvider: "SELLER",
+      });
+    });
+  });
+
+  it("falls back to store delivery when availability cannot be checked", async () => {
+    mockOrder = makeOrder({ deliveryProvider: "UNDECIDED" });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+    jest
+      .mocked(ordersService.getInternalDeliveryAvailability)
+      .mockRejectedValue(new Error("availability unavailable"));
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aceitar pedido" }),
+    );
+
+    await waitFor(() => {
+      expect(ordersService.getInternalDeliveryAvailability).toHaveBeenCalledWith(
+        1,
+      );
+    });
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /Entrega pelo sistema/i }),
+      ).toBeDisabled();
+    });
+    expect(
+      screen.getByRole("button", { name: /Entrega própria da loja/i }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      screen.getByRole("button", { name: "Confirmar aceite" }),
+    ).not.toBeDisabled();
+
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
 
     await waitFor(() => {

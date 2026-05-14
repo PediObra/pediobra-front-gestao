@@ -3,6 +3,7 @@ import { shouldUsePresignedUploads, uploadFileToStorage } from "./uploads";
 import type {
   EvidenceType,
   FulfillmentMethod,
+  InternalDeliveryAvailability,
   Order,
   OrderEvidence,
   OrderStatus,
@@ -100,6 +101,11 @@ export const ordersService = {
     api.get<OrderStats>("/orders/stats", { query: params }),
 
   getById: (id: number) => api.get<Order>(`/orders/${id}`),
+
+  getInternalDeliveryAvailability: (id: number) =>
+    api.get<InternalDeliveryAvailability>(
+      `/orders/${id}/internal-delivery-availability`,
+    ),
 
   create: (payload: CreateOrderPayload) => api.post<Order>("/orders", payload),
 

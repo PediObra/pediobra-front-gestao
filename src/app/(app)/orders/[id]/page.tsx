@@ -70,6 +70,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/badges";
 import type {
   EvidenceType,
@@ -125,15 +131,27 @@ export default function OrderDetailPage({
   });
 
   const order = query.data;
+  const [statusConfirmation, setStatusConfirmation] =
+    useState<StatusConfirmation | null>(null);
+  const [acceptDeliveryProvider, setAcceptDeliveryProvider] =
+    useState<SellerDeliveryProvider>("INTERNAL");
+  const shouldLoadInternalDeliveryAvailability =
+    !!order &&
+    statusConfirmation?.type === "accept" &&
+    order.fulfillmentMethod !== "STORE_PICKUP" &&
+    order.deliveryProvider === "UNDECIDED";
+  const internalDeliveryAvailabilityQuery = useQuery({
+    queryKey: queryKeys.orders.internalDeliveryAvailability(orderId),
+    queryFn: () => ordersService.getInternalDeliveryAvailability(orderId),
+    enabled:
+      Number.isFinite(orderId) && shouldLoadInternalDeliveryAvailability,
+  });
+
   const transitions = allowedOrderStatusTransitions(
     user,
     order ?? { sellerId: 0, status: "" },
   );
 
-  const [statusConfirmation, setStatusConfirmation] =
-    useState<StatusConfirmation | null>(null);
-  const [acceptDeliveryProvider, setAcceptDeliveryProvider] =
-    useState<SellerDeliveryProvider>("INTERNAL");
   const [pickupCode, setPickupCode] = useState("");
   const [deliveryCode, setDeliveryCode] = useState("");
   const [customerPickupCode, setCustomerPickupCode] = useState("");
@@ -357,6 +375,24 @@ export default function OrderDetailPage({
     statusConfirmation?.type === "accept" &&
     !isStorePickup &&
     isDeliveryProviderUndecided;
+  const isInternalDeliveryAvailabilityPending =
+    shouldChooseDeliveryProvider && internalDeliveryAvailabilityQuery.isPending;
+  const isInternalDeliveryAvailable =
+    shouldChooseDeliveryProvider &&
+    internalDeliveryAvailabilityQuery.isSuccess &&
+    internalDeliveryAvailabilityQuery.data.available === true;
+  const isInternalDeliveryUnavailable =
+    shouldChooseDeliveryProvider &&
+    !isInternalDeliveryAvailabilityPending &&
+    !isInternalDeliveryAvailable;
+  const shouldDisableInternalDelivery =
+    shouldChooseDeliveryProvider && !isInternalDeliveryAvailable;
+  const selectedAcceptDeliveryProvider = shouldDisableInternalDelivery
+    ? "SELLER"
+    : acceptDeliveryProvider;
+  const shouldDisableConfirmStatusChange =
+    statusMutation.isPending ||
+    (shouldChooseDeliveryProvider && isInternalDeliveryAvailabilityPending);
 
   const requestStatusChange = (status: OrderStatus) => {
     if (order.status === "PENDING" && status === "CONFIRMED") {
@@ -390,7 +426,7 @@ export default function OrderDetailPage({
           ? getDefaultCancellationReason(statusConfirmation.type, t)
           : undefined,
       deliveryProvider: shouldChooseDeliveryProvider
-        ? acceptDeliveryProvider
+        ? selectedAcceptDeliveryProvider
         : undefined,
     });
   };
@@ -1050,60 +1086,91 @@ export default function OrderDetailPage({
             </DialogDescription>
           </DialogHeader>
           {shouldChooseDeliveryProvider && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {[
-                {
-                  value: "INTERNAL" as const,
-                  title: t("order.acceptDeliveryProviderInternal"),
-                  description: t("order.acceptDeliveryProviderInternalHint"),
-                  icon: Truck,
-                },
-                {
-                  value: "SELLER" as const,
-                  title: t("order.acceptDeliveryProviderSeller"),
-                  description: t("order.acceptDeliveryProviderSellerHint"),
-                  icon: Store,
-                },
-              ].map((option) => {
-                const Icon = option.icon;
-                const selected = acceptDeliveryProvider === option.value;
+            <TooltipProvider delayDuration={0}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {[
+                  {
+                    value: "INTERNAL" as const,
+                    title: t("order.acceptDeliveryProviderInternal"),
+                    description: t("order.acceptDeliveryProviderInternalHint"),
+                    disabled: shouldDisableInternalDelivery,
+                    disabledReason: shouldDisableInternalDelivery
+                      ? isInternalDeliveryAvailabilityPending
+                        ? t("order.acceptDeliveryProviderInternalChecking")
+                        : t("order.acceptDeliveryProviderInternalUnavailable")
+                      : undefined,
+                    icon: Truck,
+                  },
+                  {
+                    value: "SELLER" as const,
+                    title: t("order.acceptDeliveryProviderSeller"),
+                    description: t("order.acceptDeliveryProviderSellerHint"),
+                    disabled: false,
+                    disabledReason: undefined,
+                    icon: Store,
+                  },
+                ].map((option) => {
+                  const Icon = option.icon;
+                  const selected =
+                    selectedAcceptDeliveryProvider === option.value;
+                  const optionButton = (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setAcceptDeliveryProvider(option.value)}
+                      disabled={option.disabled}
+                      aria-pressed={selected}
+                      className={cn(
+                        "flex min-h-[168px] w-full cursor-pointer flex-col items-center justify-start rounded-md border p-5 text-center transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                        selected
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-background hover:border-primary/50 hover:bg-muted/50",
+                        option.disabled &&
+                          "hover:border-border hover:bg-background",
+                      )}
+                    >
+                      <span className="flex flex-col items-center gap-3">
+                        <span
+                          className={cn(
+                            "flex size-16 shrink-0 items-center justify-center rounded-lg border",
+                            selected
+                              ? "border-primary/30 bg-primary text-primary-foreground"
+                              : "border-border bg-muted text-muted-foreground",
+                          )}
+                        >
+                          <Icon className="size-7" />
+                        </span>
+                        <span className="space-y-2">
+                          <span className="block text-base font-semibold leading-6">
+                            {option.title}
+                          </span>
+                          <span className="block max-w-[210px] text-[13px] leading-6 text-muted-foreground">
+                            {option.description}
+                          </span>
+                        </span>
+                      </span>
+                    </button>
+                  );
 
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setAcceptDeliveryProvider(option.value)}
-                    className={cn(
-                      "flex min-h-[168px] cursor-pointer flex-col items-center justify-start rounded-md border p-5 text-center transition-colors",
-                      selected
-                        ? "border-primary bg-primary/10 text-foreground"
-                        : "border-border bg-background hover:border-primary/50 hover:bg-muted/50",
-                    )}
-                  >
-                    <span className="flex flex-col items-center gap-3">
-                      <span
-                        className={cn(
-                          "flex size-16 shrink-0 items-center justify-center rounded-lg border",
-                          selected
-                            ? "border-primary/30 bg-primary text-primary-foreground"
-                            : "border-border bg-muted text-muted-foreground",
-                        )}
-                      >
-                        <Icon className="size-7" />
-                      </span>
-                      <span className="space-y-2">
-                        <span className="block text-base font-semibold leading-6">
-                          {option.title}
+                  if (!option.disabledReason) {
+                    return optionButton;
+                  }
+
+                  return (
+                    <Tooltip key={option.value}>
+                      <TooltipTrigger asChild>
+                        <span className="block" title={option.disabledReason}>
+                          {optionButton}
                         </span>
-                        <span className="block max-w-[210px] text-[13px] leading-6 text-muted-foreground">
-                          {option.description}
-                        </span>
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-64 text-center">
+                        {option.disabledReason}
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </TooltipProvider>
           )}
           <DialogFooter className="pt-1 sm:gap-3">
             <Button
@@ -1121,7 +1188,7 @@ export default function OrderDetailPage({
                   : "default"
               }
               onClick={confirmStatusChange}
-              disabled={statusMutation.isPending}
+              disabled={shouldDisableConfirmStatusChange}
               className="cursor-pointer"
             >
               {statusMutation.isPending ? (
