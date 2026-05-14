@@ -195,7 +195,6 @@ describe("SellerDetailPage", () => {
     await waitFor(() => {
       expect(sellersService.updateDeliverySettings).toHaveBeenCalledWith(3, {
         maxDeliveryRadiusMeters: 8500,
-        deliveryProvider: "INTERNAL",
       });
     });
   });

@@ -16,9 +16,12 @@ export type DriverAvailability = "ONLINE" | "OFFLINE" | "BUSY";
 
 export type FulfillmentMethod = "DELIVERY" | "STORE_PICKUP";
 
-export type DeliveryProvider = "INTERNAL" | "SELLER" | "NONE";
+export type DeliveryProvider = "UNDECIDED" | "INTERNAL" | "SELLER" | "NONE";
 
-export type SellerDeliveryProvider = Exclude<DeliveryProvider, "NONE">;
+export type SellerDeliveryProvider = Extract<
+  DeliveryProvider,
+  "INTERNAL" | "SELLER"
+>;
 
 export type MessageTargetType =
   | "ORDER"

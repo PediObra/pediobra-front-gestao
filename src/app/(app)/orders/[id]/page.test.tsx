@@ -123,12 +123,17 @@ describe("OrderDetailPage status actions", () => {
   });
 
   it("confirms first-step acceptance before updating the order", async () => {
+    mockOrder = makeOrder({ deliveryProvider: "UNDECIDED" });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
     renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
 
     fireEvent.click(
       await screen.findByRole("button", { name: "Aceitar pedido" }),
     );
     expect(await screen.findByText("Aceitar pedido?")).toBeInTheDocument();
+    expect(screen.getByText("Entrega pelo sistema")).toBeInTheDocument();
+    expect(screen.getByText("Entrega própria da loja")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
 
@@ -136,6 +141,55 @@ describe("OrderDetailPage status actions", () => {
       expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
         status: "CONFIRMED",
         cancellationReason: undefined,
+        deliveryProvider: "INTERNAL",
+      });
+    });
+  });
+
+  it("sends seller delivery when selected in the acceptance modal", async () => {
+    mockOrder = makeOrder({ deliveryProvider: "UNDECIDED" });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aceitar pedido" }),
+    );
+    fireEvent.click(await screen.findByText("Entrega própria da loja"));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "CONFIRMED",
+        cancellationReason: undefined,
+        deliveryProvider: "SELLER",
+      });
+    });
+  });
+
+  it("keeps store pickup acceptance simple without delivery provider choice", async () => {
+    mockOrder = makeOrder({
+      fulfillmentMethod: "STORE_PICKUP",
+      deliveryProvider: "NONE",
+      deliveryAddress: null,
+      deliveryFeeCents: 0,
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Aceitar pedido" }),
+    );
+    expect(screen.queryByText("Entrega pelo sistema")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar aceite" }));
+
+    await waitFor(() => {
+      expect(ordersService.updateStatus).toHaveBeenCalledWith(1, {
+        status: "CONFIRMED",
+        cancellationReason: undefined,
+        deliveryProvider: undefined,
       });
     });
   });
@@ -325,6 +379,8 @@ function makeOrder(overrides: Partial<Order> = {}): Order {
     sellerId: 20,
     customerAddressId: 30,
     status: "PENDING",
+    fulfillmentMethod: "DELIVERY",
+    deliveryProvider: "INTERNAL",
     paymentStatus: "AUTHORIZED",
     totalAmountCents: 10_000,
     deliveryFeeCents: 1_000,

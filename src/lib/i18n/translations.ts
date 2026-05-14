@@ -473,6 +473,7 @@ export const translations = {
     "order.noDriver": "Sem motorista atribuído.",
     "order.deliveryProviderInternal": "Entrega pela plataforma",
     "order.deliveryProviderSeller": "Entrega feita pela loja",
+    "order.deliveryProviderUndecided": "Entrega a definir",
     "order.assignDriver": "Atribuir motorista",
     "order.storePickup": "Retirada na loja",
     "order.select": "Selecionar",
@@ -499,6 +500,12 @@ export const translations = {
     "order.confirmAccept": "Confirmar aceite",
     "order.confirmReject": "Confirmar recusa",
     "order.confirmCancel": "Confirmar cancelamento",
+    "order.acceptDeliveryProviderInternal": "Entrega pelo sistema",
+    "order.acceptDeliveryProviderInternalHint":
+      "Cria despacho para motorista após a loja preparar o pedido.",
+    "order.acceptDeliveryProviderSeller": "Entrega própria da loja",
+    "order.acceptDeliveryProviderSellerHint":
+      "A loja assume a rota e recebe produto + frete no repasse.",
     "order.rejectDefaultReason": "Loja recusou o pedido",
     "order.cancelDefaultReason": "Pedido cancelado pela loja",
     "order.pickupConfirmation": "Confirmação de retirada",
@@ -1176,6 +1183,7 @@ export const translations = {
     "order.noDriver": "No driver assigned.",
     "order.deliveryProviderInternal": "Platform delivery",
     "order.deliveryProviderSeller": "Store delivery",
+    "order.deliveryProviderUndecided": "Delivery to decide",
     "order.assignDriver": "Assign driver",
     "order.storePickup": "Store pickup",
     "order.select": "Select",
@@ -1202,6 +1210,12 @@ export const translations = {
     "order.confirmAccept": "Confirm acceptance",
     "order.confirmReject": "Confirm refusal",
     "order.confirmCancel": "Confirm cancellation",
+    "order.acceptDeliveryProviderInternal": "System delivery",
+    "order.acceptDeliveryProviderInternalHint":
+      "Creates driver dispatch after the store prepares the order.",
+    "order.acceptDeliveryProviderSeller": "Store delivery",
+    "order.acceptDeliveryProviderSellerHint":
+      "The store handles the route and receives products + delivery fee.",
     "order.rejectDefaultReason": "Store declined the order",
     "order.cancelDefaultReason": "Order cancelled by the store",
     "order.pickupConfirmation": "Pickup confirmation",
@@ -1882,6 +1896,7 @@ export const translations = {
     "order.noDriver": "Sin repartidor asignado.",
     "order.deliveryProviderInternal": "Entrega por la plataforma",
     "order.deliveryProviderSeller": "Entrega hecha por la tienda",
+    "order.deliveryProviderUndecided": "Entrega por definir",
     "order.assignDriver": "Asignar repartidor",
     "order.storePickup": "Retiro en tienda",
     "order.select": "Seleccionar",
@@ -1908,6 +1923,12 @@ export const translations = {
     "order.confirmAccept": "Confirmar aceptación",
     "order.confirmReject": "Confirmar rechazo",
     "order.confirmCancel": "Confirmar cancelación",
+    "order.acceptDeliveryProviderInternal": "Entrega por el sistema",
+    "order.acceptDeliveryProviderInternalHint":
+      "Crea despacho para repartidor después de que la tienda prepare el pedido.",
+    "order.acceptDeliveryProviderSeller": "Entrega propia de la tienda",
+    "order.acceptDeliveryProviderSellerHint":
+      "La tienda asume la ruta y recibe productos + flete en el repase.",
     "order.rejectDefaultReason": "La tienda rechazó el pedido",
     "order.cancelDefaultReason": "Pedido cancelado por la tienda",
     "order.pickupConfirmation": "Confirmación de recogida",

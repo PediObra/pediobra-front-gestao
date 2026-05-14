@@ -14,8 +14,6 @@ import {
   MapPinned,
   Power,
   Save,
-  Store,
-  Truck,
   Users,
   UserPlus,
 } from "lucide-react";
@@ -70,7 +68,6 @@ import { cn } from "@/lib/utils";
 import type {
   MembershipRole,
   SellerDayOfWeek,
-  SellerDeliveryProvider,
   SellerOperatingHour,
   SellerProductImportJob,
   UserWithRelations,
@@ -203,8 +200,6 @@ export default function SellerDetailPage({
   const [clearLogo, setClearLogo] = useState(false);
   const [logoInputKey, setLogoInputKey] = useState(0);
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState("");
-  const [deliveryProvider, setDeliveryProvider] =
-    useState<SellerDeliveryProvider>("INTERNAL");
   const [autoOnlineEnabled, setAutoOnlineEnabled] = useState(false);
   const [operatingHours, setOperatingHours] = useState<SellerOperatingHour[]>(
     () => buildDefaultOperatingHours(),
@@ -239,14 +234,9 @@ export default function SellerDetailPage({
       setDeliveryRadiusKm(formatRadiusInput(radiusMeters));
     }
 
-    const provider = deliverySettingsQuery.data?.deliveryProvider;
-    if (provider) {
-      setDeliveryProvider(provider);
-    }
   }, [
     deliverySettingsQuery.data?.sellerId,
     deliverySettingsQuery.data?.maxDeliveryRadiusMeters,
-    deliverySettingsQuery.data?.deliveryProvider,
   ]);
 
   useEffect(() => {
@@ -332,7 +322,6 @@ export default function SellerDetailPage({
 
       return sellersService.updateDeliverySettings(sellerId, {
         maxDeliveryRadiusMeters: Math.round(parsedRadiusKm * 1000),
-        deliveryProvider,
       });
     },
     onSuccess: (settings) => {
@@ -1042,71 +1031,13 @@ export default function SellerDetailPage({
                     <CardTitle>Configuração de entrega</CardTitle>
                     <CardDescription>
                       {canEdit
-                        ? "Escolha quem entrega os pedidos e ate quantos km esta loja atende."
+                        ? "Defina ate quantos km esta loja atende pedidos com entrega."
                         : "Voce nao tem permissao para alterar a configuracao de entrega."}
                     </CardDescription>
                   </div>
                   <MapPinned className="size-5 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="grid gap-5 p-6">
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {[
-                      {
-                        value: "INTERNAL" as const,
-                        title: "Entrega pela plataforma",
-                        description:
-                          "Gera despacho para motorista e repasse separado do frete.",
-                        icon: Truck,
-                      },
-                      {
-                        value: "SELLER" as const,
-                        title: "Entrega própria da loja",
-                        description:
-                          "A loja assume a rota e recebe produto + frete no repasse.",
-                        icon: Store,
-                      },
-                    ].map((option) => {
-                      const Icon = option.icon;
-                      const selected = deliveryProvider === option.value;
-
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          disabled={!canEdit || deliverySettingsQuery.isLoading}
-                          onClick={() => setDeliveryProvider(option.value)}
-                          className={cn(
-                            "cursor-pointer rounded-md border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                            selected
-                              ? "border-primary bg-primary/10 text-foreground"
-                              : "border-border bg-background hover:border-primary/50 hover:bg-muted/50",
-                          )}
-                        >
-                          <div className="flex items-start gap-3">
-                            <span
-                              className={cn(
-                                "flex size-9 shrink-0 items-center justify-center rounded-md border",
-                                selected
-                                  ? "border-primary/30 bg-primary text-primary-foreground"
-                                  : "border-border bg-muted text-muted-foreground",
-                              )}
-                            >
-                              <Icon className="size-4" />
-                            </span>
-                            <span className="space-y-1">
-                              <span className="block text-sm font-semibold">
-                                {option.title}
-                              </span>
-                              <span className="block text-xs leading-5 text-muted-foreground">
-                                {option.description}
-                              </span>
-                            </span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
                   <div className="grid gap-4 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
                     <div className="space-y-2">
                       <Label htmlFor="delivery-radius-km">

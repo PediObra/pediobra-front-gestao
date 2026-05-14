@@ -7,6 +7,7 @@ import type {
   OrderEvidence,
   OrderStatus,
   Paginated,
+  SellerDeliveryProvider,
 } from "./types";
 
 export interface ListOrdersParams {
@@ -44,6 +45,7 @@ export interface UpdateOrderStatusPayload {
   status: OrderStatus;
   cancellationReason?: string;
   cancellationDetails?: string;
+  deliveryProvider?: SellerDeliveryProvider;
 }
 
 export interface AssignDriverPayload {

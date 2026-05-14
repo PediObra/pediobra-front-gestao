@@ -12,6 +12,7 @@ import {
   Loader2,
   MapPin,
   Package,
+  Store,
   Truck,
   UserRound,
 } from "lucide-react";
@@ -37,6 +38,7 @@ import {
 import { formatOrderHistoryEntry } from "@/lib/status-history";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { resolveMediaUrl } from "@/lib/media-url";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/layout/page-header";
 import { MessageThreadCard } from "@/components/messages/message-thread-card";
 import {
@@ -69,7 +71,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/badges";
-import type { EvidenceType, OrderStatus, PaymentStatus } from "@/lib/api/types";
+import type {
+  EvidenceType,
+  OrderStatus,
+  PaymentStatus,
+  SellerDeliveryProvider,
+} from "@/lib/api/types";
 
 const EVIDENCE_TYPES: EvidenceType[] = [
   "SELLER_CONFIRMATION",
@@ -92,6 +99,7 @@ type StatusUpdateInput = {
   status: OrderStatus;
   cancellationReason?: string;
   cancellationDetails?: string;
+  deliveryProvider?: SellerDeliveryProvider;
 };
 
 type StatusConfirmation = {
@@ -124,6 +132,8 @@ export default function OrderDetailPage({
 
   const [statusConfirmation, setStatusConfirmation] =
     useState<StatusConfirmation | null>(null);
+  const [acceptDeliveryProvider, setAcceptDeliveryProvider] =
+    useState<SellerDeliveryProvider>("INTERNAL");
   const [pickupCode, setPickupCode] = useState("");
   const [deliveryCode, setDeliveryCode] = useState("");
   const [customerPickupCode, setCustomerPickupCode] = useState("");
@@ -321,8 +331,13 @@ export default function OrderDetailPage({
 
   const canChangeStatus = transitions.length > 0;
   const isStorePickup = order.fulfillmentMethod === "STORE_PICKUP";
-  const isSellerDelivery = order.deliveryProvider === "SELLER";
-  const isInternalDelivery = !isStorePickup && !isSellerDelivery;
+  const orderDeliveryProvider = order.deliveryProvider ?? "INTERNAL";
+  const isDeliveryProviderUndecided = orderDeliveryProvider === "UNDECIDED";
+  const isSellerDelivery = orderDeliveryProvider === "SELLER";
+  const isInternalDelivery =
+    !isStorePickup && orderDeliveryProvider === "INTERNAL";
+  const shouldShowDeliveryProvider =
+    !isStorePickup && !isDeliveryProviderUndecided;
   const canConfirmPickup =
     order.status === "READY_FOR_PICKUP" &&
     isInternalDelivery &&
@@ -338,9 +353,16 @@ export default function OrderDetailPage({
   const confirmationCopy = statusConfirmation
     ? getStatusConfirmationCopy(statusConfirmation.type, t)
     : null;
+  const shouldChooseDeliveryProvider =
+    statusConfirmation?.type === "accept" &&
+    !isStorePickup &&
+    isDeliveryProviderUndecided;
 
   const requestStatusChange = (status: OrderStatus) => {
     if (order.status === "PENDING" && status === "CONFIRMED") {
+      setAcceptDeliveryProvider(
+        orderDeliveryProvider === "SELLER" ? "SELLER" : "INTERNAL",
+      );
       setStatusConfirmation({ status, type: "accept" });
       return;
     }
@@ -367,6 +389,9 @@ export default function OrderDetailPage({
         statusConfirmation.status === "CANCELLED"
           ? getDefaultCancellationReason(statusConfirmation.type, t)
           : undefined,
+      deliveryProvider: shouldChooseDeliveryProvider
+        ? acceptDeliveryProvider
+        : undefined,
     });
   };
 
@@ -390,9 +415,11 @@ export default function OrderDetailPage({
           <div className="flex items-center gap-2">
             {!isStorePickup && (
               <Badge variant={isSellerDelivery ? "secondary" : "outline"}>
-                {isSellerDelivery
-                  ? t("order.deliveryProviderSeller")
-                  : t("order.deliveryProviderInternal")}
+                {shouldShowDeliveryProvider
+                  ? isSellerDelivery
+                    ? t("order.deliveryProviderSeller")
+                    : t("order.deliveryProviderInternal")
+                  : t("order.deliveryProviderUndecided")}
               </Badge>
             )}
             <OrderStatusBadge status={order.status} />
@@ -802,9 +829,11 @@ export default function OrderDetailPage({
                 <>
                   <p>{order.deliveryAddress}</p>
                   <p className="text-muted-foreground">
-                    {isSellerDelivery
-                      ? t("order.deliveryProviderSeller")
-                      : t("order.deliveryProviderInternal")}
+                    {shouldShowDeliveryProvider
+                      ? isSellerDelivery
+                        ? t("order.deliveryProviderSeller")
+                        : t("order.deliveryProviderInternal")
+                      : t("order.deliveryProviderUndecided")}
                   </p>
                   {order.deliveryCep && (
                     <p className="text-muted-foreground">
@@ -1013,18 +1042,75 @@ export default function OrderDetailPage({
           if (!open) setStatusConfirmation(null);
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="gap-6 p-6 sm:max-w-[580px]">
+          <DialogHeader className="space-y-2 pr-8">
             <DialogTitle>{confirmationCopy?.title}</DialogTitle>
             <DialogDescription>
               {confirmationCopy?.description}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          {shouldChooseDeliveryProvider && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {[
+                {
+                  value: "INTERNAL" as const,
+                  title: t("order.acceptDeliveryProviderInternal"),
+                  description: t("order.acceptDeliveryProviderInternalHint"),
+                  icon: Truck,
+                },
+                {
+                  value: "SELLER" as const,
+                  title: t("order.acceptDeliveryProviderSeller"),
+                  description: t("order.acceptDeliveryProviderSellerHint"),
+                  icon: Store,
+                },
+              ].map((option) => {
+                const Icon = option.icon;
+                const selected = acceptDeliveryProvider === option.value;
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setAcceptDeliveryProvider(option.value)}
+                    className={cn(
+                      "flex min-h-[168px] cursor-pointer flex-col items-center justify-start rounded-md border p-5 text-center transition-colors",
+                      selected
+                        ? "border-primary bg-primary/10 text-foreground"
+                        : "border-border bg-background hover:border-primary/50 hover:bg-muted/50",
+                    )}
+                  >
+                    <span className="flex flex-col items-center gap-3">
+                      <span
+                        className={cn(
+                          "flex size-16 shrink-0 items-center justify-center rounded-lg border",
+                          selected
+                            ? "border-primary/30 bg-primary text-primary-foreground"
+                            : "border-border bg-muted text-muted-foreground",
+                        )}
+                      >
+                        <Icon className="size-7" />
+                      </span>
+                      <span className="space-y-2">
+                        <span className="block text-base font-semibold leading-6">
+                          {option.title}
+                        </span>
+                        <span className="block max-w-[210px] text-[13px] leading-6 text-muted-foreground">
+                          {option.description}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter className="pt-1 sm:gap-3">
             <Button
               variant="ghost"
               onClick={() => setStatusConfirmation(null)}
               disabled={statusMutation.isPending}
+              className="cursor-pointer"
             >
               {t("common.cancel")}
             </Button>
@@ -1036,6 +1122,7 @@ export default function OrderDetailPage({
               }
               onClick={confirmStatusChange}
               disabled={statusMutation.isPending}
+              className="cursor-pointer"
             >
               {statusMutation.isPending ? (
                 <Loader2 className="size-4 animate-spin" />

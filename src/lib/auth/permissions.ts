@@ -36,6 +36,12 @@ const SELLER_DELIVERY_ORDER_STATUS_GRAPH = {
   CANCELLED: [],
 } as const satisfies Partial<Record<OrderStatus, readonly OrderStatus[]>>;
 
+const UNDECIDED_DELIVERY_ORDER_STATUS_GRAPH = {
+  PENDING: ["CONFIRMED", "CANCELLED"],
+  CONFIRMED: [],
+  CANCELLED: [],
+} as const satisfies Partial<Record<OrderStatus, readonly OrderStatus[]>>;
+
 const DELIVERY_REQUEST_STATUS_GRAPH = {
   PENDING: ["CANCELLED"],
   ASSIGNED: ["PICKED_UP", "CANCELLED"],
@@ -280,6 +286,8 @@ function orderStatusTransitions(
   const graph: Partial<Record<OrderStatus, readonly OrderStatus[]>> =
     fulfillmentMethod === "STORE_PICKUP"
       ? STORE_PICKUP_ORDER_STATUS_GRAPH
+      : deliveryProvider === "UNDECIDED"
+        ? UNDECIDED_DELIVERY_ORDER_STATUS_GRAPH
       : deliveryProvider === "SELLER"
         ? SELLER_DELIVERY_ORDER_STATUS_GRAPH
       : ORDER_STATUS_GRAPH;
@@ -299,6 +307,7 @@ function isOrderStatus(status: string): status is OrderStatus {
   return (
     status in ORDER_STATUS_GRAPH ||
     status in STORE_PICKUP_ORDER_STATUS_GRAPH ||
+    status in UNDECIDED_DELIVERY_ORDER_STATUS_GRAPH ||
     status in SELLER_DELIVERY_ORDER_STATUS_GRAPH
   );
 }
