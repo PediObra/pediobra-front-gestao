@@ -1083,18 +1083,49 @@ export interface DriverLocationCleanupResult {
 export interface CartItem {
   id: number;
   cartId: number;
+  productId?: number;
   sellerProductId: number;
   quantity: number;
+  product?: Product;
   sellerProduct?: SellerProduct;
 }
 
 export interface Cart {
   id: number;
   userId: number;
-  sellerId: number;
+  sellerId?: number;
+  resolvedSellerId?: number | null;
+  customerAddressId?: number | null;
+  fulfillmentMethod?: FulfillmentMethod;
   status: string;
   items?: CartItem[];
   seller?: Seller;
+  resolvedSeller?: Seller | null;
+  customerAddress?: CustomerAddress | null;
+  subtotalProductsCents?: number;
+  estimatedDeliveryFeeCents?: number;
+  distanceMeters?: number;
+  totalEstimatedCents?: number;
+}
+
+export interface CartPaymentOptionQuote {
+  sellerId: number;
+  sellerName?: string | null;
+  subtotalProductsCents: number;
+  estimatedDeliveryFeeCents: number;
+  totalEstimatedCents: number;
+  distanceMeters?: number;
+}
+
+export interface CartPaymentOption {
+  type: "ONLINE" | "DIRECT_SELLER";
+  provider: PaymentProvider;
+  available: boolean;
+  reason?: "CART_EMPTY" | "PROVIDER_DISABLED" | "NO_ELIGIBLE_SELLER";
+  requiresSellerSwitch: boolean;
+  current?: CartPaymentOptionQuote | null;
+  alternative?: CartPaymentOptionQuote | null;
+  deltaCents?: number;
 }
 
 // ---- API error shape ----
