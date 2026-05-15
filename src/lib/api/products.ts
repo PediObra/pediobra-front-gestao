@@ -9,8 +9,12 @@ export interface ListProductsParams {
   brand?: string;
   categoryId?: number;
   parentCategoryId?: number;
+  saleUnit?: string;
+  rawUnit?: string;
   unit?: string;
   barcode?: string;
+  minLogisticsWeightGrams?: number;
+  maxLogisticsWeightGrams?: number;
   minWeight?: number;
   maxWeight?: number;
   hasImage?: boolean;
@@ -36,6 +40,9 @@ export interface CreateProductPayload {
   categoryId?: number | null;
   name: string;
   description?: string;
+  rawSize?: string;
+  rawWeight?: number;
+  rawUnit?: string;
   size?: string;
   weight?: number;
   brand?: string;
@@ -65,6 +72,9 @@ function buildProductFormData(
   }
   appendOptional(formData, "name", payload.name);
   appendOptional(formData, "description", payload.description);
+  appendOptional(formData, "rawSize", payload.rawSize);
+  appendOptional(formData, "rawWeight", payload.rawWeight);
+  appendOptional(formData, "rawUnit", payload.rawUnit);
   appendOptional(formData, "size", payload.size);
   appendOptional(formData, "weight", payload.weight);
   appendOptional(formData, "brand", payload.brand);
