@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  Bike,
   Camera,
+  Car,
   CheckCircle2,
   CreditCard,
   Image as ImageIcon,
@@ -82,7 +84,9 @@ import {
 } from "@/components/ui/tooltip";
 import { OrderStatusBadge, PaymentStatusBadge } from "@/components/badges";
 import type {
+  DriverVehicleCategory,
   EvidenceType,
+  Order,
   OrderStatus,
   PaymentStatus,
   SellerDeliveryProvider,
@@ -111,6 +115,7 @@ type StatusUpdateInput = {
   cancellationReason?: string;
   cancellationDetails?: string;
   deliveryProvider?: SellerDeliveryProvider;
+  requiredVehicleCategory?: DriverVehicleCategory;
 };
 
 type StatusConfirmation = {
@@ -127,6 +132,129 @@ const SELLER_REJECTION_REASON_OPTIONS: SellerRejectionReasonOption[] = [
   "NO_DELIVERY_DRIVERS",
   "OTHER",
 ];
+
+const REQUIRED_VEHICLE_CATEGORY_OPTIONS = [
+  {
+    value: "MOTORCYCLE",
+    icon: Bike,
+    descriptionKey: "order.requiredVehicleCategory.MOTORCYCLE",
+  },
+  {
+    value: "PASSENGER_CAR",
+    icon: Car,
+    descriptionKey: "order.requiredVehicleCategory.PASSENGER_CAR",
+  },
+  {
+    value: "COMPACT_UTILITY",
+    icon: Package,
+    descriptionKey: "order.requiredVehicleCategory.COMPACT_UTILITY",
+  },
+  {
+    value: "PICKUP",
+    icon: Truck,
+    descriptionKey: "order.requiredVehicleCategory.PICKUP",
+  },
+  {
+    value: "VAN",
+    icon: Truck,
+    descriptionKey: "order.requiredVehicleCategory.VAN",
+  },
+  {
+    value: "TRUCK",
+    icon: Truck,
+    descriptionKey: "order.requiredVehicleCategory.TRUCK",
+  },
+] as const satisfies ReadonlyArray<{
+  value: DriverVehicleCategory;
+  icon: typeof Truck;
+  descriptionKey: string;
+}>;
+
+const VEHICLE_CATEGORY_CAPACITY_LIMITS: Array<{
+  category: DriverVehicleCategory;
+  maxWeightGrams: number;
+  maxLongestDimensionMm: number;
+}> = [
+  { category: "MOTORCYCLE", maxWeightGrams: 20_000, maxLongestDimensionMm: 700 },
+  {
+    category: "PASSENGER_CAR",
+    maxWeightGrams: 120_000,
+    maxLongestDimensionMm: 1_200,
+  },
+  {
+    category: "COMPACT_UTILITY",
+    maxWeightGrams: 650_000,
+    maxLongestDimensionMm: 1_800,
+  },
+  { category: "PICKUP", maxWeightGrams: 1_000_000, maxLongestDimensionMm: 2_200 },
+  { category: "VAN", maxWeightGrams: 1_300_000, maxLongestDimensionMm: 3_000 },
+  { category: "TRUCK", maxWeightGrams: 3_000_000, maxLongestDimensionMm: 5_000 },
+];
+
+const LOW_LOGISTICS_CONFIDENCES = new Set(["LOW", "UNKNOWN"]);
+
+type VehicleCategoryRecommendation = {
+  category?: DriverVehicleCategory;
+  confidence: "HIGH" | "MEDIUM" | "LOW";
+};
+
+function orderVehicleCategoryRecommendation(
+  order: Order,
+): VehicleCategoryRecommendation {
+  const items = order.items ?? [];
+
+  if (items.length === 0) {
+    return { confidence: "LOW" };
+  }
+
+  let confidence: VehicleCategoryRecommendation["confidence"] = "HIGH";
+  let totalWeightGrams = 0;
+  let maxLongestDimensionMm = 0;
+
+  for (const item of items) {
+    const product = item.sellerProduct?.product;
+
+    if (!product) return { confidence: "LOW" };
+
+    const longestDimension = Math.max(
+      product.lengthMm ?? 0,
+      product.widthMm ?? 0,
+      product.heightMm ?? 0,
+      product.diameterMm ?? 0,
+    );
+
+    if (
+      product.logisticsWeightGrams == null ||
+      longestDimension === 0 ||
+      LOW_LOGISTICS_CONFIDENCES.has(
+        product.logisticsWeightConfidence ?? "UNKNOWN",
+      ) ||
+      LOW_LOGISTICS_CONFIDENCES.has(
+        product.logisticsDimensionConfidence ?? "UNKNOWN",
+      )
+    ) {
+      return { confidence: "LOW" };
+    }
+
+    if (
+      product.logisticsWeightConfidence === "MEDIUM" ||
+      product.logisticsDimensionConfidence === "MEDIUM"
+    ) {
+      confidence = "MEDIUM";
+    }
+
+    totalWeightGrams += product.logisticsWeightGrams * item.quantity;
+    maxLongestDimensionMm = Math.max(maxLongestDimensionMm, longestDimension);
+  }
+
+  const category = VEHICLE_CATEGORY_CAPACITY_LIMITS.find(
+    (limit) =>
+      totalWeightGrams <= limit.maxWeightGrams &&
+      maxLongestDimensionMm <= limit.maxLongestDimensionMm,
+  )?.category;
+
+  return category ? { category, confidence } : { confidence: "LOW" };
+}
 
 export default function OrderDetailPage({
   params,
@@ -152,6 +280,10 @@ export default function OrderDetailPage({
   const [sellerRejectionDetails, setSellerRejectionDetails] = useState("");
   const [acceptDeliveryProvider, setAcceptDeliveryProvider] =
     useState<SellerDeliveryProvider>("INTERNAL");
+  const [
+    acceptRequiredVehicleCategory,
+    setAcceptRequiredVehicleCategory,
+  ] = useState<DriverVehicleCategory | undefined>();
   const fulfillmentLabelContext = order
     ? orderFulfillmentLabelContext(order)
     : undefined;
@@ -495,20 +627,45 @@ export default function OrderDetailPage({
     shouldForceSellerDeliveryForDirectPayment || shouldDisableInternalDelivery
       ? "SELLER"
       : acceptDeliveryProvider;
+  const vehicleCategoryRecommendation = order
+    ? orderVehicleCategoryRecommendation(order)
+    : ({ confidence: "LOW" } satisfies VehicleCategoryRecommendation);
+  const shouldPreselectRequiredVehicleCategory =
+    vehicleCategoryRecommendation.confidence !== "LOW" &&
+    vehicleCategoryRecommendation.category !== undefined;
+  const shouldChooseRequiredVehicleCategory =
+    shouldChooseDeliveryProvider &&
+    selectedAcceptDeliveryProvider === "INTERNAL";
+  const requiredVehicleCategoryHintKey =
+    shouldPreselectRequiredVehicleCategory
+      ? vehicleCategoryRecommendation.confidence === "HIGH"
+        ? "order.requiredVehicleCategorySystemHigh"
+        : "order.requiredVehicleCategorySystemMedium"
+      : "order.requiredVehicleCategoryNeedsChoice";
   const shouldDisableConfirmStatusChange =
     sellerRejectionMutation.isPending ||
     statusMutation.isPending ||
     (statusConfirmation?.type === "reject" && !sellerRejectionReason.trim()) ||
     (shouldChooseDeliveryProvider &&
       !shouldForceSellerDeliveryForDirectPayment &&
-      isInternalDeliveryAvailabilityPending);
+      isInternalDeliveryAvailabilityPending) ||
+    (shouldChooseRequiredVehicleCategory && !acceptRequiredVehicleCategory);
 
   const requestStatusChange = (status: OrderStatus) => {
     if (order.status === "PENDING" && status === "CONFIRMED") {
-      setAcceptDeliveryProvider(
+      const defaultDeliveryProvider =
         requiresDirectPaymentConfirmation || orderDeliveryProvider === "SELLER"
           ? "SELLER"
-          : "INTERNAL",
+          : "INTERNAL";
+
+      setAcceptDeliveryProvider(
+        defaultDeliveryProvider,
+      );
+      setAcceptRequiredVehicleCategory(
+        defaultDeliveryProvider === "INTERNAL" &&
+          shouldPreselectRequiredVehicleCategory
+          ? vehicleCategoryRecommendation.category
+          : undefined,
       );
       setStatusConfirmation({ status, type: "accept" });
       return;
@@ -545,6 +702,9 @@ export default function OrderDetailPage({
           : undefined,
       deliveryProvider: shouldChooseDeliveryProvider
         ? selectedAcceptDeliveryProvider
+        : undefined,
+      requiredVehicleCategory: shouldChooseRequiredVehicleCategory
+        ? acceptRequiredVehicleCategory
         : undefined,
     });
   };
@@ -1254,6 +1414,15 @@ export default function OrderDetailPage({
                         : t("order.deliveryProviderInternal")
                       : t("order.deliveryProviderUndecided")}
                   </p>
+                  {order.requiredVehicleCategory && (
+                    <p className="text-muted-foreground">
+                      {t("order.requiredVehicleCategorySelected", {
+                        category: driverVehicleCategoryLabel(
+                          order.requiredVehicleCategory,
+                        ),
+                      })}
+                    </p>
+                  )}
                   {order.deliveryCep && (
                     <p className="text-muted-foreground">
                       CEP {order.deliveryCep}
@@ -1505,7 +1674,20 @@ export default function OrderDetailPage({
                     <button
                       key={option.value}
                       type="button"
-                      onClick={() => setAcceptDeliveryProvider(option.value)}
+                      onClick={() => {
+                        setAcceptDeliveryProvider(option.value);
+                        if (option.value === "INTERNAL") {
+                          setAcceptRequiredVehicleCategory((current) => {
+                            if (current) return current;
+
+                            return shouldPreselectRequiredVehicleCategory
+                              ? vehicleCategoryRecommendation.category
+                              : undefined;
+                          });
+                        } else {
+                          setAcceptRequiredVehicleCategory(undefined);
+                        }
+                      }}
                       disabled={option.disabled}
                       aria-pressed={selected}
                       className={cn(
@@ -1561,6 +1743,69 @@ export default function OrderDetailPage({
                 })}
               </div>
             </TooltipProvider>
+          )}
+          {shouldChooseRequiredVehicleCategory && (
+            <div className="space-y-3 rounded-md border border-border bg-muted/30 p-4">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">
+                  {t("order.requiredVehicleCategoryTitle")}
+                </p>
+                <p className="text-sm leading-6 text-muted-foreground">
+                  {t(requiredVehicleCategoryHintKey, {
+                    category: vehicleCategoryRecommendation.category
+                      ? driverVehicleCategoryLabel(
+                          vehicleCategoryRecommendation.category,
+                        )
+                      : "",
+                  })}
+                </p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {REQUIRED_VEHICLE_CATEGORY_OPTIONS.map((option) => {
+                  const Icon = option.icon;
+                  const selected =
+                    acceptRequiredVehicleCategory === option.value;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        setAcceptRequiredVehicleCategory(option.value)
+                      }
+                      className={cn(
+                        "flex min-h-[132px] cursor-pointer flex-col items-start gap-3 rounded-md border p-4 text-left transition-colors",
+                        selected
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border bg-background hover:border-primary/50 hover:bg-muted/50",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex size-10 shrink-0 items-center justify-center rounded-md border",
+                          selected
+                            ? "border-primary/30 bg-primary text-primary-foreground"
+                            : "border-border bg-muted text-muted-foreground",
+                        )}
+                      >
+                        <Icon className="size-5" />
+                      </span>
+                      <span className="space-y-1">
+                        <span className="block text-sm font-semibold leading-5">
+                          {driverVehicleCategoryLabel(option.value)}
+                        </span>
+                        <span className="block text-[13px] leading-5 text-muted-foreground">
+                          {t(
+                            option.descriptionKey as Parameters<typeof t>[0],
+                          )}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           )}
           <DialogFooter className="pt-1 sm:gap-3">
             <Button

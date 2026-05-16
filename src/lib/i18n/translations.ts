@@ -475,6 +475,7 @@ export const translations = {
     "order.deliveryProviderInternal": "Entrega pela plataforma",
     "order.deliveryProviderSeller": "Entrega feita pela loja",
     "order.deliveryProviderUndecided": "Entrega a definir",
+    "order.requiredVehicleCategorySelected": "Veículo recomendado: {category}",
     "order.assignDriver": "Atribuir motorista",
     "order.storePickup": "Retirada na loja",
     "order.select": "Selecionar",
@@ -518,6 +519,24 @@ export const translations = {
       "A loja assume a rota e recebe o pagamento diretamente do cliente na entrega.",
     "order.acceptDirectSellerDeliveryNotice":
       "Este pedido será pago na entrega. Por isso, a entrega precisa ser feita pela própria loja.",
+    "order.requiredVehicleCategoryTitle": "Tipo de veículo da entrega",
+    "order.requiredVehicleCategorySystemHigh":
+      "O cálculo do sistema indicou {category} com alta confiança. Confira e ajuste se a loja souber que precisa de outro veículo.",
+    "order.requiredVehicleCategorySystemMedium":
+      "O cálculo do sistema sugeriu {category}, mas a confiança é média. Confira antes de aceitar.",
+    "order.requiredVehicleCategoryNeedsChoice":
+      "Não conseguimos calcular uma categoria com confiança. Escolha o menor veículo que resolve essa entrega.",
+    "order.requiredVehicleCategory.MOTORCYCLE": "Itens pequenos e leves.",
+    "order.requiredVehicleCategory.PASSENGER_CAR":
+      "Volumes pequenos que cabem no porta-malas.",
+    "order.requiredVehicleCategory.COMPACT_UTILITY":
+      "Caixas médias em baú compacto.",
+    "order.requiredVehicleCategory.PICKUP":
+      "Peças compridas ou volume aberto.",
+    "order.requiredVehicleCategory.VAN":
+      "Carga maior protegida da rua.",
+    "order.requiredVehicleCategory.TRUCK":
+      "Carga pesada ou muito volumosa.",
     "order.rejectDefaultReason": "Loja recusou o pedido",
     "order.rejectReasonPlaceholder": "Selecione o motivo",
     "order.rejectReasonNoStock": "Sem estoque no momento",
@@ -1218,6 +1237,8 @@ export const translations = {
     "order.deliveryProviderInternal": "Platform delivery",
     "order.deliveryProviderSeller": "Store delivery",
     "order.deliveryProviderUndecided": "Delivery to decide",
+    "order.requiredVehicleCategorySelected":
+      "Recommended vehicle: {category}",
     "order.assignDriver": "Assign driver",
     "order.storePickup": "Store pickup",
     "order.select": "Select",
@@ -1261,6 +1282,24 @@ export const translations = {
       "The store handles the route and collects payment directly from the customer on delivery.",
     "order.acceptDirectSellerDeliveryNotice":
       "This order will be paid on delivery. Because of that, it must be delivered by the store.",
+    "order.requiredVehicleCategoryTitle": "Delivery vehicle type",
+    "order.requiredVehicleCategorySystemHigh":
+      "The system calculation selected {category} with high confidence. Review and adjust if the store knows another vehicle is needed.",
+    "order.requiredVehicleCategorySystemMedium":
+      "The system calculation suggested {category}, but confidence is medium. Review it before accepting.",
+    "order.requiredVehicleCategoryNeedsChoice":
+      "We could not calculate a category with confidence. Choose the smallest vehicle that can handle this delivery.",
+    "order.requiredVehicleCategory.MOTORCYCLE": "Small and light items.",
+    "order.requiredVehicleCategory.PASSENGER_CAR":
+      "Small volumes that fit in a trunk.",
+    "order.requiredVehicleCategory.COMPACT_UTILITY":
+      "Medium boxes in a compact cargo van.",
+    "order.requiredVehicleCategory.PICKUP":
+      "Long pieces or open-bed volume.",
+    "order.requiredVehicleCategory.VAN":
+      "Larger cargo protected from the street.",
+    "order.requiredVehicleCategory.TRUCK":
+      "Heavy or very bulky cargo.",
     "order.rejectDefaultReason": "Store declined the order",
     "order.rejectReasonPlaceholder": "Select the reason",
     "order.rejectReasonNoStock": "Out of stock right now",
@@ -1962,6 +2001,8 @@ export const translations = {
     "order.deliveryProviderInternal": "Entrega por la plataforma",
     "order.deliveryProviderSeller": "Entrega hecha por la tienda",
     "order.deliveryProviderUndecided": "Entrega por definir",
+    "order.requiredVehicleCategorySelected":
+      "Vehículo recomendado: {category}",
     "order.assignDriver": "Asignar repartidor",
     "order.storePickup": "Retiro en tienda",
     "order.select": "Seleccionar",
@@ -2005,6 +2046,24 @@ export const translations = {
       "La tienda asume la ruta y cobra el pago directamente al cliente en la entrega.",
     "order.acceptDirectSellerDeliveryNotice":
       "Este pedido se pagará en la entrega. Por eso, la entrega debe hacerla la propia tienda.",
+    "order.requiredVehicleCategoryTitle": "Tipo de vehículo de la entrega",
+    "order.requiredVehicleCategorySystemHigh":
+      "El cálculo del sistema indicó {category} con alta confianza. Revisa y ajusta si la tienda sabe que necesita otro vehículo.",
+    "order.requiredVehicleCategorySystemMedium":
+      "El cálculo del sistema sugirió {category}, pero la confianza es media. Revísalo antes de aceptar.",
+    "order.requiredVehicleCategoryNeedsChoice":
+      "No pudimos calcular una categoría con confianza. Elige el vehículo más pequeño que resuelve esta entrega.",
+    "order.requiredVehicleCategory.MOTORCYCLE": "Ítems pequeños y livianos.",
+    "order.requiredVehicleCategory.PASSENGER_CAR":
+      "Volúmenes pequeños que caben en la cajuela.",
+    "order.requiredVehicleCategory.COMPACT_UTILITY":
+      "Cajas medianas en utilitario cerrado compacto.",
+    "order.requiredVehicleCategory.PICKUP":
+      "Piezas largas o volumen abierto.",
+    "order.requiredVehicleCategory.VAN":
+      "Carga mayor protegida de la calle.",
+    "order.requiredVehicleCategory.TRUCK":
+      "Carga pesada o muy voluminosa.",
     "order.rejectDefaultReason": "La tienda rechazó el pedido",
     "order.rejectReasonPlaceholder": "Selecciona el motivo",
     "order.rejectReasonNoStock": "Sin stock en este momento",

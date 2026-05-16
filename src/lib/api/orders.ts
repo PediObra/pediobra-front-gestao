@@ -4,6 +4,7 @@ import type {
   EvidenceType,
   FulfillmentMethod,
   InternalDeliveryAvailability,
+  DriverVehicleCategory,
   Order,
   OrderEvidence,
   OrderStatus,
@@ -47,6 +48,7 @@ export interface UpdateOrderStatusPayload {
   cancellationReason?: string;
   cancellationDetails?: string;
   deliveryProvider?: SellerDeliveryProvider;
+  requiredVehicleCategory?: DriverVehicleCategory;
 }
 
 export interface RejectOrderBySellerPayload {

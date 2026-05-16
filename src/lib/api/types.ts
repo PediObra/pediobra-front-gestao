@@ -933,6 +933,7 @@ export interface Order {
   status: OrderStatus;
   fulfillmentMethod?: FulfillmentMethod;
   deliveryProvider?: DeliveryProvider;
+  requiredVehicleCategory?: DriverVehicleCategory | null;
   paymentStatus?: PaymentStatus | null;
   sellerReassignmentStatus?: SellerReassignmentStatus;
   pendingReassignmentExpiresAt?: string | null;
