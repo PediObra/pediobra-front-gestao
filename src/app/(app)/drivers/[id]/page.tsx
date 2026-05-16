@@ -9,7 +9,11 @@ import { driversService } from "@/lib/api/drivers";
 import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import type { DriverStatus } from "@/lib/api/types";
-import { formatDate, formatPhone } from "@/lib/formatters";
+import {
+  driverVehicleCategoryLabel,
+  formatDate,
+  formatPhone,
+} from "@/lib/formatters";
 import { useTranslation } from "@/lib/i18n/language-store";
 import { PageHeader } from "@/components/layout/page-header";
 import {
@@ -175,7 +179,8 @@ export default function DriverDetailPage({
                             {v.brand} {v.model} {v.year ? `(${v.year})` : ""}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {v.type ?? t("driver.vehicle")} · {v.color ?? "—"}
+                            {driverVehicleCategoryLabel(v.vehicleCategory)} ·{" "}
+                            {v.color ?? "—"}
                           </div>
                         </div>
                         <div className="font-mono text-sm font-semibold">

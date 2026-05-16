@@ -24,6 +24,7 @@ import { queryKeys } from "@/lib/query-keys";
 import { useAuth } from "@/hooks/use-auth";
 import {
   centsToBRL,
+  driverVehicleCategoryLabel,
   evidenceTypeLabel,
   formatDateTime,
   formatOrderCode,
@@ -1289,7 +1290,11 @@ export default function OrderDetailPage({
                     </div>
                     {order.assignedDriverProfile.vehicles?.[0] && (
                       <div className="text-xs text-muted-foreground">
-                        {order.assignedDriverProfile.vehicles[0].model} ·{" "}
+                        {driverVehicleCategoryLabel(
+                          order.assignedDriverProfile.vehicles[0]
+                            .vehicleCategory,
+                        )}{" "}
+                        · {order.assignedDriverProfile.vehicles[0].model} ·{" "}
                         {order.assignedDriverProfile.vehicles[0].plate}
                       </div>
                     )}

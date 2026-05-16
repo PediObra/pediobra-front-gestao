@@ -655,6 +655,12 @@ export interface CustomerAddress {
 
 // ---- Drivers ----
 
+export type DriverVehicleCategory =
+  | "MOTORCYCLE"
+  | "CAR_UTILITY"
+  | "PICKUP_VAN"
+  | "TRUCK";
+
 export interface DriverVehicle {
   id: number;
   driverProfileId: number;
@@ -664,6 +670,7 @@ export interface DriverVehicle {
   year?: number | null;
   color?: string | null;
   type?: string | null;
+  vehicleCategory?: DriverVehicleCategory | null;
   active?: boolean;
 }
 

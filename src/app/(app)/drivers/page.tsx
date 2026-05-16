@@ -29,7 +29,11 @@ import { ApiError } from "@/lib/api/client";
 import { driversService, type ListDriversParams } from "@/lib/api/drivers";
 import { operationsService } from "@/lib/api/operations";
 import { queryKeys } from "@/lib/query-keys";
-import { driverStatusLabel, formatPhone } from "@/lib/formatters";
+import {
+  driverStatusLabel,
+  driverVehicleCategoryLabel,
+  formatPhone,
+} from "@/lib/formatters";
 import { useAuth } from "@/hooks/use-auth";
 import { useTranslation } from "@/lib/i18n/language-store";
 import type { DriverProfile, DriverStatus } from "@/lib/api/types";
@@ -123,7 +127,16 @@ export default function DriversListPage() {
         id: "vehicles",
         header: t("drivers.vehicles"),
         cell: ({ row }) => (
-          <span className="text-sm">{row.original.vehicles?.length ?? 0}</span>
+          <div className="text-sm">
+            <div>{row.original.vehicles?.length ?? 0}</div>
+            {row.original.vehicles?.[0]?.vehicleCategory && (
+              <div className="text-xs text-muted-foreground">
+                {driverVehicleCategoryLabel(
+                  row.original.vehicles[0].vehicleCategory,
+                )}
+              </div>
+            )}
+          </div>
         ),
       },
       {

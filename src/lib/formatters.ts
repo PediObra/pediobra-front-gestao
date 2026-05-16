@@ -1,5 +1,6 @@
 import type {
   DriverStatus,
+  DriverVehicleCategory,
   DeliveryRequestStatus,
   EvidenceType,
   MembershipRole,
@@ -195,6 +196,16 @@ export const DRIVER_STATUS_LABEL: Record<DriverStatus, string> = {
 export function driverStatusLabel(status: DriverStatus) {
   return translate(
     `status.driver.${status}` as Parameters<typeof translate>[0],
+  );
+}
+
+export function driverVehicleCategoryLabel(
+  category: DriverVehicleCategory | string | null | undefined,
+) {
+  if (!category) return "—";
+
+  return translate(
+    `driver.vehicleCategory.${category}` as Parameters<typeof translate>[0],
   );
 }
 
