@@ -657,9 +657,19 @@ export interface CustomerAddress {
 
 export type DriverVehicleCategory =
   | "MOTORCYCLE"
-  | "CAR_UTILITY"
-  | "PICKUP_VAN"
+  | "PASSENGER_CAR"
+  | "COMPACT_UTILITY"
+  | "PICKUP"
+  | "VAN"
   | "TRUCK";
+
+export type DriverCargoBodyType = "OPEN" | "CLOSED" | "UNKNOWN";
+
+export type DriverVehicleCapacityConfidence =
+  | "HIGH"
+  | "MEDIUM"
+  | "LOW"
+  | "MANUAL";
 
 export interface DriverVehicle {
   id: number;
@@ -667,10 +677,19 @@ export interface DriverVehicle {
   plate: string;
   model?: string | null;
   brand?: string | null;
+  catalogBrandId?: number | null;
+  catalogModelId?: number | null;
+  catalogSource?: string | null;
   year?: number | null;
   color?: string | null;
   type?: string | null;
   vehicleCategory?: DriverVehicleCategory | null;
+  cargoBodyType?: DriverCargoBodyType | null;
+  maxWeightGrams?: number | null;
+  maxLengthMm?: number | null;
+  maxWidthMm?: number | null;
+  maxHeightMm?: number | null;
+  capacityConfidence?: DriverVehicleCapacityConfidence | null;
   active?: boolean;
 }
 
@@ -683,6 +702,8 @@ export interface DriverProfile {
   address: string;
   status: DriverStatus;
   availability?: DriverAvailability;
+  currentVehicleId?: number | null;
+  currentVehicle?: DriverVehicle | null;
   stripeAccountId?: string | null;
   stripeAccountType?: string | null;
   stripeOnboardingStatus?: StripeConnectOnboardingStatus;

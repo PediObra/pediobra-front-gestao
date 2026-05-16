@@ -30,6 +30,7 @@ import { driversService, type ListDriversParams } from "@/lib/api/drivers";
 import { operationsService } from "@/lib/api/operations";
 import { queryKeys } from "@/lib/query-keys";
 import {
+  driverCargoBodyTypeLabel,
   driverStatusLabel,
   driverVehicleCategoryLabel,
   formatPhone,
@@ -129,11 +130,16 @@ export default function DriversListPage() {
         cell: ({ row }) => (
           <div className="text-sm">
             <div>{row.original.vehicles?.length ?? 0}</div>
-            {row.original.vehicles?.[0]?.vehicleCategory && (
+            {row.original.currentVehicle?.vehicleCategory && (
               <div className="text-xs text-muted-foreground">
                 {driverVehicleCategoryLabel(
-                  row.original.vehicles[0].vehicleCategory,
+                  row.original.currentVehicle.vehicleCategory,
                 )}
+                {row.original.currentVehicle.cargoBodyType
+                  ? ` · ${driverCargoBodyTypeLabel(
+                      row.original.currentVehicle.cargoBodyType,
+                    )}`
+                  : ""}
               </div>
             )}
           </div>

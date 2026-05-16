@@ -10,6 +10,7 @@ import { ApiError } from "@/lib/api/client";
 import { queryKeys } from "@/lib/query-keys";
 import type { DriverStatus } from "@/lib/api/types";
 import {
+  driverCargoBodyTypeLabel,
   driverVehicleCategoryLabel,
   formatDate,
   formatPhone,
@@ -180,8 +181,14 @@ export default function DriverDetailPage({
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {driverVehicleCategoryLabel(v.vehicleCategory)} ·{" "}
+                            {driverCargoBodyTypeLabel(v.cargoBodyType)} ·{" "}
                             {v.color ?? "—"}
                           </div>
+                          {driver.currentVehicleId === v.id ? (
+                            <div className="mt-1 text-xs font-semibold text-primary">
+                              Em uso
+                            </div>
+                          ) : null}
                         </div>
                         <div className="font-mono text-sm font-semibold">
                           {v.plate}

@@ -1,4 +1,5 @@
 import type {
+  DriverCargoBodyType,
   DriverStatus,
   DriverVehicleCategory,
   DeliveryRequestStatus,
@@ -206,6 +207,16 @@ export function driverVehicleCategoryLabel(
 
   return translate(
     `driver.vehicleCategory.${category}` as Parameters<typeof translate>[0],
+  );
+}
+
+export function driverCargoBodyTypeLabel(
+  cargoBodyType: DriverCargoBodyType | string | null | undefined,
+) {
+  if (!cargoBodyType) return "—";
+
+  return translate(
+    `driver.cargoBodyType.${cargoBodyType}` as Parameters<typeof translate>[0],
   );
 }
 
