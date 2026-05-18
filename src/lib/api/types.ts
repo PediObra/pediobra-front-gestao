@@ -16,6 +16,8 @@ export type DriverAvailability = "ONLINE" | "OFFLINE" | "BUSY";
 
 export type FulfillmentMethod = "DELIVERY" | "STORE_PICKUP";
 
+export type FulfillmentTiming = "ASAP" | "SCHEDULED";
+
 export type DeliveryProvider = "UNDECIDED" | "INTERNAL" | "SELLER" | "NONE";
 
 export type SellerDeliveryProvider = Extract<
@@ -382,6 +384,10 @@ export interface SellerOperationalSettings {
   isOnline: boolean;
   autoOnlineEnabled: boolean;
   operatingHours: SellerOperatingHour[];
+  acceptsScheduledOrders: boolean;
+  scheduledOrderingPaused: boolean;
+  scheduledMinLeadMinutes: number;
+  scheduledMaxLeadDays: number;
 }
 
 export interface SellerTeamInvitationPreview {
@@ -932,6 +938,9 @@ export interface Order {
   assignedDriverProfileId?: number | null;
   status: OrderStatus;
   fulfillmentMethod?: FulfillmentMethod;
+  fulfillmentTiming?: FulfillmentTiming;
+  scheduledWindowStartAt?: string | null;
+  scheduledWindowEndAt?: string | null;
   deliveryProvider?: DeliveryProvider;
   requiredVehicleCategory?: DriverVehicleCategory | null;
   paymentStatus?: PaymentStatus | null;

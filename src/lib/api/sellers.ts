@@ -120,6 +120,10 @@ export interface UpdateSellerOperationalSettingsPayload {
   isOnline?: boolean;
   autoOnlineEnabled?: boolean;
   operatingHours?: SellerOperatingHour[];
+  acceptsScheduledOrders?: boolean;
+  scheduledOrderingPaused?: boolean;
+  scheduledMinLeadMinutes?: number;
+  scheduledMaxLeadDays?: number;
 }
 
 export interface UpdateSellerAvailabilityPayload {

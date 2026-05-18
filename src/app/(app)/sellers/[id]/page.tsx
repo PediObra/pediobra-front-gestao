@@ -109,6 +109,7 @@ const HOUR_OPTIONS = Array.from({ length: 24 }, (_, index) =>
   String(index).padStart(2, "0"),
 );
 const MINUTE_OPTIONS = ["00", "15", "30", "45"] as const;
+const SCHEDULED_MAX_LEAD_DAYS_CAP = 3;
 
 export default function SellerDetailPage({
   params,
@@ -223,6 +224,10 @@ export default function SellerDetailPage({
     useState(true);
   const [storefrontPickupEnabled, setStorefrontPickupEnabled] = useState(true);
   const [autoOnlineEnabled, setAutoOnlineEnabled] = useState(false);
+  const [acceptsScheduledOrders, setAcceptsScheduledOrders] = useState(false);
+  const [scheduledOrderingPaused, setScheduledOrderingPaused] = useState(false);
+  const [scheduledMinLeadMinutes, setScheduledMinLeadMinutes] = useState("120");
+  const [scheduledMaxLeadDays, setScheduledMaxLeadDays] = useState("3");
   const [operatingHours, setOperatingHours] = useState<SellerOperatingHour[]>(
     () => buildDefaultOperatingHours(),
   );
@@ -255,7 +260,6 @@ export default function SellerDetailPage({
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep form state in sync with API settings.
       setDeliveryRadiusKm(formatRadiusInput(radiusMeters));
     }
-
   }, [
     deliverySettingsQuery.data?.sellerId,
     deliverySettingsQuery.data?.maxDeliveryRadiusMeters,
@@ -267,6 +271,10 @@ export default function SellerDetailPage({
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- Populate editable availability fields from the fetched settings.
     setAutoOnlineEnabled(settings.autoOnlineEnabled);
+    setAcceptsScheduledOrders(settings.acceptsScheduledOrders);
+    setScheduledOrderingPaused(settings.scheduledOrderingPaused);
+    setScheduledMinLeadMinutes(String(settings.scheduledMinLeadMinutes));
+    setScheduledMaxLeadDays(String(settings.scheduledMaxLeadDays));
     setOperatingHours(mergeOperatingHours(settings.operatingHours));
   }, [operationalSettingsQuery.data?.sellerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -389,6 +397,10 @@ export default function SellerDetailPage({
         settings,
       );
       setAutoOnlineEnabled(settings.autoOnlineEnabled);
+      setAcceptsScheduledOrders(settings.acceptsScheduledOrders);
+      setScheduledOrderingPaused(settings.scheduledOrderingPaused);
+      setScheduledMinLeadMinutes(String(settings.scheduledMinLeadMinutes));
+      setScheduledMaxLeadDays(String(settings.scheduledMaxLeadDays));
       setOperatingHours(mergeOperatingHours(settings.operatingHours));
       qc.setQueryData(queryKeys.sellers.byId(sellerId), {
         ...(seller ?? {}),
@@ -415,9 +427,34 @@ export default function SellerDetailPage({
         );
       }
 
+      const minLeadMinutes = acceptsScheduledOrders
+        ? Number(scheduledMinLeadMinutes)
+        : 120;
+      const maxLeadDays = acceptsScheduledOrders
+        ? Number(scheduledMaxLeadDays)
+        : 3;
+
+      if (
+        acceptsScheduledOrders &&
+        (!Number.isInteger(minLeadMinutes) ||
+          minLeadMinutes < 0 ||
+          !Number.isInteger(maxLeadDays) ||
+          maxLeadDays < 1 ||
+          maxLeadDays > SCHEDULED_MAX_LEAD_DAYS_CAP)
+      ) {
+        throw new Error(
+          "Configure uma antecedencia minima valida e limite entre 1 e 3 dias.",
+        );
+      }
+
       return sellersService.updateOperationalSettings(sellerId, {
         autoOnlineEnabled,
         operatingHours,
+        acceptsScheduledOrders,
+        scheduledOrderingPaused:
+          acceptsScheduledOrders && scheduledOrderingPaused,
+        scheduledMinLeadMinutes: minLeadMinutes,
+        scheduledMaxLeadDays: maxLeadDays,
       });
     },
     onSuccess: (settings) => {
@@ -426,6 +463,10 @@ export default function SellerDetailPage({
         settings,
       );
       setAutoOnlineEnabled(settings.autoOnlineEnabled);
+      setAcceptsScheduledOrders(settings.acceptsScheduledOrders);
+      setScheduledOrderingPaused(settings.scheduledOrderingPaused);
+      setScheduledMinLeadMinutes(String(settings.scheduledMinLeadMinutes));
+      setScheduledMaxLeadDays(String(settings.scheduledMaxLeadDays));
       setOperatingHours(mergeOperatingHours(settings.operatingHours));
       qc.setQueryData(queryKeys.sellers.byId(sellerId), {
         ...(seller ?? {}),
@@ -974,6 +1015,134 @@ export default function SellerDetailPage({
                     </div>
                   </div>
 
+                  <div className="rounded-md border border-border p-4">
+                    <div className="space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <div className="text-sm font-semibold">
+                            Agendamento de entregas
+                          </div>
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            Permite que clientes escolham uma janela futura
+                            quando a loja estiver aberta no horário marcado.
+                          </p>
+                        </div>
+                        <Switch
+                          aria-label="Aceitar pedidos agendados"
+                          checked={acceptsScheduledOrders}
+                          disabled={
+                            !canEdit || operationalSettingsQuery.isLoading
+                          }
+                          onCheckedChange={(checked) => {
+                            setAcceptsScheduledOrders(checked);
+                            if (!checked) setScheduledOrderingPaused(false);
+                          }}
+                        />
+                      </div>
+
+                      <div
+                        className={cn(
+                          "rounded-md border border-border/70 bg-muted/30 p-3",
+                          !acceptsScheduledOrders && "opacity-70",
+                        )}
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="text-sm font-semibold">
+                              Pausar novos agendamentos
+                            </div>
+                            <p className="text-xs leading-5 text-muted-foreground">
+                              Bloqueia novos pedidos agendados sem desligar o
+                              modo receber agora.
+                            </p>
+                          </div>
+                          <Switch
+                            aria-label="Pausar novos agendamentos"
+                            checked={scheduledOrderingPaused}
+                            disabled={
+                              !canEdit ||
+                              !acceptsScheduledOrders ||
+                              operationalSettingsQuery.isLoading
+                            }
+                            onCheckedChange={setScheduledOrderingPaused}
+                          />
+                        </div>
+                      </div>
+
+                      <div
+                        className={cn(
+                          "space-y-3 rounded-md border border-border/70 bg-muted/30 p-3",
+                          !acceptsScheduledOrders && "opacity-70",
+                        )}
+                      >
+                        <div className="space-y-1">
+                          <div className="text-sm font-semibold">
+                            Regras de agendamento
+                          </div>
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            Estes campos valem apenas para entregas agendadas.
+                          </p>
+                        </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                          <div className="space-y-2">
+                            <Label htmlFor="scheduled-min-lead-minutes">
+                              Antecedência mínima (min)
+                            </Label>
+                            <Input
+                              id="scheduled-min-lead-minutes"
+                              type="number"
+                              inputMode="numeric"
+                              min={0}
+                              step={15}
+                              disabled={
+                                !canEdit ||
+                                !acceptsScheduledOrders ||
+                                operationalSettingsQuery.isLoading
+                              }
+                              value={scheduledMinLeadMinutes}
+                              onChange={(event) =>
+                                setScheduledMinLeadMinutes(event.target.value)
+                              }
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="scheduled-max-lead-days">
+                              Limite máximo (dias)
+                            </Label>
+                            <Input
+                              id="scheduled-max-lead-days"
+                              type="number"
+                              inputMode="numeric"
+                              min={1}
+                              max={SCHEDULED_MAX_LEAD_DAYS_CAP}
+                              step={1}
+                              aria-describedby="scheduled-max-lead-days-help"
+                              disabled={
+                                !canEdit ||
+                                !acceptsScheduledOrders ||
+                                operationalSettingsQuery.isLoading
+                              }
+                              value={scheduledMaxLeadDays}
+                              onChange={(event) =>
+                                setScheduledMaxLeadDays(
+                                  clampScheduledMaxLeadDaysInput(
+                                    event.target.value,
+                                  ),
+                                )
+                              }
+                            />
+                            <p
+                              id="scheduled-max-lead-days-help"
+                              className="text-xs leading-5 text-muted-foreground"
+                            >
+                              Nesta versão, o limite máximo suportado é 3 dias.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="space-y-3">
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="text-sm font-semibold">
@@ -1246,7 +1415,9 @@ export default function SellerDetailPage({
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="storefront-description">Descrição</Label>
+                        <Label htmlFor="storefront-description">
+                          Descrição
+                        </Label>
                         <Textarea
                           id="storefront-description"
                           disabled={!canEdit}
@@ -1578,8 +1749,8 @@ export default function SellerDetailPage({
                             </div>
                           ) : (
                             <div className="rounded-md border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-                              Owners têm acesso completo à loja e podem
-                              convidar outros owners.
+                              Owners têm acesso completo à loja e podem convidar
+                              outros owners.
                             </div>
                           )}
 
@@ -1696,6 +1867,17 @@ function splitTime(value: string | null | undefined, fallback: string) {
     hour: hour ?? "00",
     minute: minute ?? "00",
   };
+}
+
+function clampScheduledMaxLeadDaysInput(value: string) {
+  if (value.trim() === "") return "";
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return value;
+
+  return String(
+    Math.min(SCHEDULED_MAX_LEAD_DAYS_CAP, Math.max(1, Math.trunc(parsed))),
+  );
 }
 
 function isCompleteOperatingSchedule(hours: SellerOperatingHour[]) {

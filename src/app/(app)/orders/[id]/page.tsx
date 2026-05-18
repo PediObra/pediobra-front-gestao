@@ -175,7 +175,11 @@ const VEHICLE_CATEGORY_CAPACITY_LIMITS: Array<{
   maxWeightGrams: number;
   maxLongestDimensionMm: number;
 }> = [
-  { category: "MOTORCYCLE", maxWeightGrams: 20_000, maxLongestDimensionMm: 700 },
+  {
+    category: "MOTORCYCLE",
+    maxWeightGrams: 20_000,
+    maxLongestDimensionMm: 700,
+  },
   {
     category: "PASSENGER_CAR",
     maxWeightGrams: 120_000,
@@ -186,12 +190,28 @@ const VEHICLE_CATEGORY_CAPACITY_LIMITS: Array<{
     maxWeightGrams: 650_000,
     maxLongestDimensionMm: 1_800,
   },
-  { category: "PICKUP", maxWeightGrams: 1_000_000, maxLongestDimensionMm: 2_200 },
+  {
+    category: "PICKUP",
+    maxWeightGrams: 1_000_000,
+    maxLongestDimensionMm: 2_200,
+  },
   { category: "VAN", maxWeightGrams: 1_300_000, maxLongestDimensionMm: 3_000 },
-  { category: "TRUCK", maxWeightGrams: 3_000_000, maxLongestDimensionMm: 5_000 },
+  {
+    category: "TRUCK",
+    maxWeightGrams: 3_000_000,
+    maxLongestDimensionMm: 5_000,
+  },
 ];
 
 const LOW_LOGISTICS_CONFIDENCES = new Set(["LOW", "UNKNOWN"]);
+
+const SCHEDULED_WINDOW_PROTECTED_STATUSES: readonly OrderStatus[] = [
+  "READY_FOR_PICKUP",
+  "PICKED_UP",
+  "OUT_FOR_DELIVERY",
+  "DELIVERED",
+  "DELIVERY_FAILED",
+];
 
 type VehicleCategoryRecommendation = {
   category?: DriverVehicleCategory;
@@ -280,10 +300,8 @@ export default function OrderDetailPage({
   const [sellerRejectionDetails, setSellerRejectionDetails] = useState("");
   const [acceptDeliveryProvider, setAcceptDeliveryProvider] =
     useState<SellerDeliveryProvider>("INTERNAL");
-  const [
-    acceptRequiredVehicleCategory,
-    setAcceptRequiredVehicleCategory,
-  ] = useState<DriverVehicleCategory | undefined>();
+  const [acceptRequiredVehicleCategory, setAcceptRequiredVehicleCategory] =
+    useState<DriverVehicleCategory | undefined>();
   const fulfillmentLabelContext = order
     ? orderFulfillmentLabelContext(order)
     : undefined;
@@ -577,6 +595,18 @@ export default function OrderDetailPage({
   const isSellerReassignmentBlocked =
     !!order.sellerReassignmentStatus &&
     order.sellerReassignmentStatus !== "NONE";
+  const hasScheduledStatusBlock = transitions.some((status) =>
+    isScheduledWindowBlocked(order, status),
+  );
+  const isPickupConfirmationScheduledBlocked = isScheduledWindowBlocked(
+    order,
+    "PICKED_UP",
+  );
+  const isDeliveryConfirmationScheduledBlocked = isScheduledWindowBlocked(
+    order,
+    "DELIVERED",
+  );
+  const scheduledWindowBlockMessage = scheduledWindowBlockedMessage(order);
   const requiresDirectPaymentConfirmation =
     order.paymentStatus === "AWAITING_DIRECT_PAYMENT";
   const shouldShowDeliveryProvider =
@@ -636,12 +666,11 @@ export default function OrderDetailPage({
   const shouldChooseRequiredVehicleCategory =
     shouldChooseDeliveryProvider &&
     selectedAcceptDeliveryProvider === "INTERNAL";
-  const requiredVehicleCategoryHintKey =
-    shouldPreselectRequiredVehicleCategory
-      ? vehicleCategoryRecommendation.confidence === "HIGH"
-        ? "order.requiredVehicleCategorySystemHigh"
-        : "order.requiredVehicleCategorySystemMedium"
-      : "order.requiredVehicleCategoryNeedsChoice";
+  const requiredVehicleCategoryHintKey = shouldPreselectRequiredVehicleCategory
+    ? vehicleCategoryRecommendation.confidence === "HIGH"
+      ? "order.requiredVehicleCategorySystemHigh"
+      : "order.requiredVehicleCategorySystemMedium"
+    : "order.requiredVehicleCategoryNeedsChoice";
   const shouldDisableConfirmStatusChange =
     sellerRejectionMutation.isPending ||
     statusMutation.isPending ||
@@ -658,9 +687,7 @@ export default function OrderDetailPage({
           ? "SELLER"
           : "INTERNAL";
 
-      setAcceptDeliveryProvider(
-        defaultDeliveryProvider,
-      );
+      setAcceptDeliveryProvider(defaultDeliveryProvider);
       setAcceptRequiredVehicleCategory(
         defaultDeliveryProvider === "INTERNAL" &&
           shouldPreselectRequiredVehicleCategory
@@ -799,30 +826,43 @@ export default function OrderDetailPage({
                 <h3 className="text-base font-semibold">
                   {t("order.nextAction")}
                 </h3>
+                {hasScheduledStatusBlock && (
+                  <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                    {scheduledWindowBlockMessage}
+                  </p>
+                )}
                 <div className="grid gap-3">
-                  {transitions.map((status) => (
-                    <Button
-                      key={status}
-                      size="lg"
-                      variant={statusButtonVariant(order.status, status)}
-                      className="min-h-12 w-full cursor-pointer text-base font-semibold"
-                      onClick={() => requestStatusChange(status)}
-                      disabled={
-                        statusMutation.isPending ||
-                        sellerRejectionMutation.isPending
-                      }
-                    >
-                      {statusMutation.isPending ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : null}
-                      {statusButtonLabel(
-                        order.status,
-                        status,
-                        fulfillmentLabelContext,
-                        t,
-                      )}
-                    </Button>
-                  ))}
+                  {transitions.map((status) => {
+                    const isBlockedBySchedule = isScheduledWindowBlocked(
+                      order,
+                      status,
+                    );
+
+                    return (
+                      <Button
+                        key={status}
+                        size="lg"
+                        variant={statusButtonVariant(order.status, status)}
+                        className="min-h-12 w-full cursor-pointer text-base font-semibold"
+                        onClick={() => requestStatusChange(status)}
+                        disabled={
+                          statusMutation.isPending ||
+                          sellerRejectionMutation.isPending ||
+                          isBlockedBySchedule
+                        }
+                      >
+                        {statusMutation.isPending ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : null}
+                        {statusButtonLabel(
+                          order.status,
+                          status,
+                          fulfillmentLabelContext,
+                          t,
+                        )}
+                      </Button>
+                    );
+                  })}
                 </div>
               </section>
             )}
@@ -842,6 +882,11 @@ export default function OrderDetailPage({
                   <p className="text-sm text-muted-foreground">
                     {t("order.pickupConfirmationDescription")}
                   </p>
+                  {isPickupConfirmationScheduledBlocked && (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      {scheduledWindowBlockMessage}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="pickup-code">{t("order.pickupCode")}</Label>
@@ -849,6 +894,7 @@ export default function OrderDetailPage({
                     id="pickup-code"
                     inputMode="numeric"
                     maxLength={4}
+                    disabled={isPickupConfirmationScheduledBlocked}
                     value={pickupCode}
                     onChange={handlePickupCodeChange}
                     placeholder="0000"
@@ -868,7 +914,11 @@ export default function OrderDetailPage({
                   size="lg"
                   className="min-h-11 w-full cursor-pointer"
                   onClick={() => pickupMutation.mutate()}
-                  disabled={pickupCode.length !== 4 || pickupMutation.isPending}
+                  disabled={
+                    pickupCode.length !== 4 ||
+                    pickupMutation.isPending ||
+                    isPickupConfirmationScheduledBlocked
+                  }
                 >
                   {pickupMutation.isPending ? (
                     <Loader2 className="size-4 animate-spin" />
@@ -955,6 +1005,11 @@ export default function OrderDetailPage({
                   <p className="text-sm text-muted-foreground">
                     {t("order.sellerDeliveryConfirmationDescription")}
                   </p>
+                  {isDeliveryConfirmationScheduledBlocked && (
+                    <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                      {scheduledWindowBlockMessage}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="delivery-code">
@@ -964,6 +1019,7 @@ export default function OrderDetailPage({
                     id="delivery-code"
                     inputMode="numeric"
                     maxLength={4}
+                    disabled={isDeliveryConfirmationScheduledBlocked}
                     value={deliveryCode}
                     onChange={handleDeliveryCodeChange}
                     placeholder="0000"
@@ -987,7 +1043,8 @@ export default function OrderDetailPage({
                     deliveryCode.length !== 4 ||
                     (requiresDirectPaymentConfirmation &&
                       !directPaymentReceived) ||
-                    deliveryMutation.isPending
+                    deliveryMutation.isPending ||
+                    isDeliveryConfirmationScheduledBlocked
                   }
                 >
                   {deliveryMutation.isPending ? (
@@ -1796,9 +1853,7 @@ export default function OrderDetailPage({
                           {driverVehicleCategoryLabel(option.value)}
                         </span>
                         <span className="block text-[13px] leading-5 text-muted-foreground">
-                          {t(
-                            option.descriptionKey as Parameters<typeof t>[0],
-                          )}
+                          {t(option.descriptionKey as Parameters<typeof t>[0])}
                         </span>
                       </span>
                     </button>
@@ -1941,6 +1996,22 @@ function statusButtonVariant(currentStatus: string, nextStatus: OrderStatus) {
     return "default";
   }
   return "outline";
+}
+
+function isScheduledWindowBlocked(order: Order, nextStatus: OrderStatus) {
+  if (
+    order.fulfillmentTiming !== "SCHEDULED" ||
+    !SCHEDULED_WINDOW_PROTECTED_STATUSES.includes(nextStatus)
+  ) {
+    return false;
+  }
+
+  const start = new Date(order.scheduledWindowStartAt ?? "");
+  return !Number.isFinite(start.getTime()) || Date.now() < start.getTime();
+}
+
+function scheduledWindowBlockedMessage(order: Order) {
+  return `Pedido agendado para ${formatDateTime(order.scheduledWindowStartAt)}. As ações de saída para entrega ficam disponíveis no início da janela.`;
 }
 
 function sellerReassignmentStatusLabel(status: string) {

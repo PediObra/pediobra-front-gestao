@@ -348,6 +348,99 @@ describe("SellerDetailPage", () => {
     });
   });
 
+  it("lets seller editors configure scheduled delivery settings", async () => {
+    jest.mocked(sellersService.updateOperationalSettings).mockResolvedValue(
+      makeOperationalSettings({
+        acceptsScheduledOrders: true,
+        scheduledOrderingPaused: true,
+        scheduledMinLeadMinutes: 180,
+        scheduledMaxLeadDays: 2,
+      }),
+    );
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    expect(
+      await screen.findByText("Agendamento de entregas"),
+    ).toBeInTheDocument();
+
+    const acceptSwitch = screen.getByRole("switch", {
+      name: "Aceitar pedidos agendados",
+    });
+    await waitFor(() => expect(acceptSwitch).not.toBeDisabled());
+    fireEvent.click(acceptSwitch);
+
+    const minLeadInput = screen.getByLabelText("Antecedência mínima (min)");
+    const maxLeadInput = screen.getByLabelText("Limite máximo (dias)");
+
+    await waitFor(() => expect(minLeadInput).not.toBeDisabled());
+    fireEvent.change(minLeadInput, { target: { value: "180" } });
+    fireEvent.change(maxLeadInput, { target: { value: "2" } });
+    fireEvent.click(
+      screen.getByRole("switch", { name: "Pausar novos agendamentos" }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /salvar disponibilidade/i }),
+    );
+
+    await waitFor(() => {
+      expect(sellersService.updateOperationalSettings).toHaveBeenCalledWith(
+        3,
+        expect.objectContaining({
+          acceptsScheduledOrders: true,
+          scheduledOrderingPaused: true,
+          scheduledMinLeadMinutes: 180,
+          scheduledMaxLeadDays: 2,
+        }),
+      );
+    });
+  });
+
+  it("caps scheduled delivery max lead days at three in the seller settings form", async () => {
+    jest.mocked(sellersService.updateOperationalSettings).mockResolvedValue(
+      makeOperationalSettings({
+        acceptsScheduledOrders: true,
+        scheduledMaxLeadDays: 3,
+      }),
+    );
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    expect(
+      await screen.findByText("Agendamento de entregas"),
+    ).toBeInTheDocument();
+
+    const acceptSwitch = screen.getByRole("switch", {
+      name: "Aceitar pedidos agendados",
+    });
+    await waitFor(() => expect(acceptSwitch).not.toBeDisabled());
+    fireEvent.click(acceptSwitch);
+
+    const maxLeadInput = screen.getByLabelText("Limite máximo (dias)");
+
+    await waitFor(() => expect(maxLeadInput).not.toBeDisabled());
+    expect(
+      screen.getByText("Nesta versão, o limite máximo suportado é 3 dias."),
+    ).toBeInTheDocument();
+
+    fireEvent.change(maxLeadInput, { target: { value: "4" } });
+    expect(maxLeadInput).toHaveValue(3);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: /salvar disponibilidade/i }),
+    );
+
+    await waitFor(() => {
+      expect(sellersService.updateOperationalSettings).toHaveBeenCalledWith(
+        3,
+        expect.objectContaining({
+          acceptsScheduledOrders: true,
+          scheduledMaxLeadDays: 3,
+        }),
+      );
+    });
+  });
+
   it("shows paginated seller import data in the import section", async () => {
     jest.mocked(sellerProductImportsService.list).mockResolvedValue(
       paginated(
@@ -506,6 +599,10 @@ function makeOperationalSettings(
     sellerId: 3,
     isOnline: true,
     autoOnlineEnabled: false,
+    acceptsScheduledOrders: false,
+    scheduledOrderingPaused: false,
+    scheduledMinLeadMinutes: 120,
+    scheduledMaxLeadDays: 3,
     operatingHours: [
       "MONDAY",
       "TUESDAY",

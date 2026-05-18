@@ -155,6 +155,8 @@ describe("OrderDetailPage status actions", () => {
     expect(await screen.findByText("Aceitar pedido?")).toBeInTheDocument();
     expect(screen.getByText("Entrega pelo sistema")).toBeInTheDocument();
     expect(screen.getByText("Entrega própria da loja")).toBeInTheDocument();
+    await screen.findByText("Tipo de veículo da entrega");
+    fireEvent.click(screen.getByText("Moto").closest("button")!);
 
     await waitFor(() => {
       expect(
@@ -168,6 +170,7 @@ describe("OrderDetailPage status actions", () => {
         status: "CONFIRMED",
         cancellationReason: undefined,
         deliveryProvider: "INTERNAL",
+        requiredVehicleCategory: "MOTORCYCLE",
       });
     });
   });
@@ -191,6 +194,48 @@ describe("OrderDetailPage status actions", () => {
         deliveryProvider: "SELLER",
       });
     });
+  });
+
+  it("disables delivery execution actions before a scheduled window starts", async () => {
+    const scheduledWindowStartAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const scheduledWindowEndAt = new Date(
+      scheduledWindowStartAt.getTime() + 2 * 60 * 60 * 1000,
+    );
+    mockOrder = makeOrder({
+      assignedDriverProfileId: null,
+      deliveryProvider: "SELLER",
+      fulfillmentTiming: "SCHEDULED",
+      scheduledWindowStartAt: scheduledWindowStartAt.toISOString(),
+      scheduledWindowEndAt: scheduledWindowEndAt.toISOString(),
+      status: "PREPARING",
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    expect(await screen.findByText(/Pedido agendado para/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Em rota" })).toBeDisabled();
+  });
+
+  it("disables scheduled pickup confirmation before the scheduled window starts", async () => {
+    const scheduledWindowStartAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const scheduledWindowEndAt = new Date(
+      scheduledWindowStartAt.getTime() + 2 * 60 * 60 * 1000,
+    );
+    mockOrder = makeOrder({
+      assignedDriverProfileId: 30,
+      deliveryProvider: "INTERNAL",
+      fulfillmentTiming: "SCHEDULED",
+      scheduledWindowStartAt: scheduledWindowStartAt.toISOString(),
+      scheduledWindowEndAt: scheduledWindowEndAt.toISOString(),
+      status: "READY_FOR_PICKUP",
+    });
+    jest.mocked(ordersService.getById).mockResolvedValue(mockOrder);
+
+    renderWithQueryClient(<OrderDetailPage params={resolvedParams()} />);
+
+    expect(await screen.findByText(/Pedido agendado para/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Código de retirada")).toBeDisabled();
   });
 
   it("forces store delivery in the acceptance modal when payment is collected on delivery", async () => {
