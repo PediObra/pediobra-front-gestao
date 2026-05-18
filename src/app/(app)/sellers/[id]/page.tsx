@@ -70,6 +70,7 @@ import { useTranslation } from "@/lib/i18n/language-store";
 import { cn } from "@/lib/utils";
 import type {
   MembershipRole,
+  SellerDeliveryProvider,
   SellerDayOfWeek,
   SellerOperatingHour,
   SellerProductImportJob,
@@ -214,6 +215,8 @@ export default function SellerDetailPage({
   const [clearLogo, setClearLogo] = useState(false);
   const [logoInputKey, setLogoInputKey] = useState(0);
   const [deliveryRadiusKm, setDeliveryRadiusKm] = useState("");
+  const [sellerDeliveryProvider, setSellerDeliveryProvider] =
+    useState<SellerDeliveryProvider>("INTERNAL");
   const [storefrontEnabled, setStorefrontEnabled] = useState(false);
   const [storefrontSlug, setStorefrontSlug] = useState("");
   const [storefrontPublicName, setStorefrontPublicName] = useState("");
@@ -242,6 +245,10 @@ export default function SellerDetailPage({
   const [inviteCanManageSellerStaff, setInviteCanManageSellerStaff] =
     useState(false);
   const [devInviteUrl, setDevInviteUrl] = useState<string | null>(null);
+  const deliverySettingsSellerId = deliverySettingsQuery.data?.sellerId;
+  const deliverySettingsRadiusMeters =
+    deliverySettingsQuery.data?.maxDeliveryRadiusMeters;
+  const deliverySettingsProvider = deliverySettingsQuery.data?.deliveryProvider;
 
   useEffect(() => {
     if (seller) {
@@ -255,14 +262,18 @@ export default function SellerDetailPage({
   }, [seller?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const radiusMeters = deliverySettingsQuery.data?.maxDeliveryRadiusMeters;
-    if (radiusMeters !== undefined) {
+    if (deliverySettingsRadiusMeters !== undefined) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- Keep form state in sync with API settings.
-      setDeliveryRadiusKm(formatRadiusInput(radiusMeters));
+      setDeliveryRadiusKm(formatRadiusInput(deliverySettingsRadiusMeters));
+    }
+
+    if (deliverySettingsProvider) {
+      setSellerDeliveryProvider(deliverySettingsProvider);
     }
   }, [
-    deliverySettingsQuery.data?.sellerId,
-    deliverySettingsQuery.data?.maxDeliveryRadiusMeters,
+    deliverySettingsSellerId,
+    deliverySettingsRadiusMeters,
+    deliverySettingsProvider,
   ]);
 
   useEffect(() => {
@@ -371,11 +382,14 @@ export default function SellerDetailPage({
 
       return sellersService.updateDeliverySettings(sellerId, {
         maxDeliveryRadiusMeters: Math.round(parsedRadiusKm * 1000),
+        deliveryProvider: sellerDeliveryProvider,
       });
     },
     onSuccess: (settings) => {
       qc.setQueryData(queryKeys.sellers.deliverySettings(sellerId), settings);
       qc.invalidateQueries({ queryKey: queryKeys.sellers.all() });
+      setDeliveryRadiusKm(formatRadiusInput(settings.maxDeliveryRadiusMeters));
+      setSellerDeliveryProvider(settings.deliveryProvider);
       toast.success("Configurações de entrega atualizadas.");
     },
     onError: (err: unknown) => {
@@ -1289,6 +1303,30 @@ export default function SellerDetailPage({
                   <MapPinned className="size-5 text-muted-foreground" />
                 </CardHeader>
                 <CardContent className="grid gap-5 p-6">
+                  <div className="rounded-md border border-border p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="text-sm font-semibold">
+                          Entrega própria da loja
+                        </div>
+                        <p className="text-xs leading-5 text-muted-foreground">
+                          Permite que a loja entregue com equipe própria e
+                          aceite pagamento direto na entrega. Pedidos pagos
+                          pelo app ainda podem usar entrega pela plataforma.
+                        </p>
+                      </div>
+                      <Switch
+                        aria-label="Ativar entrega própria da loja"
+                        checked={sellerDeliveryProvider === "SELLER"}
+                        disabled={!canEdit || deliverySettingsQuery.isLoading}
+                        onCheckedChange={(checked) =>
+                          setSellerDeliveryProvider(
+                            checked ? "SELLER" : "INTERNAL",
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
                     <div className="space-y-2">
                       <Label htmlFor="delivery-radius-km">

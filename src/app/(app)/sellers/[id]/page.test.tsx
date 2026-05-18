@@ -195,6 +195,44 @@ describe("SellerDetailPage", () => {
     await waitFor(() => {
       expect(sellersService.updateDeliverySettings).toHaveBeenCalledWith(3, {
         maxDeliveryRadiusMeters: 8500,
+        deliveryProvider: "INTERNAL",
+      });
+    });
+  });
+
+  it("lets seller editors enable store delivery in delivery settings", async () => {
+    jest.mocked(sellersService.updateDeliverySettings).mockResolvedValue(
+      makeDeliverySettings({
+        deliveryProvider: "SELLER",
+      }),
+    );
+
+    renderWithQueryClient(<SellerDetailPage params={resolvedParams()} />);
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Dados Entrega" }));
+
+    const storeDeliverySwitch = await screen.findByRole("switch", {
+      name: "Ativar entrega própria da loja",
+    });
+    const radiusInput = await screen.findByLabelText(
+      "Raio máximo de entrega (km)",
+    );
+
+    await waitFor(() => {
+      expect(storeDeliverySwitch).not.toBeDisabled();
+      expect(radiusInput).toHaveValue("5");
+    });
+    expect(storeDeliverySwitch).toHaveAttribute("aria-checked", "false");
+
+    fireEvent.click(storeDeliverySwitch);
+    expect(storeDeliverySwitch).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: /salvar entrega/i }));
+
+    await waitFor(() => {
+      expect(sellersService.updateDeliverySettings).toHaveBeenCalledWith(3, {
+        maxDeliveryRadiusMeters: 5000,
+        deliveryProvider: "SELLER",
       });
     });
   });
